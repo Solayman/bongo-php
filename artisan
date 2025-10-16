@@ -1,0 +1,25 @@
+#!/usr/bin/env php
+<?php
+
+// Simple artisan-like CLI for your mini Laravel
+
+$argv = $_SERVER['argv'];
+$command = $argv[1] ?? null;
+
+switch ($command) {
+    case 'serve':
+        $host = '127.0.0.1';
+        $port = 8000;
+        echo "🚀 Starting development server: http://$host:$port\n";
+        echo "Press Ctrl+C to stop.\n";
+        // Run PHP built-in server (points to public folder)
+        passthru("php -S $host:$port -t public");
+        break;
+
+    case 'help':
+    default:
+        echo "Available commands:\n";
+        echo "  serve        Start the local development server\n";
+        echo "  help         Show this help message\n";
+        break;
+}
