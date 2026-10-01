@@ -224,6 +224,23 @@ Delete the generated test files afterwards.
 - [ ] **Framework self-check:** Routing, Environment, Config, View engine, Session and Database are all **OK**. "Composer (optional)" shows **Not installed**, which is expected because BongoMVC needs no Composer.
 - [ ] **Tables:** lists your database tables, with approximate row counts.
 
+## 9b. Storefront (`/shop`)
+
+| # | Do this | You should see |
+| --- | --- | --- |
+| 9b.1 | Open `/shop` (signed out) | The product grid with coloured demo images; filter by category and search |
+| 9b.2 | Open a product → **Add to cart** (quantity 2) | "… was added to your cart." The cart badge shows 2. |
+| 9b.3 | **Cart** → change a quantity → **Update**; remove an item | Totals update; removed items are gone |
+| 9b.4 | **Checkout** while signed out | Sent to `/shop/login` |
+| 9b.5 | **Create an account** | Signed in as the new customer, still with the same cart |
+| 9b.6 | Checkout with an empty address | "The shipping address field is required." |
+| 9b.7 | Fill in the address → **Place order** | The order page, "Thank you! Your order ORD-… has been placed." The cart is empty and the stock has gone down. |
+| 9b.8 | System status → Recent log entries | `Mail "Order ORD-… confirmed" sent to …` |
+| 9b.9 | Admin panel → Orders | The new order is listed (pending) |
+| 9b.10 | As the customer, change the URL to another order's id (`/shop/orders/1`) | **404**: customers only see their own orders |
+| 9b.11 | Sign in to `/login` as admin in the same browser | Both sessions work side by side (two guards) |
+| 9b.12 | Try `/shop/login` with the admin account | "These credentials do not match our records." Admins are not customers. |
+
 ## 10. Automated tests
 
 ```bash

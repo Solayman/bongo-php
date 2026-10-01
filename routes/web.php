@@ -9,6 +9,10 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Shop\AccountController;
+use App\Http\Controllers\Shop\CartController;
+use App\Http\Controllers\Shop\CatalogController;
+use App\Http\Controllers\Shop\CheckoutController;
 use App\Http\Controllers\SystemController;
 use System\Routing\Route;
 
@@ -79,4 +83,30 @@ Route::middleware('auth')->group(function () {
     // Sample cleanup tool (its JS sends the CSRF token as an X-CSRF-TOKEN header)
     Route::get('/cleanup', [CleanupController::class, 'dashboard'])->name('cleanup');
     Route::post('/cleanup/ajax', [CleanupController::class, 'ajaxHandler']);
+});
+
+// Storefront for customers (the "customer" guard; separate from the admin login)
+Route::prefix('/shop')->name('shop.')->group(function () {
+    Route::get('/', [CatalogController::class, 'index'])->name('index');
+    Route::get('/products/{product}', [CatalogController::class, 'show'])->name('product')->where('product', '\d+');
+
+    Route::get('/cart', [CartController::class, 'show'])->name('cart');
+    Route::post('/cart', [CartController::class, 'add'])->name('cart.add');
+    Route::patch('/cart/{product}', [CartController::class, 'update'])->name('cart.update')->where('product', '\d+');
+    Route::delete('/cart/{product}', [CartController::class, 'remove'])->name('cart.remove')->where('product', '\d+');
+
+    Route::middleware('guest:customer')->group(function () {
+        Route::get('/login', [AccountController::class, 'showLogin'])->name('login');
+        Route::post('/login', [AccountController::class, 'login']);
+        Route::get('/register', [AccountController::class, 'showRegister'])->name('register');
+        Route::post('/register', [AccountController::class, 'register'])->middleware('throttle:10,1');
+    });
+
+    Route::middleware('auth:customer')->group(function () {
+        Route::post('/logout', [AccountController::class, 'logout'])->name('logout');
+        Route::get('/checkout', [CheckoutController::class, 'show'])->name('checkout');
+        Route::post('/checkout', [CheckoutController::class, 'place'])->name('checkout.place');
+        Route::get('/orders', [AccountController::class, 'orders'])->name('orders');
+        Route::get('/orders/{order}', [AccountController::class, 'order'])->name('orders.show')->where('order', '\d+');
+    });
 });

@@ -9,7 +9,7 @@ Built in:
 | Routing | `Route::get/post/put/patch/delete/any/match`, groups, named routes, multiple route files (`web.php`, `api.php`), method spoofing, 404/405 |
 | Middleware | Aliases, groups (`web`, `api`), global stack, parameters (`role:admin`); built-in `auth`, `guest`, `csrf`, `cors`, security headers |
 | Views | Own template engine: `@if/@foreach/@forelse`, `@csrf/@method/@error`, `@auth`, `@json`, layouts, `@include`, `@push/@stack`, custom directives, compiled-view cache |
-| Database | Query builder (grouped `orWhere`, joins, `groupBy/having`, aggregates, `pluck/value/exists`, `increment`, `chunk`, pagination), transactions with savepoints, query log, models with relations and eager loading |
+| Database | Query builder (row locks, grouped `orWhere`, joins, `groupBy/having`, aggregates, `pluck/value/exists`, `increment`, `chunk`, pagination), transactions with savepoints, query log, models with relations and eager loading |
 | Schema & migrations | PHP migrations with a schema builder; each run is tracked in the database; rollback |
 | Sessions | Flash messages, old input, CSRF tokens |
 | Validation & uploads | 35+ rules (dates, regex, files, `unique`, …), `items.*.field` wildcards, custom messages; safe uploads (`$file->store()`, `Storage::url()`) |
@@ -378,6 +378,16 @@ public function edit(Product $product, Request $request, ReportBuilder $reports)
 
 Plain `edit($id)` methods keep working exactly as before.
 
+### The application boot file
+
+`app/bootstrap.php` (if present) runs on every request and command, after config and helpers. Register event listeners, view directives and container bindings there:
+
+```php
+Event::listen('order.placed', [SendOrderConfirmation::class, 'handle']);
+ViewCompiler::directive('money', fn($args) => "<?php echo money($args); ?>");
+app()->singleton(Cart::class);
+```
+
 ### Service container
 
 ```php
@@ -589,6 +599,17 @@ Safety rules:
 - `update()`, `delete()`, `increment()` and `decrement()` **refuse to run without a `where()`**. Pass `true` to `update`/`delete` to really affect every row.
 - Column and table names are not escaped, so never pass user input as an identifier.
 
+### Row locks
+
+```php
+DB::transaction(function () use ($cart) {
+    $products = DB::table('products')->whereIn('id', array_keys($cart))->lockForUpdate()->get();   // SELECT ... FOR UPDATE
+    // check stock, create the order, decrement stock: no other request can change these rows meanwhile
+});
+```
+
+`lockForUpdate()` blocks other writers until the transaction ends. `sharedLock()` lets others read but not change the rows.
+
 ### Transactions
 
 ```php
@@ -748,7 +769,8 @@ Auth::user(); Auth::check(); Auth::id();          // the default guard
 Auth::attempt($email, $password); Auth::logout(); // session login / logout on the default guard
 Auth::guard('api')->user();                       // a specific guard
 Auth::guard('admin')->attempt($email, $password); // several session guards can be signed in at once
-auth()->name;                                     // helper
+auth()->name;                                     // helper (default guard)
+auth('customer');                                 // the signed-in user of another guard, or null
 ```
 
 - **Each session guard keeps its own session key**, so for example an admin login and a customer login don't interfere.
@@ -763,7 +785,7 @@ auth()->name;                                     // helper
 | `auth:web,api` | Either guard; the first that succeeds becomes the default for the request |
 | `guest` / `guest:admin` | Only for signed-out visitors |
 
-Browsers that aren't signed in are redirected to the guard's `login_url`, and the page they wanted is remembered. API clients get **401** JSON with a `WWW-Authenticate: Bearer` header and the reason, e.g. "Token has expired".
+Each guard can set `login_url` (where `auth:<guard>` sends guests) and `home` (where `guest:<guard>` sends signed-in users). Browsers that aren't signed in are redirected to the guard's `login_url`, and the page they wanted is remembered. API clients get **401** JSON with a `WWW-Authenticate: Bearer` header and the reason, e.g. "Token has expired".
 
 ### JWT for APIs
 
@@ -1217,17 +1239,32 @@ class ProductTest extends System\Testing\HttpTestCase
 
 ## 14. The e-commerce test application
 
-The e-commerce admin is how BongoMVC is tested the way a real project would use it. It stays in the repository for now, and will be removed later so the framework ships fresh. A copy is also kept on the `demo/ecommerce` branch.
+The e-commerce app is how BongoMVC is tested the way a real project would use it. It stays in the repository for now, and will be removed later so the framework ships fresh. A copy is also on the `demo/ecommerce` branch.
+
+### Admin panel (`/`, signed in with the `web` guard)
 
 | Page | Route | Exercises |
 | --- | --- | --- |
-| Login / logout | `/login`, `POST /logout` | Auth, throttle, CSRF, flash, validation, logging |
-| Dashboard | `/` | Aggregates, joins, raw queries, stat tiles |
-| Products | `/products…` | CRUD, route params, validation (`unique`, `exists`), search, filters, pagination |
+| Login / logout / forgot password | `/login`, `/forgot-password` | Auth, throttle, CSRF, mail, validation, logging, i18n |
+| Dashboard | `/` | Aggregates, grouped queries, debug footer |
+| Products | `/products…` | CRUD, route model binding, image uploads, search, filters, pagination |
 | Categories | `/categories…` | CRUD, unique slugs, `ON DELETE SET NULL` |
-| Orders | `/orders`, `/orders/{id}` | Filters, joins, status updates |
+| Orders | `/orders`, `/orders/{id}` | Filters, joins, `PATCH` status updates |
 | Customers | `/customers`, `/customers/{id}` | Grouped raw queries |
-| Profile | `/profile` | Update with `unique` ignore, password change |
-| System status | `/system` | DB connection, env, session and optional Composer checks |
+| Profile | `/profile` | `unique` with ignore, password change |
+| System status | `/system` | Self-check, security, migrations, log viewer, debug tools, deployment checklist |
+
+### Storefront (`/shop`, signed in with the `customer` guard)
+
+| Page | Route | Exercises |
+| --- | --- | --- |
+| Catalog | `/shop`, `/shop?category=books&q=…` | Models, pagination, filters, demo images |
+| Product | `/shop/products/{product}` | Route model binding (404 for drafts), relations |
+| Cart | `/shop/cart` (POST / PATCH / DELETE) | Session cart (`App\Services\Cart`), container injection, stock limits |
+| Register / sign in | `/shop/register`, `/shop/login` | A second session guard, provider conditions (`role = customer`), throttling |
+| Checkout | `/shop/checkout` | `auth:customer`, a transaction with `lockForUpdate()`, a stock re-check, the `order.placed` event and confirmation email |
+| My orders | `/shop/orders`, `/shop/orders/{order}` | Customers only see **their own** orders (404 otherwise) |
+
+The admin and customer logins are separate guards, so one browser can be signed in to both. Demo customer: `rahim1@example.com` / `password`.
 
 `/cleanup` is the older sample cleanup tool. It requires login.
