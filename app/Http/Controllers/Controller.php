@@ -8,19 +8,9 @@ use System\View\ViewEngine;
 
 class Controller
 {
-    protected ViewEngine $viewEngine;
-
-    public function __construct()
-    {
-        $this->viewEngine = new ViewEngine(
-            base_path('resources/views'),
-            base_path('storage/cache/views')
-        );
-    }
-
     protected function view(string $view, array $data = []): string
     {
-        return $this->viewEngine->render($view, $data);
+        return ViewEngine::shared()->render($view, $data);
     }
 
     /**

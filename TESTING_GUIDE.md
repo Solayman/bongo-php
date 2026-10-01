@@ -75,6 +75,16 @@ Login: **admin@example.com / password**
 | 4.6 | Type `<b>bold</b>` as a product name and save | The list shows the text `<b>bold</b>` literally, not bold (output escaping) |
 | 4.7 | Type `{{ phpversion() }}` as a product name and save | The text shows literally; no PHP version number appears (template code is never executed) |
 
+## 4b. Template engine
+
+| # | Do this | You should see |
+| --- | --- | --- |
+| 4b.1 | Open a few pages, then look in `storage/cache/views` | One compiled `.php` file per template used |
+| 4b.2 | Edit any view (add a word), then reload | The change shows at once (automatic recompile) |
+| 4b.3 | `php bongo view:clear` | "Removed N compiled view(s)", and pages still work |
+| 4b.4 | In a view, add `@foreach([1, 2, 3] as $i) {{ $i }} @endforeach` | `1 2 3` |
+| 4b.5 | Add `{{-- secret note --}}` and view the page source | The note is not in the HTML |
+
 ## 5. Database layer
 
 | # | Do this | You should see |

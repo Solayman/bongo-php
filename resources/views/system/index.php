@@ -7,11 +7,11 @@
     <div class="col-md-4">
         <div class="card stat-tile h-100"><div class="card-body">
             <div class="label">Database</div>
-            <?php if ($db['connected']): ?>
+            @if($db['connected'])
                 <div class="value"><i class="bi bi-check-circle-fill text-success fs-5"></i> Connected</div>
-            <?php else: ?>
+            @else
                 <div class="value"><i class="bi bi-x-circle-fill text-danger fs-5"></i> Not connected</div>
-            <?php endif; ?>
+            @endif
             <div class="sub">{{ $connection['username'] }}@{{ $connection['host'] }}:{{ $connection['port'] }}</div>
         </div></div>
     </div>
@@ -31,21 +31,21 @@
     </div>
 </div>
 
-<?php if ($db['error']): ?>
+@if($db['error'])
     <div class="alert alert-danger"><strong>Database error:</strong> {{ $db['error'] }}</div>
-<?php endif; ?>
+@endif
 
 <div class="row g-3">
     <div class="col-lg-4">
         <div class="card">
             <div class="card-header bg-white fw-semibold">Framework self-check</div>
             <ul class="list-group list-group-flush">
-                <?php foreach ($checks as $name => $ok): ?>
+                @foreach($checks as $name => $ok)
                     <li class="list-group-item d-flex justify-content-between">
                         <span>{{ $name }}</span>
                         <span class="badge <?= $ok ? 'text-bg-success' : 'text-bg-secondary' ?>"><?= $ok ? 'OK' : (str_contains($name, 'optional') ? 'Not installed' : 'FAIL') ?></span>
                     </li>
-                <?php endforeach; ?>
+                @endforeach
             </ul>
         </div>
     </div>
@@ -56,21 +56,21 @@
                 <table class="table table-sm table-hover mb-0">
                     <thead class="table-light"><tr><th>Table</th><th class="num">≈ Rows</th><th class="num">Size (KB)</th><th>Engine</th></tr></thead>
                     <tbody>
-                    <?php foreach ($db['tables'] as $table): ?>
+                    @foreach($db['tables'] as $table)
                         <tr>
                             <td>{{ $table->TABLE_NAME }}</td>
                             <td class="num">{{ number_format((int) $table->TABLE_ROWS) }}</td>
                             <td class="num">{{ number_format(((int) $table->DATA_LENGTH + (int) $table->INDEX_LENGTH) / 1024) }}</td>
                             <td>{{ $table->ENGINE ?? '' }}</td>
                         </tr>
-                    <?php endforeach; ?>
+                    @endforeach
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 </div>
-<?php if (config('app.debug')): ?>
+@if(config('app.debug'))
 <div class="card mt-3">
     <div class="card-body d-flex flex-wrap gap-2 align-items-center">
         <span class="fw-semibold me-2">Debug tools</span>
@@ -79,28 +79,28 @@
         <span class="small text-secondary">Opens in a new tab. Shown only while APP_DEBUG is on.</span>
     </div>
 </div>
-<?php endif; ?>
+@endif
 
 <div class="row g-3 mt-1">
     <div class="col-lg-5">
         <div class="card h-100">
             <div class="card-header bg-white fw-semibold">Security (live check)</div>
             <ul class="list-group list-group-flush">
-                <?php foreach ($security as $name => [$ok, $detail]): ?>
+                @foreach($security as $name => [$ok, $detail])
                     <li class="list-group-item">
                         <div class="d-flex justify-content-between">
                             <span>{{ $name }}</span>
-                            <?php if ($ok): ?>
+                            @if($ok)
                                 <span class="badge text-bg-success">OK</span>
-                            <?php elseif ($name === 'HTTPS'): ?>
+                            @elseif($name === 'HTTPS')
                                 <span class="badge text-bg-secondary">Not in use</span>
-                            <?php else: ?>
+                            @else
                                 <span class="badge text-bg-danger">FAIL</span>
-                            <?php endif; ?>
+                            @endif
                         </div>
                         <div class="small text-secondary">{{ $detail }}</div>
                     </li>
-                <?php endforeach; ?>
+                @endforeach
             </ul>
         </div>
     </div>
@@ -114,23 +114,23 @@
                 <table class="table table-sm mb-0">
                     <thead class="table-light"><tr><th>Migration</th><th>Status</th><th class="num">Batch</th><th>Ran at</th></tr></thead>
                     <tbody>
-                    <?php foreach ($migrations as $m): ?>
+                    @foreach($migrations as $m)
                         <tr>
                             <td class="small">{{ $m['migration'] }}</td>
                             <td>
-                                <?php if ($m['ran']): ?>
+                                @if($m['ran'])
                                     <span class="badge text-bg-success">Ran</span>
-                                <?php else: ?>
+                                @else
                                     <span class="badge text-bg-warning">Pending</span>
-                                <?php endif; ?>
+                                @endif
                             </td>
                             <td class="num">{{ $m['batch'] ?? '' }}</td>
                             <td class="small text-secondary">{{ $m['ran_at'] ?? '' }}</td>
                         </tr>
-                    <?php endforeach; ?>
-                    <?php if (!$migrations): ?>
+                    @endforeach
+                    @if(!$migrations)
                         <tr><td colspan="4" class="text-secondary text-center py-3">No migrations found.</td></tr>
-                    <?php endif; ?>
+                    @endif
                     </tbody>
                 </table>
             </div>
@@ -148,13 +148,13 @@
             <form method="GET" action="<?= url('/system') ?>#logs" class="d-flex gap-2">
                 <select name="level" class="form-select form-select-sm" aria-label="Minimum level" onchange="this.form.submit()">
                     <option value="">All levels</option>
-                    <?php foreach (['info', 'warning', 'error'] as $level): ?>
+                    @foreach(['info', 'warning', 'error'] as $level)
                         <option value="{{ $level }}" <?= $logLevel === $level ? 'selected' : '' ?>>{{ ucfirst($level) }} and above</option>
-                    <?php endforeach; ?>
+                    @endforeach
                 </select>
             </form>
             <form method="POST" action="<?= url('/system/log-test') ?>" class="m-0">
-                <?= csrf_field() ?>
+                @csrf
                 <button class="btn btn-sm btn-outline-dark text-nowrap" type="submit">Write test entry</button>
             </form>
         </div>
@@ -163,7 +163,7 @@
         <table class="table table-sm mb-0">
             <thead class="table-light sticky-top"><tr><th style="width: 160px;">Time</th><th style="width: 100px;">Level</th><th>Message</th></tr></thead>
             <tbody>
-            <?php foreach ($logs as $entry): ?>
+            @foreach($logs as $entry)
                 <?php $badge = match ($entry['level']) {
                     'debug' => 'text-bg-light border', 'info' => 'text-bg-info', 'notice' => 'text-bg-primary',
                     'warning' => 'text-bg-warning', default => 'text-bg-danger',
@@ -173,15 +173,15 @@
                     <td><span class="badge <?= $badge ?>">{{ strtoupper($entry['level']) }}</span></td>
                     <td class="small">
                         <code class="text-body text-wrap" style="word-break: break-word;">{{ $entry['message'] }}</code>
-                        <?php if ($entry['details'] !== ''): ?>
+                        @if($entry['details'] !== '')
                             <details class="mt-1"><summary class="small text-secondary">Details</summary><pre class="small mb-0">{{ $entry['details'] }}</pre></details>
-                        <?php endif; ?>
+                        @endif
                     </td>
                 </tr>
-            <?php endforeach; ?>
-            <?php if (!$logs): ?>
+            @endforeach
+            @if(!$logs)
                 <tr><td colspan="3" class="text-secondary text-center py-3">No log entries yet today. Click "Write test entry" or try a wrong password on the login page.</td></tr>
-            <?php endif; ?>
+            @endif
             </tbody>
         </table>
     </div>

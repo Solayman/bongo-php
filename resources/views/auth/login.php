@@ -18,15 +18,15 @@
                 <p class="text-secondary small mb-0">Sign in to the admin dashboard</p>
             </div>
 
-            <?php if ($message = flash('success')): ?>
+            @if($message = flash('success'))
                 <div class="alert alert-success py-2 small">{{ $message }}</div>
-            <?php endif; ?>
-            <?php if ($message = flash('error')): ?>
+            @endif
+            @if($message = flash('error'))
                 <div class="alert alert-warning py-2 small">{{ $message }}</div>
-            <?php endif; ?>
+            @endif
 
             <form method="POST" action="<?= url('/login') ?>" novalidate>
-                <?= csrf_field() ?>
+                @csrf
                 <div class="mb-3">
                     <label for="email" class="form-label">Email</label>
                     <input type="email" id="email" name="email" value="{{ old('email') }}" autocomplete="username" autofocus
@@ -42,9 +42,9 @@
                 <button type="submit" class="btn btn-dark w-100">Sign in</button>
             </form>
 
-            <?php if (config('app.env') !== 'production'): ?>
+            @if(config('app.env') !== 'production')
                 <p class="text-secondary small text-center mt-3 mb-0">Demo login: admin@example.com / password</p>
-            <?php endif; ?>
+            @endif
         </div>
     </div>
 </div>

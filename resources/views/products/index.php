@@ -8,9 +8,9 @@
         <input type="search" name="q" value="{{ $filters['q'] ?? '' }}" class="form-control" placeholder="Search name or SKU" style="width: 220px;">
         <select name="category" class="form-select" style="width: 180px;">
             <option value="">All categories</option>
-            <?php foreach ($categories as $category): ?>
+            @foreach($categories as $category)
                 <option value="{{ $category->id }}" <?= (string) $filters['category'] === (string) $category->id ? 'selected' : '' ?>>{{ $category->name }}</option>
-            <?php endforeach; ?>
+            @endforeach
         </select>
         <select name="status" class="form-select" style="width: 140px;">
             <option value="">Any status</option>
@@ -29,7 +29,7 @@
                 <tr><th>Product</th><th>SKU</th><th>Category</th><th class="num">Price</th><th class="num">Stock</th><th>Status</th><th></th></tr>
             </thead>
             <tbody>
-            <?php foreach ($products['data'] as $product): ?>
+            @foreach($products['data'] as $product)
                 <tr>
                     <td class="fw-medium">{{ $product->name }}</td>
                     <td class="text-secondary small">{{ $product->sku }}</td>
@@ -43,16 +43,16 @@
                         <a href="<?= url('/products/' . $product->id . '/edit') ?>" class="btn btn-sm btn-outline-secondary">Edit</a>
                         <form method="POST" action="<?= route('products.destroy', ['id' => $product->id]) ?>" class="d-inline"
                               onsubmit="return confirm('Delete this product?');">
-                            <?= csrf_field() ?>
-                            <?= method_field('DELETE') ?>
+                            @csrf
+                            @method('DELETE')
                             <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
                         </form>
                     </td>
                 </tr>
-            <?php endforeach; ?>
-            <?php if (!$products['data']): ?>
+            @endforeach
+            @if(!$products['data'])
                 <tr><td colspan="7" class="text-center text-secondary py-4">No products found.</td></tr>
-            <?php endif; ?>
+            @endif
             </tbody>
         </table>
     </div>

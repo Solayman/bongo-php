@@ -107,6 +107,11 @@ class Runner
         $GLOBALS['config']['app']['env'] = 'testing';
         $GLOBALS['config']['logging']['path'] = BASE_PATH . '/storage/logs/testing';
         \System\Log\Logger::setInstance(null);
+
+        // Each run starts with an empty test log, so assertions only see this run's entries
+        foreach (glob(BASE_PATH . '/storage/logs/testing/*.log') ?: [] as $old) {
+            @unlink($old);
+        }
         $GLOBALS['config']['database']['connections'][$default]['database'] = $testDb;
     }
 

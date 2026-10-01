@@ -15,7 +15,7 @@
                 <tr><th>Customer</th><th>Phone</th><th class="num">Orders</th><th class="num">Total spent</th><th>Last order</th></tr>
             </thead>
             <tbody>
-            <?php foreach ($customers as $customer): ?>
+            @foreach($customers as $customer)
                 <tr>
                     <td>
                         <a href="<?= url('/customers/' . $customer['id']) ?>" class="fw-medium">{{ $customer['name'] }}</a>
@@ -26,10 +26,10 @@
                     <td class="num">{{ money($customer['total_spent']) }}</td>
                     <td class="small text-secondary"><?= $customer['last_order_at'] ? e(date('M j, Y', strtotime($customer['last_order_at']))) : '—' ?></td>
                 </tr>
-            <?php endforeach; ?>
-            <?php if (!$customers): ?>
+            @endforeach
+            @if(!$customers)
                 <tr><td colspan="5" class="text-center text-secondary py-4">No customers found.</td></tr>
-            <?php endif; ?>
+            @endif
             </tbody>
         </table>
     </div>
