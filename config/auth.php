@@ -11,6 +11,9 @@ return [
         'api' => ['driver' => 'jwt', 'provider' => 'users'],
     ],
 
+    // "Forgot password": which provider, and how long a reset link works (minutes)
+    'passwords' => ['provider' => 'users', 'expire' => 60],
+
     // Where users come from: a table plus optional fixed conditions
     'providers' => [
         'users' => ['table' => 'users'],

@@ -99,6 +99,8 @@ class Runner
             'APP_KEY'     => \System\Security\Key::generate(),
             'LOG_PATH'    => BASE_PATH . '/storage/logs/testing',
             'CACHE_PATH'  => BASE_PATH . '/storage/cache/testing',
+            'MAIL_DRIVER' => 'file',
+            'MAIL_PATH'   => BASE_PATH . '/storage/mail/testing',
         ];
         foreach ($overrides as $name => $value) {
             $_ENV[$name] = $value;
@@ -108,6 +110,12 @@ class Runner
         $GLOBALS['config']['app']['env'] = 'testing';
         $GLOBALS['config']['logging']['path'] = BASE_PATH . '/storage/logs/testing';
         $GLOBALS['config']['cache']['path'] = BASE_PATH . '/storage/cache/testing';
+        $GLOBALS['config']['mail']['driver'] = 'file';
+        $GLOBALS['config']['mail']['file_path'] = BASE_PATH . '/storage/mail/testing';
+        \System\Mail\Mail::setMailer(null);
+        foreach (glob(BASE_PATH . '/storage/mail/testing/*.json') ?: [] as $old) {
+            @unlink($old);
+        }
         \System\Cache\Cache::setStore(null);
         (new \System\Cache\FileStore(BASE_PATH . '/storage/cache/testing'))->flush();
         \System\Log\Logger::setInstance(null);
@@ -149,7 +157,7 @@ class Runner
         self::$baseUrl = "http://127.0.0.1:$port";
 
         $env = getenv() + [];
-        foreach (['APP_ENV', 'APP_DEBUG', 'DB_DATABASE', 'APP_KEY', 'LOG_PATH', 'CACHE_PATH'] as $name) {
+        foreach (['APP_ENV', 'APP_DEBUG', 'DB_DATABASE', 'APP_KEY', 'LOG_PATH', 'CACHE_PATH', 'MAIL_DRIVER', 'MAIL_PATH'] as $name) {
             $env[$name] = getenv($name);
         }
         $env['APP_URL'] = self::$baseUrl;

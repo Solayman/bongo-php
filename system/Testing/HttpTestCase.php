@@ -108,6 +108,20 @@ abstract class HttpTestCase extends TestCase
         return $response;
     }
 
+    /** Emails sent during the test run ("file" mail driver), newest last */
+    protected function sentMails(): array
+    {
+        $files = glob(BASE_PATH . '/storage/mail/testing/*.json') ?: [];
+        sort($files);
+        return array_map(fn($f) => json_decode((string) file_get_contents($f), true), $files);
+    }
+
+    protected function lastMail(): ?array
+    {
+        $mails = $this->sentMails();
+        return $mails ? end($mails) : null;
+    }
+
     protected function db(string $table)
     {
         return DB::table($table);

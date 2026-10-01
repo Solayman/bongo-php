@@ -40,6 +40,9 @@
                     <div class="invalid-feedback">{{ error('password') }}</div>
                 </div>
                 <button type="submit" class="btn btn-dark w-100">{{ __('Sign in') }}</button>
+                <div class="text-center mt-2">
+                    <a href="{{ route('password.request') }}" class="small">{{ __('Forgot your password?') }}</a>
+                </div>
             </form>
 
             <div class="text-center small mt-3">

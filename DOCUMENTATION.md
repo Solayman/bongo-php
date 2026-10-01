@@ -16,6 +16,7 @@ Built in:
 | Auth & security | Multiple guards (session, JWT) and providers, `auth:api` middleware, own HS256 JWT with refresh and revocation, peppered Argon2id passwords, AES-256-GCM encryption, login throttling |
 | Testing | `php bongo test`: unit + HTTP tests on a separate test database |
 | Debugging | `dump()`/`dd()` for browser, CLI and JSON; developer error page with source and stack trace; `php bongo tinker` |
+| Mail & events | Built-in SMTP client (TLS/SSL, AUTH), log and file drivers, HTML + text emails; `Event::listen/dispatch`; forgot-password flow with hashed single-use tokens |
 | Localization | `__()`, `trans_choice()`, JSON + group translation files, `?lang=` / session / `Accept-Language`, translated validation messages; English and বাংলা included |
 | Cache & rate limits | File cache (`Cache::remember`), `throttle:60,1` middleware with rate-limit headers, `RateLimiter` |
 | Container & DI | Service container (`app()`, `bind/singleton/instance`, autowiring), controller method injection, route model binding (`edit(Product $product)` → 404 if missing) |
@@ -104,7 +105,7 @@ resources/views/         Templates (dot notation: products.index → products/in
 lang/                    Translations: bn.json, bn/messages.php, ...
 storage/logs/            Log files (git-ignored)
 system/                  Framework core (namespace System\)
-  Auth/                  Auth (guards), SessionGuard, JwtGuard, UserProvider, LoginThrottle
+  Auth/                  Auth (guards), SessionGuard, JwtGuard, UserProvider, LoginThrottle, PasswordBroker
   Database/              Connection, DB (transactions, query log), QueryBuilder, Model, HasMany, BelongsTo, Migration, Migrator
   Database/Schema/       Schema, Blueprint, ColumnDefinition, Expression
   Cache/                 Cache, FileStore, RateLimiter
@@ -116,6 +117,8 @@ system/                  Framework core (namespace System\)
   Log/                   Logger, Log
   Routing/               Router, Route, RouteDefinition, PendingGroup
   Security/              Key, Hash, Crypt, Jwt
+  Events/                Event
+  Mail/                  Mail, Message, Mailer (smtp, log, file)
   Storage/               Storage (public uploads)
   Translation/           Translator, Lang
   Support/helpers.php    Framework helpers
@@ -830,6 +833,70 @@ $plain     = Crypt::decrypt($encrypted);           // needs the same APP_KEY; ta
 - **CSRF:** every state-changing form carries `csrf_field()`, and `csrf` middleware rejects missing or forged tokens with 419.
 
 In production, also serve the site over **HTTPS**, set `APP_ENV=production`, and keep `.env` outside version control (it's already git-ignored).
+
+---
+
+### Forgot password
+
+`/forgot-password` sends a reset link by email, and `/reset-password/{token}` sets the new password. Both use the framework's `System\Auth\PasswordBroker`:
+- **Hashed tokens:** each token is 64 random hex characters, and only its SHA-256 hash is stored, in `password_resets`.
+- **Single use, short-lived:** a link works once and expires after `auth.passwords.expire` minutes (default 60).
+- **No account discovery:** the same message is shown whether or not the email exists, and no email is sent for unknown addresses.
+- **Throttled:** 3 requests per email + IP per 15 minutes, plus `throttle:6,1` on the routes.
+- **Clean-up after reset:** the login lockout for that email is cleared, and `auth.password_reset` is dispatched (see Events) and logged.
+
+```php
+$broker = new System\Auth\PasswordBroker();
+$broker->sendResetLink($email);                       // RESET_LINK_SENT or THROTTLED
+$broker->reset($email, $token, $newPassword);         // PASSWORD_RESET or INVALID_TOKEN
+```
+
+---
+
+## 9a. Mail and events
+
+### Sending email
+
+```php
+use System\Mail\Mail;
+
+Mail::to('rahim@example.com', 'Rahim')
+    ->cc('boss@example.com')
+    ->subject('Your order has shipped')
+    ->view('emails.order-shipped', ['order' => $order])   // HTML; a plain-text copy is made automatically
+    ->send();
+
+Mail::to($email)->subject('Hi')->text('Plain text only')->send();
+```
+
+| `.env` | Default | |
+| --- | --- | --- |
+| `MAIL_DRIVER` | `log` | `log` writes emails to the log (development), `smtp` sends them for real, `file` writes JSON files to `storage/mail` |
+| `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | `no-reply@example.com`, `APP_NAME` | Sender |
+| `MAIL_HOST`, `MAIL_PORT` | `localhost`, `587` | SMTP server |
+| `MAIL_ENCRYPTION` | `tls` | `tls` (STARTTLS, port 587), `ssl` (port 465), or `none` |
+| `MAIL_USERNAME`, `MAIL_PASSWORD` | empty | SMTP login (AUTH LOGIN) |
+
+The SMTP client is built in, with no extensions or packages, and works with Gmail (an app password), Mailgun, SendGrid, Amazon SES, Mailtrap and others.
+- Messages are sent as UTF-8 `multipart/alternative`. Bangla names and subjects work.
+- Line breaks are stripped from subjects and addresses are validated, so headers can't be injected.
+- `php bongo test` uses the `file` driver, and tests read emails with `$this->lastMail()` and `$this->sentMails()`.
+
+### Events
+
+```php
+use System\Events\Event;
+
+Event::listen('order.shipped', fn($order) => Mail::to($order->email)->subject('Shipped!')->text('...')->send());
+Event::listen(OrderShipped::class, [NotifyWarehouse::class, 'handle']);   // or 'NotifyWarehouse@handle'
+
+Event::dispatch('order.shipped', $order);
+Event::dispatch(new OrderShipped($order));   // object events: listeners for its class receive it
+```
+
+- Listeners run in order, and one returning `false` stops the rest.
+- Listener parameters are filled by the container, so you can also type-hint services.
+- The framework dispatches `auth.password_reset_requested` and `auth.password_reset`.
 
 ---
 

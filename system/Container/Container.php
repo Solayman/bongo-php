@@ -172,7 +172,18 @@ class Container
             }
 
             if ($class !== null) {
-                $args[] = ($found && $value instanceof $class) ? $value : $this->make($class);
+                if (!($found && $value instanceof $class)) {
+                    // An object passed in (e.g. an event) fills a parameter of its type
+                    $found = false;
+                    foreach ($given as $key => $candidate) {
+                        if (!in_array($key, $usedNames, true) && $candidate instanceof $class) {
+                            $usedNames[] = $key;
+                            [$found, $value] = [true, $candidate];
+                            break;
+                        }
+                    }
+                }
+                $args[] = $found ? $value : $this->make($class);
                 continue;
             }
 
