@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@set('title', 'Orders')
+@set('title', __('Orders'))
 
 @section('content')
 <form method="GET" action="<?= url('/orders') ?>" class="d-flex flex-wrap gap-2 mb-3">

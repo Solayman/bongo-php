@@ -12,6 +12,6 @@
 @endif
 @if(errors())
     <div class="alert alert-danger" role="alert">
-        <i class="bi bi-exclamation-triangle me-1"></i>Please fix the highlighted fields.
+        <i class="bi bi-exclamation-triangle me-1"></i>{{ __('Please fix the highlighted fields.') }}
     </div>
 @endif

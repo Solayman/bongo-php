@@ -16,6 +16,7 @@ Built in:
 | Auth & security | Multiple guards (session, JWT) and providers, `auth:api` middleware, own HS256 JWT with refresh and revocation, peppered Argon2id passwords, AES-256-GCM encryption, login throttling |
 | Testing | `php bongo test`: unit + HTTP tests on a separate test database |
 | Debugging | `dump()`/`dd()` for browser, CLI and JSON; developer error page with source and stack trace; `php bongo tinker` |
+| Localization | `__()`, `trans_choice()`, JSON + group translation files, `?lang=` / session / `Accept-Language`, translated validation messages; English and বাংলা included |
 | Cache & rate limits | File cache (`Cache::remember`), `throttle:60,1` middleware with rate-limit headers, `RateLimiter` |
 | Container & DI | Service container (`app()`, `bind/singleton/instance`, autowiring), controller method injection, route model binding (`edit(Product $product)` → 404 if missing) |
 | Generators | `make:controller [--api]`, `make:model [--migration]`, `make:middleware`, `make:test [--unit]`, `make:migration` |
@@ -100,6 +101,7 @@ database/
   migrations/            PHP migrations (tracked in the `migrations` table)
   seeders/DatabaseSeeder.php
 resources/views/         Templates (dot notation: products.index → products/index.php)
+lang/                    Translations: bn.json, bn/messages.php, ...
 storage/logs/            Log files (git-ignored)
 system/                  Framework core (namespace System\)
   Auth/                  Auth (guards), SessionGuard, JwtGuard, UserProvider, LoginThrottle
@@ -110,11 +112,12 @@ system/                  Framework core (namespace System\)
   Container/             Container (DI, autowiring, method injection, model binding)
   Debug/                 Dumper (dump/dd), ExceptionPage (debug error page)
   Http/                  Request, Session, UploadedFile, HttpException, ErrorPage
-  Http/Middleware/       Cors, SecurityHeaders, StartSession, ThrottleRequests
+  Http/Middleware/       Cors, SecurityHeaders, StartSession, SetLocale, ThrottleRequests
   Log/                   Logger, Log
   Routing/               Router, Route, RouteDefinition, PendingGroup
   Security/              Key, Hash, Crypt, Jwt
   Storage/               Storage (public uploads)
+  Translation/           Translator, Lang
   Support/helpers.php    Framework helpers
   Testing/               TestCase, HttpTestCase, TestResponse, Runner
   Validation/Validator.php
@@ -231,7 +234,7 @@ A middleware is a class with `handle(...$params): void`. To stop the request it 
     'cors'  => System\Http\Middleware\Cors::class,
 ],
 'middleware_groups' => [                // named sets
-    'web' => ['session', 'csrf'],
+    'web' => ['session', 'locale', 'csrf'],
     'api' => ['cors', 'throttle:60,1'],
 ],
 'middleware_global' => [                // every request, before routing
@@ -830,6 +833,52 @@ In production, also serve the site over **HTTPS**, set `APP_ENV=production`, and
 
 ---
 
+## 9b. Localization (English / বাংলা)
+
+### Translating text
+
+```php
+__('Sign in')                                        // "সাইন ইন" when the locale is bn
+__('Welcome back, :name!', ['name' => $user->name])  // :name, :Name (capitalized), :NAME (upper case)
+__('messages.app.tagline')                           // group file: lang/bn/messages.php
+trans_choice('{0} No orders|{1} One order|[2,*] :count orders', $count)
+trans_choice('apple|apples', $count)                 // simple singular|plural
+locale();                                            // "en" or "bn"
+```
+
+In templates, write `{{ __('Orders') }}` and `@set('title', __('Products'))`.
+
+Translations live in `lang/`:
+
+| File | Keys | Example |
+| --- | --- | --- |
+| `lang/bn.json` | The English sentence itself | `{"Sign in": "সাইন ইন"}` |
+| `lang/bn/messages.php` | Dot-separated group keys | `return ['app' => ['tagline' => '…']];` → `__('messages.app.tagline')` |
+
+If a translation is missing in the current language, the fallback language (`fallback_locale`, English) is used, and then the key itself. So untranslated text still shows in English.
+
+### Choosing the language
+
+`config/app.php`:
+
+```php
+'locale'          => env('APP_LOCALE', 'en'),   // default
+'fallback_locale' => 'en',
+'locales'         => ['en' => 'English', 'bn' => 'বাংলা'],   // what users may pick
+```
+
+The `locale` middleware (part of the `web` group) picks the language for each request in this order:
+1. `?lang=bn` in the URL, which is remembered in the session.
+2. The language saved in the session.
+3. The browser's `Accept-Language` header.
+4. `APP_LOCALE`.
+
+Unsupported codes are ignored. The admin top bar and the login page have a language switch, and `<html lang="…">` follows the locale.
+
+**Validation messages are translated as well.** Every rule's message is a template such as `"The :attribute must be at least :param characters."`, so `lang/bn.json` translates it once for every field. Field names are translated too (`"email": "ইমেইল"`). To add a language, add its code to `locales` and create `lang/{code}.json`.
+
+---
+
 ## 10. Cache and rate limiting
 
 ### Cache
@@ -1000,6 +1049,7 @@ Generators never overwrite an existing file. New migrations always sort after th
 | `app()`, `app(Class::class)` | The service container / resolve a class |
 | `abort(404, 'msg')` | Stop with an HTTP error page |
 | `response($data, 'json', 200)` | JSON or HTML response and stop |
+| `__('text', [...])`, `trans_choice()`, `locale()` | Translation |
 | `e($value)` | HTML-escape |
 | `money($n)`, `is_active('/prefix')` | Formatting and nav helpers |
 | `base_path('x')` | Absolute project path |

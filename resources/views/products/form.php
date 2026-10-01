@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@set('title', 'Product')
+@set('title', __('Product'))
 
 @section('content')
 <?php

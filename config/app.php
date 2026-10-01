@@ -8,6 +8,11 @@ return [
     // Used by PHP dates, log timestamps and the MySQL session (e.g. Asia/Dhaka)
     'timezone' => env('APP_TIMEZONE', 'UTC'),
 
+    // Languages: default, fallback for missing text, and the ones users may choose (code => name)
+    'locale'          => env('APP_LOCALE', 'en'),
+    'fallback_locale' => 'en',
+    'locales'         => ['en' => 'English', 'bn' => 'বাংলা'],
+
     // Route files: each is loaded inside a group with its prefix and middleware
     'routes' => [
         'web' => ['file' => 'routes/web.php', 'middleware' => ['web']],
@@ -22,11 +27,12 @@ return [
         'cors'    => System\Http\Middleware\Cors::class,
         'session'  => System\Http\Middleware\StartSession::class,
         'throttle' => System\Http\Middleware\ThrottleRequests::class,
+        'locale'   => System\Http\Middleware\SetLocale::class,
     ],
 
     // Named sets of middleware
     'middleware_groups' => [
-        'web' => ['session', 'csrf'],
+        'web' => ['session', 'locale', 'csrf'],
         'api' => ['cors', 'throttle:' . env('API_RATE_LIMIT', 60) . ',1'],
     ],
 

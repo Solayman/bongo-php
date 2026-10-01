@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@set('title', 'Customers')
+@set('title', __('Customers'))
 
 @section('content')
 <form method="GET" action="<?= url('/customers') ?>" class="d-flex gap-2 mb-3">

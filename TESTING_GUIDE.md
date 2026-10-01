@@ -55,6 +55,17 @@ Use any HTTP client (curl, Postman, Insomnia):
 
 | 1b.11 | Call `GET /api/health` 61 times within a minute (e.g. a loop in a shell) | Responses 1–60 have `X-RateLimit-Remaining` counting down; the 61st is `429` with `Retry-After` |
 
+## 1c. Language (English / বাংলা)
+
+| # | Do this | You should see |
+| --- | --- | --- |
+| 1c.1 | On the login page, click **বাংলা** | The page switches to Bangla: "সাইন ইন", "ইমেইল", "পাসওয়ার্ড" |
+| 1c.2 | Submit the empty form | "ইমেইল দেওয়া আবশ্যক।" and "পাসওয়ার্ড দেওয়া আবশ্যক।" |
+| 1c.3 | Sign in | "আবার স্বাগতম, Admin!", and the dashboard and sidebar in Bangla |
+| 1c.4 | Open another page | Still Bangla (remembered in the session) |
+| 1c.5 | Top bar → language menu → **English** | Back to English |
+| 1c.6 | Sign out, set the browser's preferred language to Bangla, then open the login page | Bangla, chosen from `Accept-Language` |
+
 ## 2. CSRF protection
 
 | # | Do this | You should see |
