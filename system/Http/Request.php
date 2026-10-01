@@ -3,9 +3,54 @@ namespace System\Http;
 
 class Request
 {
+    /**
+     * HTTP method. HTML forms can only send GET/POST, so a POST may carry
+     * _method=PUT|PATCH|DELETE (or the X-HTTP-Method-Override header).
+     */
     public static function method(): string
     {
+        $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+
+        if ($method === 'POST') {
+            $override = strtoupper((string) ($_POST['_method'] ?? $_SERVER['HTTP_X_HTTP_METHOD_OVERRIDE'] ?? ''));
+            if (in_array($override, ['PUT', 'PATCH', 'DELETE'], true)) {
+                return $override;
+            }
+        }
+
+        return $method;
+    }
+
+    /** The method the client really sent, ignoring _method */
+    public static function realMethod(): string
+    {
         return strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+    }
+
+    public static function header(string $name, ?string $default = null): ?string
+    {
+        $key = 'HTTP_' . strtoupper(str_replace('-', '_', $name));
+        return $_SERVER[$key] ?? ($name === 'Content-Type' ? ($_SERVER['CONTENT_TYPE'] ?? $default) : $default);
+    }
+
+    /** True when the client wants JSON (Accept header, an AJAX call, or a JSON body) */
+    public static function wantsJson(): bool
+    {
+        $accept = (string) self::header('Accept', '');
+        return str_contains($accept, '/json') || str_contains($accept, '+json')
+            || self::header('X-Requested-With') === 'XMLHttpRequest'
+            || str_starts_with(self::path(), '/api/') || self::path() === '/api';
+    }
+
+    /** Decoded JSON body ([] if none or invalid) */
+    public static function json(): array
+    {
+        static $json = null;
+        if ($json === null) {
+            $type = (string) self::header('Content-Type', '');
+            $json = str_contains($type, 'json') ? (json_decode((string) file_get_contents('php://input'), true) ?: []) : [];
+        }
+        return $json;
     }
 
     public static function isPost(): bool
@@ -28,15 +73,12 @@ class Request
         return '/' . trim($uri, '/');
     }
 
-    /**
-     * All input ($_GET merged with $_POST), strings trimmed
-     */
+    /** All input: query string, form fields and a JSON body; strings trimmed */
     public static function all(): array
     {
-        return array_map(
-            fn($v) => is_string($v) ? trim($v) : $v,
-            array_merge($_GET, $_POST)
-        );
+        $input = array_merge($_GET, $_POST, self::json());
+        unset($input['_method']);
+        return array_map(fn($v) => is_string($v) ? trim($v) : $v, $input);
     }
 
     public static function input(string $key, $default = null)

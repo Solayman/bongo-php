@@ -10,8 +10,9 @@
         {{ $order->order_number }}
         <span class="badge <?= App\Models\Order::badge($order->status) ?> align-middle fs-6">{{ ucfirst($order->status) }}</span>
     </h2>
-    <form method="POST" action="<?= url('/orders/' . $order->id . '/status') ?>" class="d-flex gap-2">
+    <form method="POST" action="<?= route('orders.status', ['id' => $order->id]) ?>" class="d-flex gap-2">
         <?= csrf_field() ?>
+        <?= method_field('PATCH') ?>
         <select name="status" class="form-select" aria-label="Order status">
             <?php foreach ($statuses as $status): ?>
                 <option value="{{ $status }}" <?= $order->status === $status ? 'selected' : '' ?>>{{ ucfirst($status) }}</option>

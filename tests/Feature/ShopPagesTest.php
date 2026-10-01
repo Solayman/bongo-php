@@ -48,10 +48,10 @@ class ShopPagesTest extends HttpTestCase
         $this->submit('/categories', '/categories', ['name' => 'Toys & Games']);
         $this->assertSame(1, $this->db('categories')->where('slug', 'toys-games-2')->count());
 
-        $this->submit("/categories/{$category->id}/edit", "/categories/{$category->id}", ['name' => 'Toys'])->assertRedirect('/categories');
+        $this->submit("/categories/{$category->id}/edit", "/categories/{$category->id}", ['_method' => 'PUT', 'name' => 'Toys'])->assertRedirect('/categories');
         $this->assertSame('toys', $this->db('categories')->where('id', $category->id)->first()->slug);
 
-        $this->submit('/categories', "/categories/{$category->id}/delete")->assertRedirect('/categories');
+        $this->submit('/categories', "/categories/{$category->id}", ['_method' => 'DELETE'])->assertRedirect('/categories');
         $this->assertNull($this->db('categories')->where('id', $category->id)->first());
     }
 
@@ -61,18 +61,18 @@ class ShopPagesTest extends HttpTestCase
         $id = $this->db('categories')->insertGetId(['name' => 'Temp', 'slug' => 'temp-pages']);
         $this->db('products')->insert(['category_id' => $id, 'name' => 'Orphan', 'sku' => 'ORPH-1', 'price' => 1, 'stock' => 1]);
 
-        $this->submit('/categories', "/categories/$id/delete");
+        $this->submit('/categories', "/categories/$id", ['_method' => 'DELETE']);
         $this->assertSame($before + 1, $this->db('products')->count());
         $this->assertNull($this->db('products')->where('sku', 'ORPH-1')->first()->category_id);
     }
 
     public function testOrderStatusUpdate(): void
     {
-        $this->submit('/orders/1', '/orders/1/status', ['status' => 'shipped'])->assertRedirect('/orders/1');
+        $this->submit('/orders/1', '/orders/1/status', ['_method' => 'PATCH', 'status' => 'shipped'])->assertRedirect('/orders/1');
         $this->assertSame('shipped', $this->db('orders')->where('id', 1)->first()->status);
         $this->get('/orders/1')->assertSee('marked as shipped');
 
-        $this->submit('/orders/1', '/orders/1/status', ['status' => 'teleported']);
+        $this->submit('/orders/1', '/orders/1/status', ['_method' => 'PATCH', 'status' => 'teleported']);
         $this->assertSame('shipped', $this->db('orders')->where('id', 1)->first()->status);
     }
 
@@ -85,23 +85,23 @@ class ShopPagesTest extends HttpTestCase
 
     public function testProfileAndPasswordChange(): void
     {
-        $this->submit('/profile', '/profile', ['name' => 'Chief Admin', 'email' => 'admin@example.com', 'phone' => '123'])->assertRedirect('/profile');
+        $this->submit('/profile', '/profile', ['_method' => 'PUT', 'name' => 'Chief Admin', 'email' => 'admin@example.com', 'phone' => '123'])->assertRedirect('/profile');
         $this->get('/profile')->assertSee('Profile updated.')->assertSee('Chief Admin');
 
         // Email must stay unique
-        $this->submit('/profile', '/profile', ['name' => 'Chief Admin', 'email' => 'rahim1@example.com']);
+        $this->submit('/profile', '/profile', ['_method' => 'PUT', 'name' => 'Chief Admin', 'email' => 'rahim1@example.com']);
         $this->get('/profile')->assertSee('The email has already been taken.');
 
         // Wrong current password
-        $this->submit('/profile', '/profile/password', ['current_password' => 'nope', 'password' => 'newpassword1', 'password_confirmation' => 'newpassword1']);
+        $this->submit('/profile', '/profile/password', ['_method' => 'PUT', 'current_password' => 'nope', 'password' => 'newpassword1', 'password_confirmation' => 'newpassword1']);
         $this->get('/profile')->assertSee('The current password is incorrect.');
 
         // Change, log out, log back in with the new password, then restore it
-        $this->submit('/profile', '/profile/password', ['current_password' => 'password', 'password' => 'newpassword1', 'password_confirmation' => 'newpassword1'])
+        $this->submit('/profile', '/profile/password', ['_method' => 'PUT', 'current_password' => 'password', 'password' => 'newpassword1', 'password_confirmation' => 'newpassword1'])
             ->assertRedirect('/profile');
         $this->submit('/', '/logout');
         $this->submit('/login', '/login', ['email' => 'admin@example.com', 'password' => 'newpassword1'])->assertRedirect('/');
-        $this->submit('/profile', '/profile/password', ['current_password' => 'newpassword1', 'password' => 'password', 'password_confirmation' => 'password']);
+        $this->submit('/profile', '/profile/password', ['_method' => 'PUT', 'current_password' => 'newpassword1', 'password' => 'password', 'password_confirmation' => 'password']);
         $this->db('users')->where('id', 1)->update(['name' => 'Admin', 'phone' => null]);
     }
 

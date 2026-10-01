@@ -49,8 +49,19 @@ Login: **admin@example.com / password**
 | --- | --- | --- |
 | 3.1 | Open `/does-not-exist` | **404 · Page Not Found** page |
 | 3.2 | Open `/products/999999/edit` | 404 with "Product not found" |
-| 3.3 | Type `/products/1/delete` in the address bar (a GET request) | **405 · Method Not Allowed**, and nothing is deleted |
+| 3.3 | Type `/products/1` in the address bar (a GET request to a PUT/DELETE-only URL) | **405 · Method Not Allowed**, and nothing changes |
 | 3.4 | Open `/orders/1` | Order detail. The `{id}` route parameter works. |
+
+## 3b. Routes, API, CORS, headers
+
+| # | Do this | You should see |
+| --- | --- | --- |
+| 3b.1 | `php bongo route:list` | Every route with method, path, name, action and middleware |
+| 3b.2 | Open `/api/health` | JSON: `{"status":"ok", ...}` |
+| 3b.3 | Open `/api/nope` | JSON error `{"error":{"status":404,...}}`, not an HTML page |
+| 3b.4 | Dev tools → Network → any page → Response headers | `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy`; **no** `X-Powered-By` |
+| 3b.5 | `curl -i -X OPTIONS -H "Origin: https://x.com" http://127.0.0.1:8000/api/health` | `204` with `Access-Control-Allow-Origin` and `Access-Control-Allow-Methods` |
+| 3b.6 | Delete a product from the list | Works. In dev tools the form posts `_method=DELETE` to `/products/{id}`. |
 
 ## 4. Forms, validation, flash messages
 

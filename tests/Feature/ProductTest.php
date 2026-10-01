@@ -43,7 +43,7 @@ class ProductTest extends HttpTestCase
         $this->assertNull($product->category_id);
         $this->get('/products')->assertSee('Product &quot;Test Kettle&quot; created.');
 
-        $this->submit("/products/{$product->id}/edit", "/products/{$product->id}", [
+        $this->submit("/products/{$product->id}/edit", "/products/{$product->id}", ['_method' => 'PUT',
             'name' => 'Test Kettle XL', 'sku' => 'TST-1', 'category_id' => '1', 'price' => '24.00',
             'stock' => '3', 'status' => 'draft', 'description' => '',
         ])->assertRedirect('/products');
@@ -53,7 +53,7 @@ class ProductTest extends HttpTestCase
         $this->assertSame('draft', $updated->status);
         $this->assertEquals(1, $updated->category_id);
 
-        $this->submit('/products', "/products/{$product->id}/delete")->assertRedirect('/products');
+        $this->submit('/products', "/products/{$product->id}", ['_method' => 'DELETE'])->assertRedirect('/products');
         $this->assertNull($this->db('products')->where('id', $product->id)->first());
     }
 
@@ -64,7 +64,7 @@ class ProductTest extends HttpTestCase
 
     public function testDeleteRequiresPost(): void
     {
-        $this->get('/products/1/delete')->assertStatus(405);
+        $this->get('/products/1')->assertStatus(405);
         $this->assertSame('BG-1000', $this->db('products')->where('id', 1)->first()->sku, 'GET must not delete');
     }
 }

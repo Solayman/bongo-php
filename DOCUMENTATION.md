@@ -6,8 +6,8 @@ Built in:
 
 | Area | What you get |
 | --- | --- |
-| Routing | `'GET /products/{id}' => [Controller, method, [middleware]]`, 404/405 handling |
-| Middleware | `auth`, `guest`, `csrf` (and your own) |
+| Routing | `Route::get/post/put/patch/delete/any/match`, groups, named routes, multiple route files (`web.php`, `api.php`), method spoofing, 404/405 |
+| Middleware | Aliases, groups (`web`, `api`), global stack, parameters (`role:admin`); built-in `auth`, `guest`, `csrf`, `cors`, security headers |
 | Views | Template directives: `@extends`, `@section`, `@yield`, `@set`, `@include`, `{{ }}`, `{!! !!}` |
 | Database | PDO query builder, models, pagination, aggregates, joins |
 | Schema & migrations | PHP migrations with a schema builder; each run is tracked in the database; rollback |
@@ -16,7 +16,7 @@ Built in:
 | Auth & security | Login/logout, peppered Argon2id password hashes, AES-256-GCM encryption keyed by `APP_KEY`, login throttling |
 | Testing | `php bongo test`: unit + HTTP tests on a separate test database |
 | Logging | Built-in daily log files in `storage/logs`, levels, secret masking; framework events logged automatically |
-| CLI | `php bongo serve / migrate / migrate:status / migrate:rollback / make:migration / db:seed / key:generate / log:clear / test` |
+| CLI | `php bongo serve / route:list / migrate / migrate:status / migrate:rollback / make:migration / db:seed / key:generate / log:clear / test` |
 
 The repository currently includes an **e-commerce admin panel** (products, categories, orders, customers). It is the test application used to exercise the framework end to end, and it will be removed later so the framework ships fresh.
 
@@ -85,7 +85,8 @@ config/
 public/
   index.php              Front controller: Router + error handling
   asset/                 CSS / JS
-routes/web.php           Route table
+routes/web.php           Web routes (sessions + CSRF)
+routes/api.php           API routes (/api prefix, CORS, JSON)
 app/                     Application code (namespace App\)
   Http/Controllers/      Controllers
   Http/Middleware/       Authenticate, RedirectIfAuthenticated, VerifyCsrfToken
@@ -101,8 +102,9 @@ system/                  Framework core (namespace System\)
   Database/              Connection, DB, QueryBuilder, Model, Migration, Migrator
   Database/Schema/       Schema, Blueprint, ColumnDefinition, Expression
   Http/                  Request, Session, HttpException, ErrorPage
+  Http/Middleware/       Cors, SecurityHeaders
   Log/                   Logger, Log
-  Routing/Router.php
+  Routing/               Router, Route, RouteDefinition, PendingGroup
   Security/              Key, Hash, Crypt
   Support/helpers.php    Framework helpers
   Testing/               TestCase, HttpTestCase, TestResponse, Runner
@@ -132,35 +134,164 @@ flowchart TD
 
 ---
 
-## 5. Routing and middleware
+## 5. Routing, middleware, CORS and CSRF
+
+### Route files
+
+Route files are listed in `config/app.php`. Each one is loaded inside its own group:
 
 ```php
-// routes/web.php
-$admin = ['auth', 'csrf'];
-
-return [
-    'GET /products'              => ['ProductController', 'index', $admin],
-    'POST /products'             => ['ProductController', 'store', $admin],
-    'GET /products/{id}/edit'    => ['ProductController', 'edit', $admin],
-    'POST /products/{id}'        => ['ProductController', 'update', $admin],
-    'POST /products/{id}/delete' => ['ProductController', 'destroy', $admin],
-];
+'routes' => [
+    'web' => ['file' => 'routes/web.php', 'middleware' => ['web']],
+    'api' => ['file' => 'routes/api.php', 'prefix' => '/api', 'middleware' => ['api'], 'name' => 'api.'],
+],
 ```
 
-- Methods: `GET`, `POST`, `ANY`. A key with no method means `ANY`.
-- `{name}` matches one path segment. Values are passed to the controller method in order: `edit($id)`.
-- A path that matches with the wrong method returns **405**. No match returns **404**.
-- Delete/update actions use `POST` forms. A `GET` request can never change data.
-- The last page shown with `GET` is remembered in the session, so `back()` works without a `Referer` header.
+Add more files (e.g. `routes/admin.php`) the same way.
 
-**Middleware** are classes with a `handle(): void` method. They either return or stop the request with `redirect()` or an exception. Register an alias in `config/app.php`:
+### Declaring routes
 
 ```php
-'middleware' => [
-    'auth'  => App\Http\Middleware\Authenticate::class,            // not logged in → /login (remembers the page)
-    'guest' => App\Http\Middleware\RedirectIfAuthenticated::class, // logged in → /
-    'csrf'  => App\Http\Middleware\VerifyCsrfToken::class,         // POST without a valid _token → 419
+use App\Http\Controllers\ProductController;
+use System\Routing\Route;
+
+Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+Route::post('/products', [ProductController::class, 'store'])->name('products.store');
+Route::get('/products/{id}/edit', [ProductController::class, 'edit'])->name('products.edit')->where('id', '\d+');
+Route::put('/products/{id}', [ProductController::class, 'update'])->name('products.update');
+Route::patch('/orders/{id}/status', [OrderController::class, 'updateStatus']);
+Route::delete('/products/{id}', [ProductController::class, 'destroy'])->name('products.destroy');
+Route::options('/ping', fn() => 'pong');
+Route::any('/webhook', [WebhookController::class, 'handle']);            // every method
+Route::match(['GET', 'POST'], '/search', [SearchController::class, 'run']);
+
+Route::get('/posts/{page?}', [PostController::class, 'index']);         // optional parameter
+Route::get('/hello/{name}', fn($name) => "Hello $name");                // closure action
+Route::get('/api/status', fn() => ['ok' => true]);                      // returning an array sends JSON
+```
+
+- **Actions:** `[Controller::class, 'method']` with an imported class, `['ProductController', 'index']` (short names resolve to `App\Http\Controllers\`), or a closure.
+- **Parameters:** values are passed to the method in order: `edit($id)`. `->where('id', '\d+')` restricts a parameter with a regex.
+- **Responses:** an action can `echo`, or return a string (HTML) or an array (JSON).
+- **`GET` routes also answer `HEAD`.** A matching path with the wrong method returns **405** with an `Allow` header; no match returns **404**.
+
+### Groups
+
+```php
+Route::prefix('/admin')->name('admin.')->middleware('auth')->group(function () {
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports');   // /admin/reports, "admin.reports"
+});
+
+Route::group(['prefix' => '/v1', 'middleware' => ['auth'], 'name' => 'v1.'], function () { /* ... */ });
+```
+
+Groups nest: prefixes join, middleware adds up, name prefixes concatenate.
+
+### Named routes and URLs
+
+```php
+route('products.edit', ['id' => 5]);                 // http://127.0.0.1:8000/products/5/edit
+route('admin.reports', ['year' => 2026, 'q' => 'x']); // unused parameters become ?q=x
+route('/plain/path');                                 // a path still works
+```
+
+### HTML forms: PUT, PATCH, DELETE
+
+Browsers only send GET and POST, so forms add a hidden `_method` field:
+
+```php
+<form method="POST" action="<?= route('products.destroy', ['id' => $product->id]) ?>">
+    <?= csrf_field() ?>
+    <?= method_field('DELETE') ?>
+    <button>Delete</button>
+</form>
+```
+
+API clients can send real `PUT`/`PATCH`/`DELETE` requests, or a POST with the `X-HTTP-Method-Override` header.
+
+### Middleware
+
+A middleware is a class with `handle(...$params): void`. To stop the request it calls `redirect()`, `abort()` or `response()`; otherwise the request continues.
+
+```php
+// config/app.php
+'middleware' => [                       // aliases
+    'auth'  => App\Http\Middleware\Authenticate::class,
+    'guest' => App\Http\Middleware\RedirectIfAuthenticated::class,
+    'csrf'  => App\Http\Middleware\VerifyCsrfToken::class,
+    'cors'  => System\Http\Middleware\Cors::class,
 ],
+'middleware_groups' => [                // named sets
+    'web' => ['csrf'],
+    'api' => ['cors'],
+],
+'middleware_global' => [                // every request, before routing
+    System\Http\Middleware\SecurityHeaders::class,
+],
+```
+
+On routes:
+- **Attach:** `->middleware('auth')`, `->middleware('auth', 'csrf')`, or a class name directly.
+- **Parameters:** `->middleware('role:admin,editor')` calls `handle('admin', 'editor')`.
+- **Skip:** `->withoutMiddleware('csrf')` drops one that a group added.
+
+`php bongo route:list [filter]` prints every route with its methods, name, action and the middleware that really runs:
+
+```
+Method  Path                Name              Action                     Middleware
+GET     /products/{id}/edit products.edit     ProductController@edit     VerifyCsrfToken, Authenticate
+DELETE  /products/{id}      products.destroy  ProductController@destroy  VerifyCsrfToken, Authenticate
+GET     /api/health         api.health        Closure                    Cors
+```
+
+### CSRF protection
+
+The `web` group runs `csrf` on every route:
+- Any request that isn't GET, HEAD or OPTIONS must carry the session's token, either as the `_token` form field (`csrf_field()`) or the `X-CSRF-TOKEN` header.
+- Missing or wrong tokens get **419** and are logged as a warning.
+- For JavaScript, put `<meta name="csrf-token" content="<?= e(csrf_token()) ?>">` in the page and send it as `X-CSRF-TOKEN`.
+
+API routes (`api` group) have no CSRF check because they don't use the session.
+
+### CORS
+
+The `api` group runs `cors` with the settings in `config/cors.php`:
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `allowed_origins` | `*` (`CORS_ALLOWED_ORIGINS`, comma-separated) | Which sites may call the API from a browser |
+| `allowed_methods` | GET, POST, PUT, PATCH, DELETE, OPTIONS | Methods announced to the browser |
+| `allowed_headers` | Content-Type, Authorization, X-Requested-With, X-CSRF-TOKEN, Accept | Request headers the browser may send |
+| `exposed_headers` | none | Response headers JavaScript may read |
+| `supports_credentials` | `false` (`CORS_CREDENTIALS`) | Allow cookies or `Authorization` across origins. The origin is then echoed back, because browsers reject `*` with credentials. |
+| `max_age` | 600 | Seconds a browser may cache the preflight answer |
+
+`OPTIONS` preflight requests are answered automatically with **204** and the CORS headers. Origins that aren't allowed get no CORS headers, so the browser blocks them.
+
+### Security headers
+
+`SecurityHeaders` runs on every response:
+- `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy: strict-origin-when-cross-origin`, and a restrictive `Permissions-Policy`.
+- `Strict-Transport-Security` when the site runs over HTTPS.
+- `X-Powered-By` is removed.
+
+### Errors for API clients
+
+When a request wants JSON (`Accept: application/json`, an AJAX header, or any `/api/...` path), errors are JSON instead of HTML:
+
+```json
+{"error": {"status": 404, "message": "Page Not Found"}}
+```
+
+### Legacy array routes
+
+Route files may still `return` an array, so existing projects keep working:
+
+```php
+return [
+    'GET /products'      => ['ProductController', 'index', ['auth']],
+    'GET|POST /search'   => ['SearchController', 'run'],
+];
 ```
 
 ---
@@ -441,12 +572,13 @@ Tests write to `storage/logs/testing/` instead, so they never mix with your app'
 | --- | --- |
 | `env($key, $default)` | `.env` value (`true`/`false`/`null` converted) |
 | `config('app.name')` | Config by dot notation (every `config/*.php` file is loaded) |
-| `url('/path')`, `route('/path')`, `asset('asset/x.css')` | Absolute URLs from `APP_URL` |
+| `url('/path')`, `asset('asset/x.css')` | Absolute URLs from `APP_URL` |
+| `route('name', [params])` | URL of a named route (a `/path` also works) |
 | `view($name, $data)` | Render a view to a string |
 | `request()`, `request('key')` | Input |
 | `session('key')`, `flash('key', 'msg')`, `flash('key')` | Session and flash messages |
 | `old('field', $default)`, `error('field')`, `errors()` | Form state after validation |
-| `csrf_token()`, `csrf_field()` | CSRF |
+| `csrf_token()`, `csrf_field()`, `method_field('DELETE')` | CSRF token and method spoofing for forms |
 | `auth()` | Logged-in user or `null` |
 | `redirect($url)`, `back()` | Redirect and stop |
 | `abort(404, 'msg')` | Stop with an HTTP error page |

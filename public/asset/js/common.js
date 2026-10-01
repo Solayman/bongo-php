@@ -11,7 +11,10 @@ async function run(action) {
     try {
         const resText = await fetch(ajaxUrl, {
             method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') || {}).content || ''
+            },
             body: 'action=' + encodeURIComponent(action) + '&panel=' + encodeURIComponent(panel)
         }).then(r => r.text());
 

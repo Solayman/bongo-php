@@ -32,8 +32,16 @@ if (!function_exists('url')) {
 }
 
 if (!function_exists('route')) {
-    function route($path) {
-        return url($path);
+    /**
+     * URL of a named route: route('products.edit', ['id' => 5]).
+     * A path still works too: route('/products').
+     */
+    function route(string $nameOrPath, array $params = []) {
+        $router = \System\Routing\Router::current();
+        if (!str_starts_with($nameOrPath, '/') && $router && $router->has($nameOrPath)) {
+            return url($router->url($nameOrPath, $params));
+        }
+        return url($nameOrPath);
     }
 }
 
@@ -102,6 +110,13 @@ if (!function_exists('csrf_token')) {
 if (!function_exists('csrf_field')) {
     function csrf_field() {
         return '<input type="hidden" name="_token" value="' . e(csrf_token()) . '">';
+    }
+}
+
+if (!function_exists('method_field')) {
+    /** Hidden _method field so an HTML form can send PUT, PATCH or DELETE */
+    function method_field(string $method) {
+        return '<input type="hidden" name="_method" value="' . e(strtoupper($method)) . '">';
     }
 }
 

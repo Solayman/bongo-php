@@ -111,6 +111,30 @@ try {
             echo "Application key set in .env\n";
             break;
 
+        case 'route:list':
+            $router = System\Routing\Router::fromConfig();
+            $rows = [];
+            foreach ($router->routes() as $route) {
+                $action = $route->action instanceof Closure ? 'Closure'
+                    : (new ReflectionClass(class_exists($route->action[0]) ? $route->action[0] : 'App\\Http\\Controllers\\' . $route->action[0]))->getShortName() . '@' . $route->action[1];
+                $middleware = array_map(fn($m) => (new ReflectionClass($m[0]))->getShortName() . ($m[1] ? ':' . implode(',', $m[1]) : ''), $router->resolveMiddleware($route));
+                $rows[] = [implode('|', array_diff($route->methods, ['HEAD'])), $route->path, $route->name ?? '', $action, implode(', ', $middleware)];
+            }
+            $filter = $options[0] ?? null;
+            if ($filter) {
+                $rows = array_filter($rows, fn($r) => stripos(implode(' ', $r), $filter) !== false);
+            }
+            $widths = [6, 4, 4, 6, 10];
+            foreach ($rows as $r) foreach ($r as $i => $v) $widths[$i] = max($widths[$i], strlen($v));
+            $line = fn($r) => vsprintf("%-{$widths[0]}s  %-{$widths[1]}s  %-{$widths[2]}s  %-{$widths[3]}s  %s
+", $r);
+            echo $line(['Method', 'Path', 'Name', 'Action', 'Middleware']);
+            foreach ($rows as $r) echo $line($r);
+            echo "
+" . count($rows) . " route(s)
+";
+            break;
+
         case 'log:clear':
             $dir = config('logging.path');
             $removed = 0;
@@ -135,6 +159,8 @@ try {
             echo "  migrate:fresh [--force] [--seed]         Drop all tables, migrate (and seed)\n";
             echo "  db:seed                                  Run database/seeders/DatabaseSeeder.php\n";
             echo "  key:generate [--show] [--force]          Create APP_KEY in .env (password pepper + encryption)\n";
+            echo "  route:list [filter]                      Show every route with its name, action and middleware
+";
             echo "  log:clear                                Delete the log files in storage/logs
 ";
             echo "  test [filter]                            Run the tests in tests/\n";

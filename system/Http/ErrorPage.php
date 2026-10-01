@@ -17,6 +17,21 @@ class ErrorPage
 
         if (!headers_sent()) {
             http_response_code($status);
+        }
+
+        // API clients get JSON, browsers get a page
+        if (Request::wantsJson()) {
+            if (!headers_sent()) header('Content-Type: application/json');
+            $body = ['error' => ['status' => $status, 'message' => $message]];
+            if ($exception) {
+                $body['error']['exception'] = get_class($exception) . ': ' . $exception->getMessage();
+                $body['error']['file'] = $exception->getFile() . ':' . $exception->getLine();
+            }
+            echo json_encode($body);
+            return;
+        }
+
+        if (!headers_sent()) {
             header('Content-Type: text/html; charset=UTF-8');
         }
 
