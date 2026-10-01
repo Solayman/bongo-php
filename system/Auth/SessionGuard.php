@@ -42,7 +42,7 @@ class SessionGuard extends Guard
         Session::regenerateToken();
         Session::put($this->key(), (int) $user->id);
         $this->setUser($user);
-        Log::info('User {user_id} logged in ({guard} guard)', ['user_id' => (int) $user->id, 'guard' => $this->name, 'ip' => $_SERVER['REMOTE_ADDR'] ?? null]);
+        Log::info('User {user_id} logged in ({guard} guard)', ['user_id' => (int) $user->id, 'guard' => $this->name, 'ip' => \System\Http\Request::ip()]);
     }
 
     public function logout(): void

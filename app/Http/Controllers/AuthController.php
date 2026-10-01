@@ -20,7 +20,7 @@ class AuthController extends Controller
         ]);
 
         $email = strtolower($data['email']);
-        $ip = $_SERVER['REMOTE_ADDR'] ?? 'cli';
+        $ip = \System\Http\Request::ip();
         $throttle = new LoginThrottle();
 
         if ($throttle->tooManyAttempts($email, $ip)) {

@@ -43,7 +43,7 @@ class PasswordBroker
     {
         $email = strtolower(trim($email));
         $limiter = new RateLimiter();
-        $key = 'password-reset:' . sha1($email . '|' . ($_SERVER['REMOTE_ADDR'] ?? 'cli'));
+        $key = 'password-reset:' . sha1($email . '|' . \System\Http\Request::ip());
 
         if ($limiter->tooManyAttempts($key, 3)) {
             Log::warning('Password reset throttled for {email}', ['email' => $email]);
@@ -97,7 +97,7 @@ class PasswordBroker
         $user = $this->provider->findByIdentifier($email);
 
         if ($user === null || !$this->tokenIsValid($email, $token)) {
-            Log::warning('Invalid password reset attempt for {email}', ['email' => $email, 'ip' => $_SERVER['REMOTE_ADDR'] ?? null]);
+            Log::warning('Invalid password reset attempt for {email}', ['email' => $email, 'ip' => \System\Http\Request::ip()]);
             return self::INVALID_TOKEN;
         }
 
@@ -106,7 +106,7 @@ class PasswordBroker
             DB::table($this->table)->where('email', $email)->delete(); // single use
         });
 
-        (new LoginThrottle())->clear($email, $_SERVER['REMOTE_ADDR'] ?? 'cli');
+        (new LoginThrottle())->clear($email, \System\Http\Request::ip());
         Event::dispatch('auth.password_reset', $user);
         Log::info('Password reset for user {user_id}', ['user_id' => $user->id]);
         return self::PASSWORD_RESET;

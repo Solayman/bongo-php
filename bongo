@@ -184,6 +184,18 @@ try {
             }
             break;
 
+        case 'security:check':
+            $results = System\Security\SecurityCheck::run();
+            $marks = ['ok' => "\033[32m  OK  \033[0m", 'warn' => "\033[33m WARN \033[0m", 'fail' => "\033[31m FAIL \033[0m"];
+            $width = max(array_map(fn($r) => strlen($r['check']), $results)) + 2;
+            echo 'Security check (APP_ENV=' . config('app.env') . ')' . PHP_EOL . PHP_EOL;
+            foreach ($results as $r) {
+                printf("%s %-{$width}s %s%s", $marks[$r['status']], $r['check'], $r['detail'], PHP_EOL);
+            }
+            $summary = System\Security\SecurityCheck::summary($results);
+            echo PHP_EOL . ($summary === 'ok' ? 'All checks passed.' : ($summary === 'warn' ? 'Some warnings: review them before going live.' : 'Some checks FAILED: fix them before going live.')) . PHP_EOL;
+            exit($summary === 'fail' ? 1 : 0);
+
         case 'cache:clear':
             echo 'Removed ' . System\Cache\Cache::flush() . ' cache file(s)' . PHP_EOL;
             break;
@@ -229,6 +241,8 @@ try {
             echo "  make:middleware <Name>                   Create a middleware class
 ";
             echo "  make:test <Name> [--unit]                Create a feature (or unit) test
+";
+            echo "  security:check                           Deployment security checklist (exit 1 on failures)
 ";
             echo "  cache:clear                              Delete everything in the file cache
 ";

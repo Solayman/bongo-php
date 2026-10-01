@@ -27,7 +27,7 @@ class ThrottleRequests
                 header("X-RateLimit-Limit: $max");
                 header('X-RateLimit-Remaining: 0');
             }
-            Log::warning('Rate limit hit on {path}', ['path' => Request::path(), 'ip' => $_SERVER['REMOTE_ADDR'] ?? null]);
+            Log::warning('Rate limit hit on {path}', ['path' => Request::path(), 'ip' => \System\Http\Request::ip()]);
             throw new HttpException(429);
         }
 
@@ -47,7 +47,7 @@ class ThrottleRequests
         } catch (\Throwable $e) {
             // no auth configured for this request
         }
-        $who = $who !== null ? "user:$who" : 'ip:' . ($_SERVER['REMOTE_ADDR'] ?? 'cli');
+        $who = $who !== null ? "user:$who" : 'ip:' . \System\Http\Request::ip();
         return 'throttle:' . sha1($who . '|' . Request::path());
     }
 }

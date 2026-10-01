@@ -86,9 +86,9 @@ class AuthTest extends HttpTestCase
     public function testSessionIdChangesOnLogin(): void
     {
         $this->get('/login');
-        $before = $this->cookies['PHPSESSID'] ?? null;
+        $before = $this->cookies['bongo_session'] ?? null;
         $this->loginAsAdmin();
-        $this->assertNotSame($before, $this->cookies['PHPSESSID'] ?? null, 'Session id must be regenerated on login');
+        $this->assertNotSame($before, $this->cookies['bongo_session'] ?? null, 'Session id must be regenerated on login');
     }
 
     public function testAuthEventsAreLoggedWithoutPasswords(): void

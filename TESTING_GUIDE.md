@@ -190,6 +190,11 @@ Delete the generated test files afterwards.
 | 7.4 | Change the password, sign out, sign in with the new one | Works. The old password no longer works. |
 | 7.5 | (Optional, dev DB only) Back up `.env`, run `php bongo key:generate --force`, then try to sign in | Sign-in fails for every user, because passwords depend on `APP_KEY`. Restore the old `.env` and sign-in works again. **Never do this on a live site.** |
 
+| 7.6 | `php bongo security:check` | A checklist with OK/WARN/FAIL. Locally expect WARN for debug mode, HTTPS and CSP, and FAIL until `APP_KEY` is set. |
+| 7.7 | Dev tools → Application → Cookies | `bongo_session`, HttpOnly, SameSite Lax (no `PHPSESSID`) |
+| 7.8 | Set `SESSION_IDLE_MINUTES=1` in `.env`, sign in, wait 2 minutes, then click any page | Back on the login page ("Please sign in to continue."). Remove the setting afterwards. |
+| 7.9 | Set `SECURITY_CSP` to the example in `config/security.php`, then reload | The `Content-Security-Policy` response header is present and the admin still works |
+
 ## 8. Logging
 
 | # | Do this | You should see |
