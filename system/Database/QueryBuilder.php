@@ -160,4 +160,9 @@ class QueryBuilder
         $stmt = $this->pdo->prepare($sql);
         return $stmt->execute($this->bindings);
     }
+    public function truncate(): bool
+    {
+        $sql = "TRUNCATE TABLE {$this->table}";
+        return $this->pdo->exec($sql) !== false;
+    }
 }

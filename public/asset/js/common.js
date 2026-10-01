@@ -87,3 +87,5 @@ function formatValue(value) {
 
     return `<span>${strValue}</span>`;
 }
+
+

@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\OCCleanup;
+use App\Services\DatabaseCleaner;
 use System\Database\DB;
 
 class DatabaseController extends Controller
 {
     public function index()
     {
-
         echo view('admin.extends.database_dashboard_cleanup', [
             'title' => 'OC Cleanup Dashboard',
             'user' => 'Solayman'
@@ -28,49 +27,71 @@ class DatabaseController extends Controller
             ]);
             return;
         }
-        $deleted = 'panel';
+
         try {
-            // Example: handle different actions
+            $cleaner = new DatabaseCleaner();
+
             switch ($action) {
                 case 'resetYapiTokens':
-                    // Call your cleanup logic
-//                    $deleted = $this->clearLogs($panel);
-
+                    ob_start();
+                    $cleaner->resetYapiTokens();
+                    $output = ob_get_clean();
                     echo json_encode([
                         'status' => 'success',
-                        'message' => "✅ Cleared Yapi Tokens data deleted for : $panel ($deleted)"
+                        'message' => "✅ Yapi Tokens reset successfully for $panel",
+                        'output' => nl2br($output)
                     ]);
                     break;
 
                 case 'resetTmpYapiReports':
-                    // Your logic here
+                    ob_start();
+                    $cleaner->resetTmpYapiReports();
+                    $output = ob_get_clean();
                     echo json_encode([
                         'status' => 'success',
-                        'message' => "✅ Cleared reset Tmp Yapi Reports data deleted for : $panel ($deleted)"
+                        'message' => "✅ Tmp Yapi Reports reset successfully for $panel",
+                        'output' => nl2br($output)
                     ]);
                     break;
 
                 case 'resetWallets':
-                    // Your logic here
+                    ob_start();
+                    $cleaner->resetWallets();
+                    $output = ob_get_clean();
                     echo json_encode([
                         'status' => 'success',
-                        'message' => "✅ Wallets data reset for : $panel ($deleted)"
+                        'message' => "✅ Wallets reset successfully for $panel",
+                        'output' => nl2br($output)
                     ]);
                     break;
 
                 case 'resetMerchants':
-                    // Your logic here
+                    ob_start();
+                    $cleaner->resetMerchants();
+                    $output = ob_get_clean();
                     echo json_encode([
                         'status' => 'success',
-                        'message' => "✅ Merchants data reset for : $panel ($deleted)"
+                        'message' => "✅ Merchants reset successfully for $panel",
+                        'output' => nl2br($output)
                     ]);
                     break;
 
                 case 'runFullCleanup':
-                    // Your logic here
+                    ob_start();
+                    $cleaner->runFullCleanup();
+                    $output = ob_get_clean();
                     echo json_encode([
                         'status' => 'success',
-                        'message' => "✅ Full Database Cleanup for : $panel ($deleted)"
+                        'message' => "✅ Full Database Cleanup completed for $panel",
+                        'output' => nl2br($output)
+                    ]);
+                    break;
+
+                case 'getTableContent':
+                    $count = $cleaner->getTableCount();
+                    echo json_encode([
+                        'status' => 'success',
+                        'message' => "There are $count tables in cleanup list."
                     ]);
                     break;
 
@@ -80,7 +101,6 @@ class DatabaseController extends Controller
                         'message' => "Unknown action: $action"
                     ]);
             }
-
         } catch (\Throwable $e) {
             echo json_encode([
                 'status' => 'error',
@@ -88,5 +108,4 @@ class DatabaseController extends Controller
             ]);
         }
     }
-
 }

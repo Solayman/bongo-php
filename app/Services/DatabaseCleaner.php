@@ -1,13 +1,15 @@
 <?php
-namespace App\Services;
-use DateTime;
 
-require_once 'DatabaseConnection.php';
+namespace App\Services;
+
+use System\Database\DB;
+use DateTime;
 
 class DatabaseCleaner
 {
-    private $pdo;
-    private $tablesToTruncate = [
+    protected $db;
+
+    protected array $tablesToTruncate = [
         'sale_integrators',
         'backup_sale_integrators',
         'sales',
@@ -96,7 +98,6 @@ class DatabaseCleaner
         'finalization_reports',
         'finalization_report_actions',
         'backup_success_finalization_reports',
-        'sale_billings',
         'refund_history_installments',
         'sale_asynchronous_processes',
         'incoming_wallet_events',
@@ -130,110 +131,118 @@ class DatabaseCleaner
 
     public function __construct()
     {
-        $this->pdo = DatabaseConnection::getInstance()->getConnection();
+        // DB is your wrapper class that returns QueryBuilder
+        $this->db = new DB();
     }
 
-    public function truncateTables()
+    public function truncateTables(): void
     {
-        echo "Starting table truncation...\n";
-        
+        echo "🚀 Starting table truncation...\n";
+
         foreach ($this->tablesToTruncate as $table) {
             try {
-                $this->pdo->exec("TRUNCATE TABLE `$table`");
-                echo "✓ Truncated: $table\n";
-            } catch (\PDOException $e) {
-                echo "✗ Failed to truncate $table: " . $e->getMessage() . "\n";
+                $this->db->table($table)->truncate();
+                echo "✅ Truncated: $table\n";
+            } catch (\Throwable $e) {
+                echo "❌ Failed to truncate $table: " . $e->getMessage() . "\n";
             }
         }
-        
-        echo "Table truncation completed!\n";
+
+        echo "🎉 Table truncation completed!\n";
     }
 
-    public function deleteFromTables(array $tables)
+    public function resetYapiTokens(): void
     {
-        echo "Starting data deletion...\n";
-        
-        foreach ($tables as $table) {
-            try {
-                $this->pdo->exec("DELETE FROM `$table`");
-                echo "✓ Deleted data from: $table\n";
-            } catch (\PDOException $e) {
-                echo "✗ Failed to delete from $table: " . $e->getMessage() . "\n";
-            }
-        }
-        
-        echo "Data deletion completed!\n";
-    }
+        echo "🔁 Resetting yapi_tokens...\n";
 
-    public function resetYapiTokens()
-    {
-        echo "Resetting yapi_tokens...\n";
-        
         $todayMinus1 = (new DateTime())->modify('-1 day')->format('Y-m-d H:i:s');
-        
+
         try {
-            $this->pdo->exec("UPDATE yapi_tokens SET status = 0, attempt = 0, error_code = NULL, error_message = NULL, created_at = '$todayMinus1', updated_at = '$todayMinus1'");
-            echo "✓ yapi_tokens reset successfully\n";
-        } catch (\PDOException $e) {
-            echo "✗ Failed to reset yapi_tokens: " . $e->getMessage() . "\n";
+            $this->db->table('yapi_tokens')->update([
+                'status' => 0,
+                'attempt' => 0,
+                'error_code' => null,
+                'error_message' => null,
+                'created_at' => $todayMinus1,
+                'updated_at' => $todayMinus1,
+            ]);
+            echo "✅ yapi_tokens reset successfully\n";
+        } catch (\Throwable $e) {
+            echo "❌ Failed to reset yapi_tokens: " . $e->getMessage() . "\n";
         }
     }
 
-    public function resetTmpYapiReports()
+    public function resetTmpYapiReports(): void
     {
-        echo "Resetting tmp_yapi_reports...\n";
-        
-        $today = (new DateTime())->format('Y-m-d H:i:s');
-        
+        echo "🔁 Resetting tmp_yapi_reports...\n";
+
+        $now = (new DateTime())->format('Y-m-d H:i:s');
+
         try {
-            $this->pdo->exec("UPDATE tmp_yapi_reports SET status = 0, created_at = '$today', updated_at = '$today'");
-            echo "✓ tmp_yapi_reports reset successfully\n";
-        } catch (\PDOException $e) {
-            echo "✗ Failed to reset tmp_yapi_reports: " . $e->getMessage() . "\n";
+            $this->db->table('tmp_yapi_reports')->update([
+                'status' => 0,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+            echo "✅ tmp_yapi_reports reset successfully\n";
+        } catch (\Throwable $e) {
+            echo "❌ Failed to reset tmp_yapi_reports: " . $e->getMessage() . "\n";
         }
     }
 
-    public function resetWallets()
+    public function resetWallets(): void
     {
-        echo "Resetting wallets...\n";
-        
-        $money = 0;
-        
+        echo "💰 Resetting wallets...\n";
+
         try {
-            $this->pdo->exec("UPDATE wallets SET amount = $money, non_withdrawable_amount = 0, withdrawable_amount = $money, rolling_amount = 0, pending_sale_amount = 0, block_amount = 0");
-            echo "✓ wallets reset successfully\n";
-        } catch (\PDOException $e) {
-            echo "✗ Failed to reset wallets: " . $e->getMessage() . "\n";
+            $this->db->table('wallets')->update([
+                'amount' => 0,
+                'non_withdrawable_amount' => 0,
+                'withdrawable_amount' => 0,
+                'rolling_amount' => 0,
+                'pending_sale_amount' => 0,
+                'block_amount' => 0,
+            ]);
+            echo "✅ wallets reset successfully\n";
+        } catch (\Throwable $e) {
+            echo "❌ Failed to reset wallets: " . $e->getMessage() . "\n";
         }
     }
 
-    public function resetMerchants()
+    public function resetMerchants(): void
     {
-        echo "Resetting merchants...\n";
-        
+        echo "🏪 Resetting merchants...\n";
+
         try {
-            $this->pdo->exec("UPDATE merchants SET total_transaction = 0");
-            echo "✓ merchants reset successfully\n";
-        } catch (\PDOException $e) {
-            echo "✗ Failed to reset merchants: " . $e->getMessage() . "\n";
+            $this->db->table('merchants')->update([
+                'total_transaction' => 0
+            ]);
+            echo "✅ merchants reset successfully\n";
+        } catch (\Throwable $e) {
+            echo "❌ Failed to reset merchants: " . $e->getMessage() . "\n";
         }
     }
 
-    public function runFullCleanup()
+    public function runFullCleanup(): void
     {
-        echo "=== Starting Full Database Cleanup ===\n";
-        
+        echo "🧹=== Starting Full Database Cleanup ===\n";
+
         $this->truncateTables();
         $this->resetYapiTokens();
         $this->resetTmpYapiReports();
         $this->resetWallets();
         $this->resetMerchants();
-        
-        echo "=== Database Cleanup Completed Successfully! ===\n";
+
+        echo "🎯=== Database Cleanup Completed Successfully ===\n";
     }
 
-    public function getTableCount()
+    public function getTableCount(): int
     {
         return count($this->tablesToTruncate);
+    }
+
+    public function getTableList(): array
+    {
+        return $this->tablesToTruncate;
     }
 }
