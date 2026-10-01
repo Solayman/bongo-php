@@ -94,6 +94,11 @@ Use any HTTP client (curl, Postman, Insomnia):
 | 4.6 | Type `<b>bold</b>` as a product name and save | The list shows the text `<b>bold</b>` literally, not bold (output escaping) |
 | 4.7 | Type `{{ phpversion() }}` as a product name and save | The text shows literally; no PHP version number appears (template code is never executed) |
 
+| 4.8 | Edit a product, choose a JPG/PNG under **Image**, then save | The image shows on the edit page, and a thumbnail appears in the product list |
+| 4.9 | Upload a new image for the same product | The new image shows; the old file is gone from `public/storage/products` |
+| 4.10 | Tick **Remove image**, then save | The image is gone (from the page and from disk) |
+| 4.11 | Rename a `.txt` or `.php` file to `cat.jpg` and upload it | "The image must be an image (jpg, png, gif or webp)." Nothing is stored. |
+
 ## 4b. Template engine
 
 | # | Do this | You should see |

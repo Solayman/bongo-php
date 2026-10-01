@@ -14,7 +14,7 @@ $invalid = fn(string $field) => error($field) ? 'is-invalid' : '';
     <h2 class="h4 mt-2"><?= $editing ? 'Edit ' . e($product->name) : 'New product' ?></h2>
 </div>
 
-<form method="POST" action="<?= $editing ? route('products.update', ['id' => $product->id]) : route('products.store') ?>" novalidate>
+<form method="POST" action="<?= $editing ? route('products.update', ['id' => $product->id]) : route('products.store') ?>" enctype="multipart/form-data" novalidate>
     @csrf
     <?= $editing ? method_field('PUT') : '' ?>
     <div class="card"><div class="card-body">
@@ -62,6 +62,21 @@ $invalid = fn(string $field) => error($field) ? 'is-invalid' : '';
                 <textarea class="form-control <?= $invalid('description') ?>" id="description" name="description" rows="4">{{ $value('description') }}</textarea>
                 <div class="invalid-feedback">{{ error('description') }}</div>
             </div>
+            <div class="col-md-8">
+                <label class="form-label" for="image">Image</label>
+                <input class="form-control <?= $invalid('image') ?>" id="image" name="image" type="file" accept="image/jpeg,image/png,image/gif,image/webp">
+                <div class="invalid-feedback">{{ error('image') }}</div>
+                <div class="form-text">JPG, PNG, GIF or WebP, up to 2 MB.</div>
+            </div>
+            @if($editing && $product->image)
+                <div class="col-md-4">
+                    <img src="{{ $product->imageUrl() }}" alt="{{ $product->name }}" class="img-thumbnail" style="max-height: 120px;">
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" name="remove_image" value="1" id="remove_image">
+                        <label class="form-check-label" for="remove_image">Remove image</label>
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
     <div class="card-footer bg-white text-end">

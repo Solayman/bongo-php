@@ -65,7 +65,9 @@ abstract class HttpTestCase extends TestCase
             CURLOPT_HTTPHEADER     => $headerLines,
         ]);
         if ($method !== 'GET' && $method !== 'HEAD' && ($data !== [] || $method !== 'OPTIONS')) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, is_string($data) ? $data : http_build_query($data));
+            // A \CURLFile in the data sends multipart/form-data (file uploads)
+            $multipart = is_array($data) && array_filter($data, fn($v) => $v instanceof \CURLFile);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, is_string($data) || $multipart ? $data : http_build_query($data));
         }
 
         $raw = curl_exec($ch);

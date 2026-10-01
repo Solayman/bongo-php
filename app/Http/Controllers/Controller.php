@@ -19,7 +19,7 @@ class Controller
      */
     protected function validate(array $rules, ?array $data = null): array
     {
-        $data ??= Request::all();
+        $data ??= Request::all() + Request::files();
         $errors = Validator::make($data, $rules);
 
         if ($errors) {
@@ -30,8 +30,8 @@ class Controller
             Session::flash('_errors', $errors);
             Session::flash('_old', array_filter(
                 $data,
-                fn($key) => !str_contains((string) $key, 'password') && $key !== '_token',
-                ARRAY_FILTER_USE_KEY
+                fn($value, $key) => !str_contains((string) $key, 'password') && $key !== '_token' && !$value instanceof \System\Http\UploadedFile,
+                ARRAY_FILTER_USE_BOTH
             ));
             back();
         }

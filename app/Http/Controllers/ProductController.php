@@ -5,6 +5,8 @@ use App\Models\Category;
 use App\Models\Product;
 use System\Database\DB;
 use System\Http\Request;
+use System\Http\UploadedFile;
+use System\Storage\Storage;
 
 class ProductController extends Controller
 {
@@ -49,6 +51,12 @@ class ProductController extends Controller
         $data = $this->validate($this->rules());
         $data['category_id'] = ($data['category_id'] ?? null) ?: null;
 
+        if (($data['image'] ?? null) instanceof UploadedFile) {
+            $data['image'] = $data['image']->store('products');
+        } else {
+            unset($data['image']);
+        }
+
         Product::create($data);
 
         flash('success', "Product \"{$data['name']}\" created.");
@@ -66,19 +74,29 @@ class ProductController extends Controller
     public function update($id)
     {
         $product = $this->findOrFail($id);
-        $data = $this->validate($this->rules((int) $product->id));
+        $data = $this->validate($this->rules((int) $product->id) + ['remove_image' => 'nullable|boolean']);
         $data['category_id'] = ($data['category_id'] ?? null) ?: null;
 
-        Product::query()->where('id', $product->id)->update($data);
+        $upload = $data['image'] ?? null;
+        $remove = filter_var($data['remove_image'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        unset($data['image'], $data['remove_image']);
 
-        flash('success', "Product \"{$data['name']}\" updated.");
+        if ($upload instanceof UploadedFile || $remove) {
+            Storage::delete($product->image);   // the old file
+            $data['image'] = $upload instanceof UploadedFile ? $upload->store('products') : null;
+        }
+
+        $product->update($data);
+
+        flash('success', "Product \"{$product->name}\" updated.");
         redirect(url('/products'));
     }
 
     public function destroy($id)
     {
         $product = $this->findOrFail($id);
-        Product::query()->where('id', $product->id)->delete();
+        Storage::delete($product->image);
+        $product->delete();
 
         flash('success', "Product \"{$product->name}\" deleted.");
         redirect(url('/products'));
@@ -94,11 +112,12 @@ class ProductController extends Controller
             'stock'       => 'required|integer|min:0|max:1000000',
             'status'      => 'required|in:active,draft',
             'description' => 'nullable|string|max:5000',
+            'image'       => 'nullable|image|max:2048',   // KB
         ];
     }
 
-    protected function findOrFail($id): object
+    protected function findOrFail($id): Product
     {
-        return Product::find((int) $id) ?? abort(404, 'Product not found');
+        return Product::findOrFail((int) $id);
     }
 }
