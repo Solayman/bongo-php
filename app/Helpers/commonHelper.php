@@ -1,65 +1,10 @@
 <?php
-
-if (!function_exists('config')) {
-    function config($key, $default = null) {
-        $keys = explode('.', $key);
-        $value = $GLOBALS['config'] ?? [];
-        foreach ($keys as $k) {
-            if (isset($value[$k])) $value = $value[$k];
-            else return $default;
-        }
-        return $value;
-    }
-}
-
-if (!function_exists('asset')) {
-    function asset($path) {
-        return rtrim(config('app.url'), '/') . '/' . ltrim($path, '/');
-    }
-}
-
-if (!function_exists('route')) {
-    function route($path) {
-        return rtrim(config('app.url'), '/') . '/' . ltrim($path, '/');
-    }
-}
-
-
-
-if (!function_exists('response')) {
-    function response($data, $type = 'json') {
-        switch ($type) {
-            case 'json':
-                header('Content-Type: application/json');
-                echo json_encode($data);
-                break;
-            case 'html':
-                header('Content-Type: text/html');
-                echo $data;
-                break;
-        }
-        exit;
-    }
-}
-
-if (!function_exists('redirect')) {
-    function redirect($url) {
-        header('Location: ' . $url);
-        exit;
-    }
-}
-
-if (!function_exists('base_path')) {
-    function base_path($path = '') {
-        return dirname(__DIR__, 2) . ($path ? '/' . ltrim($path, '/') : '');
-    }
-}
-
+// Application helpers. Framework helpers live in system/Support/helpers.php.
 
 if (!function_exists('dd')) {
     function dd(...$args)
     {
-        // --- Find real caller (ignore helpers/vendor) ---
+        // --- Find real caller (skip helper files) ---
         $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
         $caller = null;
         foreach ($backtrace as $trace) {
@@ -77,7 +22,7 @@ if (!function_exists('dd')) {
         // --- Make file path relative ---
         $file = $caller['file'] ?? 'unknown';
         $line = $caller['line'] ?? '?';
-        $root = realpath(__DIR__ . '/../../'); // adjust if helper path differs
+        $root = realpath(BASE_PATH);
 
         if ($root && str_starts_with($file, $root)) {
             $file = str_replace('\\', '/', substr($file, strlen($root) + 1));
@@ -151,7 +96,7 @@ if (!function_exists('dd')) {
             echo "</div>";
         }
 
-        echo "<div class='footer'>⚡ Custom dd() helper — Laravel-style pretty dump</div>";
+        echo "<div class='footer'>BongoMvc dd() debug dump</div>";
         echo "</div></body></html>";
 
         die;

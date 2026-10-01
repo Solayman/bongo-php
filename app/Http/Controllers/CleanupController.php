@@ -9,7 +9,6 @@ class CleanupController extends Controller
 
     public function dashboard()
     {
-        $table = DB::table('users')->where('id',12)->first();
 
         echo $this->view('admin.extends.dashboard', [
             'title' => 'OC Cleanup Dashboard',

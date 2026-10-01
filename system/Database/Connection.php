@@ -15,7 +15,7 @@ class Connection
             return self::$pdo;
         }
 
-        $config = require __DIR__ . '/../../config/database.php';
+        $config = config('database');
         $db = $config['connections'][$config['default']];
 
         try {
