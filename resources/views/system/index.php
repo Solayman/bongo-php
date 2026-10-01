@@ -1,8 +1,9 @@
-@extends('layouts.admin')
+@extends('layouts.app')
 
 @set('title', 'System status')
 
 @section('content')
+<h1 class="h4 mb-3">System status</h1>
 <div class="row g-3 mb-4">
     <div class="col-md-4">
         <div class="card stat-tile h-100"><div class="card-body">

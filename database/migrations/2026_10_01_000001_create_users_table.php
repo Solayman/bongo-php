@@ -13,8 +13,6 @@ return new class extends Migration
             $table->string('name', 100);
             $table->string('email', 150)->unique();
             $table->string('password');
-            $table->enum('role', ['admin', 'customer'])->default('customer');
-            $table->string('phone', 30)->nullable();
             $table->timestamps();
         });
     }

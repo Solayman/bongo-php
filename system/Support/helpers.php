@@ -5,6 +5,7 @@ use System\Auth\Auth;
 use System\Http\HttpException;
 use System\Http\Request;
 use System\Http\Session;
+use System\Log\Logger;
 
 if (!function_exists('config')) {
     function config($key, $default = null) {
@@ -151,6 +152,15 @@ if (!function_exists('response')) {
                 break;
         }
         exit;
+    }
+}
+
+if (!function_exists('logger')) {
+    /** logger() -> the Logger; logger('message', $context) -> write a debug line */
+    function logger(?string $message = null, array $context = []) {
+        if ($message === null) return Logger::instance();
+        Logger::instance()->debug($message, $context);
+        return null;
     }
 }
 

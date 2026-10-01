@@ -25,6 +25,7 @@ class Connection
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             ]);
         } catch (PDOException $e) {
+            \System\Log\Log::critical('Database connection failed: ' . $e->getMessage(), ['host' => $db['host'], 'database' => $db['database']]);
             // Throw instead of die() so callers can catch it and show a friendly error
             throw new RuntimeException('Database Connection Failed: ' . $e->getMessage(), 0, $e);
         }

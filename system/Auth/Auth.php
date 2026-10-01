@@ -3,6 +3,7 @@ namespace System\Auth;
 
 use System\Database\DB;
 use System\Http\Session;
+use System\Log\Log;
 use System\Security\Hash;
 
 class Auth
@@ -35,10 +36,14 @@ class Auth
         Session::regenerateToken();
         Session::put('auth_id', (int) $user->id);
         self::$user = $user;
+        Log::info('User {user_id} logged in', ['user_id' => (int) $user->id, 'ip' => $_SERVER['REMOTE_ADDR'] ?? null]);
     }
 
     public static function logout(): void
     {
+        if (self::id()) {
+            Log::info('User {user_id} logged out', ['user_id' => self::id()]);
+        }
         Session::forget('auth_id');
         Session::regenerate();
         Session::regenerateToken();

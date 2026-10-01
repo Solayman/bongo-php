@@ -36,13 +36,7 @@ class AuthController extends Controller
 
         $throttle->clear($email, $ip);
 
-        // The panel is for administrators only
-        if (Auth::user()->role !== 'admin') {
-            Auth::logout();
-            $this->failLogin('Only administrators can sign in to the dashboard.', $email);
-        }
-
-        $intended = Session::get('url.intended', '/');
+        $intended = Session::get('url.intended', '/home');
         Session::forget('url.intended');
 
         flash('success', 'Welcome back, ' . Auth::user()->name . '!');

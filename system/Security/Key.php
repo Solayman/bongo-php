@@ -6,7 +6,7 @@ use RuntimeException;
 /**
  * Reads the application secret from APP_KEY in .env.
  * Format: APP_KEY=base64:<32 random bytes, base64 encoded>
- * Create one with: php artisan key:generate
+ * Create one with: php bongo key:generate
  */
 class Key
 {
@@ -19,7 +19,7 @@ class Key
         }
 
         if (strlen($key) < 32) {
-            throw new RuntimeException('APP_KEY is missing or too short. Run: php artisan key:generate');
+            throw new RuntimeException('APP_KEY is missing or too short. Run: php bongo key:generate');
         }
 
         return $key;

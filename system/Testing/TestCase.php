@@ -2,7 +2,7 @@
 namespace System\Testing;
 
 /**
- * Base class for tests. Public methods named test* are run by `php artisan test`.
+ * Base class for tests. Public methods named test* are run by `php bongo test`.
  */
 abstract class TestCase
 {

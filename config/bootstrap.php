@@ -94,6 +94,32 @@ error_reporting(E_ALL);
 ini_set('display_errors', config('app.debug') ? '1' : '0');
 
 // ---------------------------
+// Log PHP warnings/notices and fatal errors through the framework logger
+// ---------------------------
+set_error_handler(function (int $severity, string $message, string $file, int $line) {
+    static $logging = false;
+    if (!(error_reporting() & $severity) || $logging) {
+        return false; // silenced with @, or raised while already logging
+    }
+    $logging = true;
+    $level = in_array($severity, [E_WARNING, E_USER_WARNING, E_CORE_WARNING, E_COMPILE_WARNING], true) ? 'warning'
+        : (in_array($severity, [E_USER_ERROR, E_RECOVERABLE_ERROR], true) ? 'error' : 'notice');
+    try {
+        System\Log\Logger::instance()->log($level, "PHP $message", ['file' => $file, 'line' => $line]);
+    } finally {
+        $logging = false;
+    }
+    return false; // let PHP continue with its normal handling (display in debug)
+});
+
+register_shutdown_function(function () {
+    $error = error_get_last();
+    if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+        System\Log\Logger::instance()->critical('PHP fatal: ' . $error['message'], ['file' => $error['file'], 'line' => $error['line']]);
+    }
+});
+
+// ---------------------------
 // Session (web requests only)
 // ---------------------------
 if (PHP_SAPI !== 'cli') {

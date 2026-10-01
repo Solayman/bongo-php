@@ -1,0 +1,72 @@
+:root {
+    --page-bg: #f5f6f8;
+    --ink: #111827;
+    --ink-muted: #6b7280;
+}
+
+body {
+    background: var(--page-bg);
+    color: var(--ink);
+}
+
+.topbar {
+    background: #111827;
+}
+
+.topbar .navbar-brand,
+.topbar .navbar-nav .nav-link {
+    color: #fff;
+}
+
+.topbar .navbar-nav .nav-link {
+    opacity: .75;
+}
+
+.topbar .navbar-nav .nav-link:hover,
+.topbar .navbar-nav .nav-link.active {
+    color: #fff;
+    opacity: 1;
+    font-weight: 500;
+}
+
+.stat-tile .label {
+    color: var(--ink-muted);
+    font-size: .8rem;
+}
+
+.stat-tile .value {
+    font-size: 1.4rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.stat-tile .sub {
+    color: var(--ink-muted);
+    font-size: .8rem;
+}
+
+.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.auth-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.hero {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 72px 16px 48px;
+}
+
+.hero code {
+    background: #eef0f3;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--ink);
+}

@@ -4,14 +4,22 @@ require_once __DIR__ . '/../config/bootstrap.php';
 use System\Http\ErrorPage;
 use System\Http\HttpException;
 use System\Http\Request;
+use System\Log\Log;
 use System\Routing\Router;
 
 try {
     $router = new Router(require base_path('routes/web.php'), config('app.middleware', []));
     $router->dispatch(Request::method(), Request::path());
 } catch (HttpException $e) {
+    $context = ['status' => $e->status(), 'method' => Request::method(), 'path' => Request::path(), 'ip' => $_SERVER['REMOTE_ADDR'] ?? null];
+    // 403 and 419 (bad CSRF token) can mean an attack; 404/405 are routine
+    in_array($e->status(), [403, 419], true)
+        ? Log::warning('HTTP {status} on {method} {path}', $context)
+        : Log::debug('HTTP {status} on {method} {path}', $context);
     ErrorPage::render($e->status(), $e->getMessage());
 } catch (Throwable $e) {
-    error_log((string) $e);
+    Log::error('Uncaught ' . get_class($e) . ': ' . $e->getMessage(), [
+        'method' => Request::method(), 'path' => Request::path(), 'exception' => $e,
+    ]);
     ErrorPage::render(500, 'Server Error', config('app.debug') ? $e : null);
 }

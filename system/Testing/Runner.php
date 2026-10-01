@@ -6,7 +6,7 @@ use System\Database\Connection;
 use System\Database\Migrator;
 
 /**
- * Zero-dependency test runner used by `php artisan test [filter]`.
+ * Zero-dependency test runner used by `php bongo test [filter]`.
  *
  * - Uses a separate database (DB_TEST_DATABASE, default "<DB_DATABASE>_test"),
  *   rebuilt and seeded on every run. It refuses to run against the main database.
@@ -97,6 +97,7 @@ class Runner
             'APP_DEBUG'   => 'true',
             'DB_DATABASE' => $testDb,
             'APP_KEY'     => \System\Security\Key::generate(),
+            'LOG_PATH'    => BASE_PATH . '/storage/logs/testing',
         ];
         foreach ($overrides as $name => $value) {
             $_ENV[$name] = $value;
@@ -104,6 +105,8 @@ class Runner
         }
 
         $GLOBALS['config']['app']['env'] = 'testing';
+        $GLOBALS['config']['logging']['path'] = BASE_PATH . '/storage/logs/testing';
+        \System\Log\Logger::setInstance(null);
         $GLOBALS['config']['database']['connections'][$default]['database'] = $testDb;
     }
 
@@ -137,7 +140,7 @@ class Runner
         self::$baseUrl = "http://127.0.0.1:$port";
 
         $env = getenv() + [];
-        foreach (['APP_ENV', 'APP_DEBUG', 'DB_DATABASE', 'APP_KEY'] as $name) {
+        foreach (['APP_ENV', 'APP_DEBUG', 'DB_DATABASE', 'APP_KEY', 'LOG_PATH'] as $name) {
             $env[$name] = getenv($name);
         }
         $env['APP_URL'] = self::$baseUrl;
