@@ -66,6 +66,8 @@ Route::middleware('auth')->group(function () {
     // System status
     Route::get('/system', [SystemController::class, 'index'])->name('system');
     Route::post('/system/log-test', [SystemController::class, 'logTest'])->name('system.log-test');
+    Route::get('/system/error-test', [SystemController::class, 'errorTest'])->name('system.error-test');
+    Route::get('/system/dump-test', [SystemController::class, 'dumpTest'])->name('system.dump-test');
 
     // Sample cleanup tool (its JS sends the CSRF token as an X-CSRF-TOKEN header)
     Route::get('/cleanup', [CleanupController::class, 'dashboard'])->name('cleanup');

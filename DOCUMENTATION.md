@@ -15,8 +15,9 @@ Built in:
 | Validation | `required`, `email`, `min`, `max`, `unique`, `exists`, `confirmed`, … |
 | Auth & security | Login/logout, peppered Argon2id password hashes, AES-256-GCM encryption keyed by `APP_KEY`, login throttling |
 | Testing | `php bongo test`: unit + HTTP tests on a separate test database |
+| Debugging | `dump()`/`dd()` for browser, CLI and JSON; developer error page with source and stack trace; `php bongo tinker` |
 | Logging | Built-in daily log files in `storage/logs`, levels, secret masking; framework events logged automatically |
-| CLI | `php bongo serve / route:list / migrate / migrate:status / migrate:rollback / make:migration / db:seed / key:generate / log:clear / test` |
+| CLI | `php bongo serve / tinker / route:list / migrate / migrate:status / migrate:rollback / make:migration / db:seed / key:generate / log:clear / test` |
 
 The repository currently includes an **e-commerce admin panel** (products, categories, orders, customers). It is the test application used to exercise the framework end to end, and it will be removed later so the framework ships fresh.
 
@@ -101,6 +102,7 @@ system/                  Framework core (namespace System\)
   Auth/                  Auth, LoginThrottle
   Database/              Connection, DB, QueryBuilder, Model, Migration, Migrator
   Database/Schema/       Schema, Blueprint, ColumnDefinition, Expression
+  Debug/                 Dumper (dump/dd), ExceptionPage (debug error page)
   Http/                  Request, Session, HttpException, ErrorPage
   Http/Middleware/       Cors, SecurityHeaders
   Log/                   Logger, Log
@@ -566,7 +568,58 @@ Tests write to `storage/logs/testing/` instead, so they never mix with your app'
 
 ---
 
-## 11. Helpers
+## 11. Debugging
+
+### `dump()` and `dd()`
+
+```php
+dump($user, $order);          // show the values and keep going (returns the first one)
+$total = dump($a + $b);       // wrap an expression
+dd($request, config('app'));  // show and stop ("dump and die")
+```
+
+The output adapts to where it runs:
+
+| Context | Output |
+| --- | --- |
+| Browser | Collapsible, colour-coded tree: types, string lengths, array counts, object class + id, `protected`/`private` properties, recursion marked |
+| Terminal (`php bongo tinker`, scripts, tests) | Plain text: `#protected`, `-private`, `{*recursion*}` |
+| API / JSON request | `{"dd": [...], "at": "app/Http/Controllers/X.php:12"}` |
+
+Every dump says where it was called (`file:line`). Depth (8 levels), item count (200 per array) and string length (2000 characters) are limited, so huge values can't freeze the page.
+
+### Debug error page
+
+With `APP_DEBUG=true`, an uncaught exception shows a developer page:
+- The exception class, message, location and any "caused by" chain.
+- **The source code around the failing line**, with that line highlighted.
+- **The stack trace**, where each frame expands to its own code. Frames from your app are marked in blue.
+- **The request:** method, URL, IP and signed-in user, then the input and headers, with values of keys like `password`, `token`, `cookie` or `auth` masked.
+- PHP version, environment, time and peak memory.
+
+With `APP_DEBUG=false` (the default when `APP_ENV=production`), visitors get a plain error page. In both cases the full exception is written to the log, and API clients get a JSON error.
+
+**Try it:** System status → Debug tools → **Trigger test error** / **Try dd()**. These buttons only appear, and only work, while `APP_DEBUG` is on.
+
+### `php bongo tinker`
+
+An interactive PHP shell with the app loaded:
+
+```
+>>> DB::table('users')->count()
+=> 11
+>>> $u = DB::table('users')->first()
+>>> Hash::check('password', $u->password)
+=> true
+>>> config('app.timezone')
+=> "Asia/Dhaka" (10)
+```
+
+`DB`, `Schema`, `Log`, `Hash`, `Crypt` and `Auth` are available without `use` statements. Variables persist between lines, errors are shown without leaving the shell, and `exit` quits.
+
+---
+
+## 12. Helpers
 
 | Helper | Description |
 | --- | --- |
@@ -587,11 +640,11 @@ Tests write to `storage/logs/testing/` instead, so they never mix with your app'
 | `money($n)`, `is_active('/prefix')` | Formatting and nav helpers |
 | `base_path('x')` | Absolute project path |
 | `logger()`, `logger('msg', $context)` | The logger, or write a debug line |
-| `dd(...$vars)` | Debug dump and stop |
+| `dump(...$vars)`, `dd(...$vars)` | Show values (and stop, for `dd`); see Debugging |
 
 ---
 
-## 12. Testing
+## 13. Testing
 
 For checking features **by hand in the browser**, follow [TESTING_GUIDE.md](TESTING_GUIDE.md): a step-by-step checklist with the expected result for every feature.
 
@@ -631,7 +684,7 @@ class ProductTest extends System\Testing\HttpTestCase
 
 ---
 
-## 13. The e-commerce test application
+## 14. The e-commerce test application
 
 The e-commerce admin is how BongoMVC is tested the way a real project would use it. It stays in the repository for now, and will be removed later so the framework ships fresh. A copy is also kept on the `demo/ecommerce` branch.
 

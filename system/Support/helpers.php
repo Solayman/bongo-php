@@ -179,6 +179,64 @@ if (!function_exists('logger')) {
     }
 }
 
+if (!function_exists('dump')) {
+    /**
+     * Show values and keep going. HTML in the browser, text in the terminal,
+     * JSON for API requests. Returns the first value, so it can wrap expressions.
+     */
+    function dump(...$values) {
+        $dumper = new \System\Debug\Dumper();
+        $at = \System\Debug\Dumper::caller();
+        switch (\System\Debug\Dumper::format()) {
+            case 'text':
+                echo "\u{25B6} $at\n";
+                foreach ($values as $value) echo $dumper->text($value);
+                break;
+            case 'json':
+                echo json_encode(['dump' => array_map([$dumper, 'plain'], $values), 'at' => $at], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR), "\n";
+                break;
+            default:
+                echo \System\Debug\Dumper::styles();
+                echo '<div class="bongo-dump-src">' . htmlspecialchars($at) . '</div>';
+                foreach ($values as $value) echo $dumper->html($value);
+        }
+        return $values[0] ?? null;
+    }
+}
+
+if (!function_exists('dd')) {
+    /** Dump the values and stop the request ("dump and die") */
+    function dd(...$values) {
+        $dumper = new \System\Debug\Dumper();
+        $at = \System\Debug\Dumper::caller();
+        $format = \System\Debug\Dumper::format();
+
+        if ($format === 'text') {
+            echo "\u{25B6} $at\n";
+            foreach ($values as $value) echo $dumper->text($value);
+            exit(1);
+        }
+
+        while (ob_get_level() > 0) ob_end_clean();
+        if (!headers_sent()) http_response_code(500);
+
+        if ($format === 'json') {
+            if (!headers_sent()) header('Content-Type: application/json');
+            echo json_encode(['dd' => array_map([$dumper, 'plain'], $values), 'at' => $at], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR);
+            exit;
+        }
+
+        if (!headers_sent()) header('Content-Type: text/html; charset=UTF-8');
+        echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>dd() · ' . htmlspecialchars($at) . '</title>'
+            . \System\Debug\Dumper::styles()
+            . '<style>body{background:#11121a;margin:0;padding:24px;font-family:system-ui,sans-serif}h1{color:#cdd6f4;font-size:15px;font-weight:500}h1 code{color:#89b4fa}</style>'
+            . '</head><body><h1>dd() called at <code>' . htmlspecialchars($at) . '</code></h1>';
+        foreach ($values as $value) echo $dumper->html($value);
+        echo '</body></html>';
+        exit;
+    }
+}
+
 if (!function_exists('money')) {
     function money($amount) {
         return '$' . number_format((float) $amount, 2);

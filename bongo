@@ -135,6 +135,30 @@ try {
 ";
             break;
 
+        case 'tinker':
+            echo "BongoMVC tinker. The app is loaded: try DB::table('users')->count(), config('app'), Hash::make('x').\n";
+            echo "Type exit to quit.\n";
+            foreach (['DB' => System\Database\DB::class, 'Schema' => System\Database\Schema\Schema::class, 'Log' => System\Log\Log::class,
+                      'Hash' => System\Security\Hash::class, 'Crypt' => System\Security\Crypt::class, 'Auth' => System\Auth\Auth::class] as $alias => $class) {
+                if (!class_exists($alias, false)) class_alias($class, $alias);
+            }
+            $dumper = new System\Debug\Dumper();
+            while (true) {
+                $line = function_exists('readline') ? readline('>>> ') : (fwrite(STDOUT, '>>> ') ? fgets(STDIN) : false);
+                if ($line === false || in_array(trim($line), ['exit', 'quit'], true)) break;
+                $code = trim($line);
+                if ($code === '') continue;
+                if (function_exists('readline_add_history')) readline_add_history($code);
+                $code = rtrim($code, ';');
+                try {
+                    $result = eval(str_starts_with($code, 'return ') || preg_match('/^(echo|print|if|foreach|for|while|function|class)\b/', $code) ? "$code;" : "return $code;");
+                    echo '=> ' . $dumper->text($result);
+                } catch (Throwable $e) {
+                    echo get_class($e) . ': ' . $e->getMessage() . "\n";
+                }
+            }
+            break;
+
         case 'log:clear':
             $dir = config('logging.path');
             $removed = 0;
@@ -160,6 +184,8 @@ try {
             echo "  db:seed                                  Run database/seeders/DatabaseSeeder.php\n";
             echo "  key:generate [--show] [--force]          Create APP_KEY in .env (password pepper + encryption)\n";
             echo "  route:list [filter]                      Show every route with its name, action and middleware
+";
+            echo "  tinker                                   Interactive PHP shell with the app loaded
 ";
             echo "  log:clear                                Delete the log files in storage/logs
 ";

@@ -121,6 +121,18 @@ Run these in a terminal, on a **development** database:
 | 8.4 | Add `LOG_LEVEL=warning` to `.env`, then write a test entry | It does **not** appear (below the minimum level). Remove the line afterwards. |
 | 8.5 | `php bongo log:clear` | "Removed N log file(s)", and the log panel is empty |
 
+## 8b. Debugging
+
+| # | Do this | You should see |
+| --- | --- | --- |
+| 8b.1 | **System status → Debug tools → Trigger test error** | Developer page: "RuntimeException", the source around `SystemController.php:77` with the line highlighted, a stack trace, request details, and **Cookie: \*\*\*\*\*\*\*\*** |
+| 8b.2 | **Try dd()** | Dark page "dd() called at app/Http/Controllers/SystemController.php:…" with collapsible values |
+| 8b.3 | Add `dump($product);` at the top of `ProductController::edit()`, then open a product's edit page | The dump appears above the page, and the page still loads. Remove the line afterwards. |
+| 8b.4 | `curl -H "Accept: application/json" http://127.0.0.1:8000/system/dump-test` (with a session cookie) | JSON `{"dd": [...], "at": "..."}` |
+| 8b.5 | `php bongo tinker`, then `DB::table('users')->count()` | `=> 11` |
+| 8b.6 | Set `APP_DEBUG=false` in `.env`, then Trigger test error | A plain "500 · Server Error" page with no code shown; the Debug tools card is hidden. Put it back afterwards. |
+| 8b.7 | Check the log after 8b.1 | `ERROR Uncaught RuntimeException: Test exception …` with the trace under **Details** |
+
 ## 9. System status page
 
 - [ ] Log times match your clock. If they don't, set `APP_TIMEZONE` in `.env` (e.g. `APP_TIMEZONE=Asia/Dhaka`).
