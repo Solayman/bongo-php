@@ -8,7 +8,7 @@ class RedirectIfAuthenticated
     public function handle(): void
     {
         if (Auth::check()) {
-            redirect(url('/home'));
+            redirect(url('/'));
         }
     }
 }

@@ -18,7 +18,7 @@ Built in:
 | Logging | Built-in daily log files in `storage/logs`, levels, secret masking; framework events logged automatically |
 | CLI | `php bongo serve / migrate / migrate:status / migrate:rollback / make:migration / db:seed / key:generate / log:clear / test` |
 
-The repository is a **fresh skeleton**: a welcome page, sign-in/sign-out, a system status page and the framework itself. No application code ships with it. The e-commerce test application used to exercise the framework lives on the `demo/ecommerce` branch.
+The repository currently includes an **e-commerce admin panel** (products, categories, orders, customers). It is the test application used to exercise the framework end to end, and it will be removed later so the framework ships fresh.
 
 ---
 
@@ -41,11 +41,11 @@ cp .env.example .env              # Windows: copy .env.example .env
 # edit .env: APP_NAME, APP_URL, DB_* values
 php bongo key:generate          # writes APP_KEY to .env
 php bongo migrate               # create tables (tracked in the `migrations` table)
-php bongo db:seed               # creates one user to sign in with
+php bongo db:seed               # demo data for the e-commerce test app
 php bongo serve                 # http://127.0.0.1:8000
 ```
 
-Seeded login: **admin@example.com / password**. Change it before going live.
+Demo login (seeded): **admin@example.com / password**. Change it on the Profile page.
 
 ### `.env` keys
 
@@ -86,14 +86,14 @@ public/
   asset/                 CSS / JS
 routes/web.php           Route table
 app/                     Application code (namespace App\)
-  Http/Controllers/      HomeController, AuthController, SystemController
+  Http/Controllers/      Controllers
   Http/Middleware/       Authenticate, RedirectIfAuthenticated, VerifyCsrfToken
-  Models/                User
+  Models/                Models
   Helpers/commonHelper.php  App helpers (dd())
 database/
   migrations/            PHP migrations (tracked in the `migrations` table)
   seeders/DatabaseSeeder.php
-resources/views/         Templates (dot notation: auth.login → auth/login.php)
+resources/views/         Templates (dot notation: products.index → products/index.php)
 storage/logs/            Log files (git-ignored)
 system/                  Framework core (namespace System\)
   Auth/                  Auth, LoginThrottle
@@ -460,7 +460,7 @@ Tests write to `storage/logs/testing/` instead, so they never mix with your app'
 
 ```bash
 php bongo test            # all tests
-php bongo test Auth       # only tests whose Class::method contains "Auth"
+php bongo test Product    # only tests whose Class::method contains "Product"
 ```
 
 - The runner uses **its own database**, `DB_TEST_DATABASE` (default `<DB_DATABASE>_test`). It creates, migrates and seeds that database on every run, and refuses to run against the main database.
@@ -494,12 +494,19 @@ class ProductTest extends System\Testing\HttpTestCase
 
 ---
 
-## 13. Test application (e-commerce)
+## 13. The e-commerce test application
 
-To exercise the framework the way a real project would, the **`demo/ecommerce`** branch contains a full e-commerce admin built on BongoMVC. It has a dashboard, products, categories, orders, customers and profile pages, plus its own migrations, seeder and HTTP tests. The skeleton on `master` stays free of application code.
+The e-commerce admin is how BongoMVC is tested the way a real project would use it. It stays in the repository for now, and will be removed later so the framework ships fresh. A copy is also kept on the `demo/ecommerce` branch.
 
-```bash
-git checkout demo/ecommerce
-php bongo migrate:fresh --seed     # use a separate database for it
-php bongo test
-```
+| Page | Route | Exercises |
+| --- | --- | --- |
+| Login / logout | `/login`, `POST /logout` | Auth, throttle, CSRF, flash, validation, logging |
+| Dashboard | `/` | Aggregates, joins, raw queries, stat tiles |
+| Products | `/products…` | CRUD, route params, validation (`unique`, `exists`), search, filters, pagination |
+| Categories | `/categories…` | CRUD, unique slugs, `ON DELETE SET NULL` |
+| Orders | `/orders`, `/orders/{id}` | Filters, joins, status updates |
+| Customers | `/customers`, `/customers/{id}` | Grouped raw queries |
+| Profile | `/profile` | Update with `unique` ignore, password change |
+| System status | `/system` | DB connection, env, session and optional Composer checks |
+
+`/cleanup` is the older sample cleanup tool. It requires login.

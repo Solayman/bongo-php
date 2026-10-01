@@ -12,7 +12,7 @@
         <div class="display-4 fw-semibold">{{ $status }}</div>
         <p class="lead mb-1">{{ $message }}</p>
         <p class="text-secondary">You do not have access to this page.</p>
-        <a href="<?= url('/') ?>" class="btn btn-dark">Go to home page</a>
+        <a href="<?= url('/') ?>" class="btn btn-dark">Go to dashboard</a>
     </div>
 </div>
 </body>
