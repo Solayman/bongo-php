@@ -13,7 +13,7 @@ Built in:
 | Schema & migrations | PHP migrations with a schema builder; each run is tracked in the database; rollback |
 | Sessions | Flash messages, old input, CSRF tokens |
 | Validation | `required`, `email`, `min`, `max`, `unique`, `exists`, `confirmed`, … |
-| Auth & security | Login/logout, peppered Argon2id password hashes, AES-256-GCM encryption keyed by `APP_KEY`, login throttling |
+| Auth & security | Multiple guards (session, JWT) and providers, `auth:api` middleware, own HS256 JWT with refresh and revocation, peppered Argon2id passwords, AES-256-GCM encryption, login throttling |
 | Testing | `php bongo test`: unit + HTTP tests on a separate test database |
 | Debugging | `dump()`/`dd()` for browser, CLI and JSON; developer error page with source and stack trace; `php bongo tinker` |
 | Logging | Built-in daily log files in `storage/logs`, levels, secret masking; framework events logged automatically |
@@ -87,7 +87,7 @@ public/
   index.php              Front controller: Router + error handling
   asset/                 CSS / JS
 routes/web.php           Web routes (sessions + CSRF)
-routes/api.php           API routes (/api prefix, CORS, JSON)
+routes/api.php           API routes (/api prefix, CORS, JSON, JWT)
 app/                     Application code (namespace App\)
   Http/Controllers/      Controllers
   Http/Middleware/       Authenticate, RedirectIfAuthenticated, VerifyCsrfToken
@@ -99,15 +99,15 @@ database/
 resources/views/         Templates (dot notation: products.index → products/index.php)
 storage/logs/            Log files (git-ignored)
 system/                  Framework core (namespace System\)
-  Auth/                  Auth, LoginThrottle
+  Auth/                  Auth (guards), SessionGuard, JwtGuard, UserProvider, LoginThrottle
   Database/              Connection, DB, QueryBuilder, Model, Migration, Migrator
   Database/Schema/       Schema, Blueprint, ColumnDefinition, Expression
   Debug/                 Dumper (dump/dd), ExceptionPage (debug error page)
   Http/                  Request, Session, HttpException, ErrorPage
-  Http/Middleware/       Cors, SecurityHeaders
+  Http/Middleware/       Cors, SecurityHeaders, StartSession
   Log/                   Logger, Log
   Routing/               Router, Route, RouteDefinition, PendingGroup
-  Security/              Key, Hash, Crypt
+  Security/              Key, Hash, Crypt, Jwt
   Support/helpers.php    Framework helpers
   Testing/               TestCase, HttpTestCase, TestResponse, Runner
   Validation/Validator.php
@@ -224,7 +224,7 @@ A middleware is a class with `handle(...$params): void`. To stop the request it 
     'cors'  => System\Http\Middleware\Cors::class,
 ],
 'middleware_groups' => [                // named sets
-    'web' => ['csrf'],
+    'web' => ['session', 'csrf'],
     'api' => ['cors'],
 ],
 'middleware_global' => [                // every request, before routing
@@ -541,13 +541,88 @@ Migration                                       Status   Batch  Ran at
 
 ## 9. Authentication and security
 
+### Guards and providers
+
+`config/auth.php` defines **guards** (how a request proves who it is) and **providers** (where users come from):
+
+```php
+'default' => 'web',
+
+'guards' => [
+    'web' => ['driver' => 'session', 'provider' => 'users', 'login_url' => '/login'],  // browser cookie
+    'api' => ['driver' => 'jwt',     'provider' => 'users'],                           // Authorization: Bearer <token>
+    // 'admin' => ['driver' => 'session', 'provider' => 'admins', 'login_url' => '/admin/login'],
+],
+
+'providers' => [
+    'users'  => ['table' => 'users'],
+    // 'admins' => ['table' => 'users', 'where' => ['role' => 'admin']],   // only these rows can sign in
+],
+```
+
 ```php
 use System\Auth\Auth;
 
-Auth::attempt($email, $password);  // true + logged in, or false
-Auth::check();  Auth::user();  Auth::id();  Auth::logout();
-auth()->name;                      // helper
+Auth::user(); Auth::check(); Auth::id();          // the default guard
+Auth::attempt($email, $password); Auth::logout(); // session login / logout on the default guard
+Auth::guard('api')->user();                       // a specific guard
+Auth::guard('admin')->attempt($email, $password); // several session guards can be signed in at once
+auth()->name;                                     // helper
 ```
+
+- **Each session guard keeps its own session key**, so for example an admin login and a customer login don't interfere.
+- **Custom drivers:** `Auth::extend('apikey', fn($name, $provider, $config) => new ApiKeyGuard($name, $provider, $config))`.
+
+**Middleware**
+
+| Middleware | Meaning |
+| --- | --- |
+| `auth` | The default guard must have a user |
+| `auth:api` | Must be authenticated by the `api` guard |
+| `auth:web,api` | Either guard; the first that succeeds becomes the default for the request |
+| `guest` / `guest:admin` | Only for signed-out visitors |
+
+Browsers that aren't signed in are redirected to the guard's `login_url`, and the page they wanted is remembered. API clients get **401** JSON with a `WWW-Authenticate: Bearer` header and the reason, e.g. "Token has expired".
+
+### JWT for APIs
+
+The `api` guard uses JSON Web Tokens, implemented in BongoMVC itself (`System\Security\Jwt`), with no packages:
+- **Signing:** HS256 with `JWT_SECRET`, or, if that's empty, a key derived from `APP_KEY`.
+- **Rejected tokens:** a bad signature, any other algorithm (including `"alg": "none"`), expired, not valid yet, or from another issuer.
+- **Claims:** `sub` (user id), `guard`, `iss`, `iat`, `nbf`, `exp` and a random `jti` per token.
+- **Revocation:** logout and refresh add the old `jti` to `jwt_revocations`, so a stolen token stops working once it is logged out.
+
+| Endpoint | Body / header | Response |
+| --- | --- | --- |
+| `POST /api/auth/login` | `{"email", "password"}` | `{"access_token", "token_type": "Bearer", "expires_in", "user"}`; 401 for wrong credentials, 422 for invalid input, 429 when throttled |
+| `GET /api/auth/me` | `Authorization: Bearer <token>` | `{"user": {...}}` (never the password hash) |
+| `POST /api/auth/refresh` | `Authorization: Bearer <token>` (may be expired, within `JWT_REFRESH_TTL`) | A new token; the old one is revoked |
+| `POST /api/auth/logout` | `Authorization: Bearer <token>` | `{"message": "Token revoked."}` |
+| `GET /api/products` | `Authorization: Bearer <token>` | Paginated JSON (example protected resource) |
+
+```bash
+TOKEN=$(curl -s -X POST http://127.0.0.1:8000/api/auth/login \
+  -H "Content-Type: application/json" -d '{"email":"admin@example.com","password":"password"}' | php -r 'echo json_decode(stream_get_contents(STDIN))->access_token;')
+curl http://127.0.0.1:8000/api/auth/me -H "Authorization: Bearer $TOKEN"
+```
+
+| `.env` | Default | |
+| --- | --- | --- |
+| `JWT_TTL` | 60 | Minutes an access token is valid |
+| `JWT_REFRESH_TTL` | 20160 (14 days) | Minutes after issue during which a token can be refreshed |
+| `JWT_SECRET` | empty → derived from `APP_KEY` | Set it to share tokens with another service |
+| `JWT_ISSUER` | `APP_URL` | `iss` claim |
+
+```php
+// In your own code
+$token = Auth::guard('api')->login($user, ['scope' => 'orders']);  // issue a token with extra claims
+$claims = Auth::guard('api')->claims();                            // claims of the current request's token
+$claims = System\Security\Jwt::decode($token);                     // verify any token (throws JwtException)
+```
+
+API routes are **stateless**. The session starts only on the `web` middleware group, so API responses set no cookie and a browser session never authenticates the API. Validation errors on API routes return **422** JSON: `{"message": "...", "errors": {"email": "..."}}`.
+
+### Passwords and encryption
 
 **Passwords are hashed, never encrypted.** A password can't be turned back into text, by anyone:
 

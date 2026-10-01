@@ -36,6 +36,23 @@ Login: **admin@example.com / password**
 
 > To unlock after 1.9, wait 15 minutes, or run `php bongo migrate:fresh --seed` on a development database.
 
+## 1b. API authentication (JWT)
+
+Use any HTTP client (curl, Postman, Insomnia):
+
+| # | Do this | You should see |
+| --- | --- | --- |
+| 1b.1 | `POST /api/auth/login` with JSON `{"email":"admin@example.com","password":"password"}` | `200` with `access_token`, `"token_type":"Bearer"`, `expires_in` ≈ 3600, and the user **without** a password field |
+| 1b.2 | `GET /api/auth/me` with `Authorization: Bearer <token>` | `200` with your user |
+| 1b.3 | The same without the header | `401`, `"Unauthenticated. No token provided."` |
+| 1b.4 | Change one character of the token, then call `/api/auth/me` | `401`, "Invalid token signature" |
+| 1b.5 | `GET /api/products?per_page=5` with the token | 5 products plus `meta` paging info |
+| 1b.6 | `POST /api/auth/refresh` with the token | A new token. The old one now gets `401 … revoked`. |
+| 1b.7 | `POST /api/auth/logout`, then `/api/auth/me` with the same token | `401 … Token has been revoked` |
+| 1b.8 | Login with `{"email":"bad"}` | `422` with `errors.email` and `errors.password` |
+| 1b.9 | While signed in to the web dashboard, open `/api/auth/me` in the same browser | `401`: the browser session does not unlock the API |
+| 1b.10 | Check the response headers of any `/api/...` call | No `Set-Cookie`; the API is stateless |
+
 ## 2. CSRF protection
 
 | # | Do this | You should see |

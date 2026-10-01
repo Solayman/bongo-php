@@ -23,6 +23,10 @@ class Controller
         $errors = Validator::make($data, $rules);
 
         if ($errors) {
+            // API clients get 422 JSON instead of a redirect
+            if (Request::wantsJson()) {
+                response(['message' => 'The given data was invalid.', 'errors' => $errors], 'json', 422);
+            }
             Session::flash('_errors', $errors);
             Session::flash('_old', array_filter(
                 $data,

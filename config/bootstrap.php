@@ -126,9 +126,4 @@ register_shutdown_function(function () {
     }
 });
 
-// ---------------------------
-// Session (web requests only)
-// ---------------------------
-if (PHP_SAPI !== 'cli') {
-    System\Http\Session::start();
-}
+// The session is started by the "session" middleware (web routes only), so API routes stay stateless
