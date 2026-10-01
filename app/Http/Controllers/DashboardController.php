@@ -27,9 +27,11 @@ class DashboardController extends Controller
             ->limit(8)
             ->get();
 
+        // One grouped query instead of one per status
+        $counts = DB::table('orders')->select('status', 'COUNT(*) AS n')->groupBy('status')->pluck('n', 'status');
         $statusCounts = [];
         foreach (Order::STATUSES as $status) {
-            $statusCounts[$status] = DB::table('orders')->where('status', $status)->count();
+            $statusCounts[$status] = (int) ($counts[$status] ?? 0);
         }
 
         $topProducts = DB::raw(

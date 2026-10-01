@@ -135,7 +135,7 @@ class QueryBuilderTest extends TestCase
         $this->assertCount(20, QbItem::all());
         $this->assertCount(4, QbItem::where('status', 'draft')->get());
         $this->assertCount(2, QbItem::whereIn('id', [1, 2])->get());
-        $this->assertTrue(QbItem::create(['name' => 'Via model']));
+        $this->assertSame('Via model', QbItem::create(['name' => 'Via model'])->name);
         $this->assertSame('users', User::tableName());
     }
 }

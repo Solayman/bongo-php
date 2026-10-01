@@ -145,4 +145,11 @@ class ShopPagesTest extends HttpTestCase
         $this->assertSame('admin@example.com', $json['dd'][0]['email']);
         $this->assertContains('SystemController.php', $json['at']);
     }
+
+    public function testDebugFooterShowsQueries(): void
+    {
+        $page = $this->get('/');
+        $page->assertSee('DEBUG')->assertSee('queries ·')->assertSee('SELECT * FROM users WHERE id = ? LIMIT 1');
+        $this->assertTrue((bool) preg_match('/<strong>(\d+)<\/strong> queries/', $page->body, $m) && (int) $m[1] > 3);
+    }
 }
