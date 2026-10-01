@@ -139,7 +139,7 @@ namespace Tests\Unit {
         public function testAppRouteFilesLoadFromConfig(): void
         {
             $router = Router::fromConfig();
-            $this->assertSame('/products/5/edit', $router->url('products.edit', ['id' => 5]));
+            $this->assertSame('/products/5/edit', $router->url('products.edit', ['product' => 5]));
             $this->assertSame('/api/health', $router->url('api.health'));
             $this->assertSame(url('/orders/3'), route('orders.show', ['id' => 3]));
             $this->assertSame(url('/plain/path'), route('/plain/path'));

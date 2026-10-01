@@ -35,9 +35,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [ProductController::class, 'index'])->name('index');
         Route::get('/create', [ProductController::class, 'create'])->name('create');
         Route::post('/', [ProductController::class, 'store'])->name('store');
-        Route::get('/{id}/edit', [ProductController::class, 'edit'])->name('edit')->where('id', '\d+');
-        Route::put('/{id}', [ProductController::class, 'update'])->name('update')->where('id', '\d+');
-        Route::delete('/{id}', [ProductController::class, 'destroy'])->name('destroy')->where('id', '\d+');
+        Route::get('/{product}/edit', [ProductController::class, 'edit'])->name('edit')->where('product', '\d+');
+        Route::put('/{product}', [ProductController::class, 'update'])->name('update')->where('product', '\d+');
+        Route::delete('/{product}', [ProductController::class, 'destroy'])->name('destroy')->where('product', '\d+');
     });
 
     // Categories

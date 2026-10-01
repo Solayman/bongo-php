@@ -17,6 +17,7 @@ Built in:
 | Testing | `php bongo test`: unit + HTTP tests on a separate test database |
 | Debugging | `dump()`/`dd()` for browser, CLI and JSON; developer error page with source and stack trace; `php bongo tinker` |
 | Cache & rate limits | File cache (`Cache::remember`), `throttle:60,1` middleware with rate-limit headers, `RateLimiter` |
+| Container & DI | Service container (`app()`, `bind/singleton/instance`, autowiring), controller method injection, route model binding (`edit(Product $product)` → 404 if missing) |
 | Generators | `make:controller [--api]`, `make:model [--migration]`, `make:middleware`, `make:test [--unit]`, `make:migration` |
 | Logging | Built-in daily log files in `storage/logs`, levels, secret masking; framework events logged automatically |
 | CLI | `php bongo serve / tinker / route:list / make:* / view:clear / cache:clear / migrate / migrate:status / migrate:rollback / make:migration / db:seed / key:generate / log:clear / test` |
@@ -106,6 +107,7 @@ system/                  Framework core (namespace System\)
   Database/Schema/       Schema, Blueprint, ColumnDefinition, Expression
   Cache/                 Cache, FileStore, RateLimiter
   Console/               Generator (make:*)
+  Container/             Container (DI, autowiring, method injection, model binding)
   Debug/                 Dumper (dump/dd), ExceptionPage (debug error page)
   Http/                  Request, Session, UploadedFile, HttpException, ErrorPage
   Http/Middleware/       Cors, SecurityHeaders, StartSession, ThrottleRequests
@@ -342,6 +344,46 @@ class ProductController extends Controller
 ```
 
 **Request:** `Request::all()` (query, form and JSON body), `Request::input('key', $default)`, `Request::only([...])`, `Request::query('key')`, `Request::file('photo')`, `Request::method()`, `Request::path()`, `Request::header('X')`, `Request::wantsJson()`. String input is trimmed, and empty strings count as missing.
+
+### Route model binding and dependency injection
+
+Controller methods (and closure routes) can ask for what they need. The router fills the parameters:
+
+```php
+// routes/web.php
+Route::get('/products/{product}/edit', [ProductController::class, 'edit']);
+
+// app/Http/Controllers/ProductController.php
+public function edit(Product $product, Request $request, ReportBuilder $reports)
+{
+    // $product  = Product::findOrFail($productIdFromUrl), or a 404 page "Product not found"
+    // $request  = System\Http\Request
+    // $reports  = built by the container (its constructor dependencies too)
+}
+```
+
+| Parameter | Filled with |
+| --- | --- |
+| Same name as a route parameter (`$id` for `{id}`) | That value. `int`/`float` types convert numeric strings automatically. |
+| A `Model` type (`Product $product`) | The model whose id is in the route (matched by name, otherwise the next route value). **404** if missing. Use `?Product $product = null` to allow none. |
+| Any other class | Built by the container |
+| Not in the route | Its default value, or `null` if nullable |
+
+Plain `edit($id)` methods keep working exactly as before.
+
+### Service container
+
+```php
+app()->singleton(Mailer::class, fn() => new Mailer(config('mail')));   // one shared instance
+app()->bind(PaymentGateway::class, FakeGateway::class);                // interface → implementation
+app()->instance('settings', $settings);                               // an existing object
+
+$mailer  = app(Mailer::class);
+$builder = app(ReportBuilder::class);         // autowired: constructor dependencies are resolved too
+app()->call([$service, 'run'], ['id' => 5]);  // call a method with injection
+```
+
+Classes with constructor dependencies are built automatically. Interfaces and abstract classes need a `bind()`. Circular dependencies are reported clearly.
 
 ### Validation
 
@@ -955,6 +997,7 @@ Generators never overwrite an existing file. New migrations always sort after th
 | `csrf_token()`, `csrf_field()`, `method_field('DELETE')` | CSRF token and method spoofing for forms |
 | `auth()` | Logged-in user or `null` |
 | `redirect($url)`, `back()` | Redirect and stop |
+| `app()`, `app(Class::class)` | The service container / resolve a class |
 | `abort(404, 'msg')` | Stop with an HTTP error page |
 | `response($data, 'json', 200)` | JSON or HTML response and stop |
 | `e($value)` | HTML-escape |

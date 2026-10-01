@@ -203,7 +203,7 @@ class Router
                 Session::put('_previous_url', $path . ($query !== '' ? "?$query" : ''));
             }
 
-            $this->callAction($route->action, array_values($params));
+            $this->callAction($route->action, $params);
             return;
         }
 
@@ -290,11 +290,16 @@ class Router
         (new $class())->handle(...$args);
     }
 
+    /**
+     * Run the action through the container: route parameters are matched by name,
+     * typed models are loaded by id (404 if missing), other classes are injected.
+     */
     protected function callAction(array|\Closure $action, array $params): void
     {
+        $container = \System\Container\Container::getInstance();
+
         if ($action instanceof \Closure) {
-            $result = $action(...$params);
-            $this->send($result);
+            $this->send($container->call($action, $params));
             return;
         }
 
@@ -305,13 +310,13 @@ class Router
             throw new RuntimeException("Controller class $class not found");
         }
 
-        $instance = new $class();
+        $instance = $container->make($class);
 
         if (!method_exists($instance, $method)) {
             throw new RuntimeException("Method $method not found in controller $class");
         }
 
-        $this->send($instance->$method(...$params));
+        $this->send($container->call([$instance, $method], $params));
     }
 
     /** Actions may echo, or return a string (HTML) or an array (JSON) */
