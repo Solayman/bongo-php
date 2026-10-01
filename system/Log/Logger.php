@@ -101,6 +101,44 @@ class Logger
             : $this->path . '/bongo-' . date('Y-m-d') . '.log';
     }
 
+    /**
+     * Newest entries from the current log file, newest first.
+     * Each entry: ['time', 'env', 'level', 'message', 'details' (trace lines)].
+     * $minLevel filters out lower levels.
+     */
+    public function recent(int $limit = 50, ?string $minLevel = null): array
+    {
+        $file = $this->file();
+        if (!is_file($file)) {
+            return [];
+        }
+
+        // Read only the end of big files
+        $size = filesize($file);
+        $handle = fopen($file, 'r');
+        fseek($handle, max(0, $size - 512 * 1024));
+        $text = stream_get_contents($handle);
+        fclose($handle);
+
+        $min = $minLevel ? (self::LEVELS[strtolower($minLevel)] ?? 0) : 0;
+        $entries = [];
+        $current = null;
+
+        foreach (preg_split('/\r?\n/', $text) as $line) {
+            if (preg_match('/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\] (\w+)\.([A-Z]+): (.*)$/', $line, $m)) {
+                if ($current) $entries[] = $current;
+                $current = ['time' => $m[1], 'env' => $m[2], 'level' => strtolower($m[3]), 'message' => $m[4], 'details' => ''];
+            } elseif ($current && $line !== '') {
+                $current['details'] .= $line . "\n";
+            }
+        }
+        if ($current) $entries[] = $current;
+
+        $entries = array_filter($entries, fn($e) => (self::LEVELS[$e['level']] ?? 0) >= $min);
+
+        return array_slice(array_reverse(array_values($entries)), 0, $limit);
+    }
+
     protected function format(string $level, string $message, array $context): string
     {
         $exception = $context['exception'] ?? null;
