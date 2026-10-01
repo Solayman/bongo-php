@@ -20,40 +20,40 @@ class ViewEngine
 
     public function render(string $view, array $data = []): string
     {
-        $childPath = $this->getViewPath($view);
-        $childContent = file_get_contents($childPath);
+        $content = file_get_contents($this->getViewPath($view));
 
-        // --- Compile child file ---
-        $compiledChild = $this->compiler->compile($childContent);
-
-        // Extract variables for child view
-        extract($data, EXTR_OVERWRITE);
-        ob_start();
-        eval('?>' . $compiledChild);
-        ob_end_clean(); // sections are captured inside SectionManager
-
-        // --- Check for @extends ---
-        if (preg_match('/@extends\([\'"](.+?)[\'"]\)/', $childContent, $match)) {
+        // --- Detect and strip @extends ---
+        $layout = null;
+        if (preg_match('/@extends\([\'"](.+?)[\'"]\)/', $content, $match)) {
             $layout = $match[1];
-            $layoutPath = $this->getViewPath($layout);
-            $layoutContent = file_get_contents($layoutPath);
-
-            // Replace @yield('section') in layout with captured sections
-            $compiledLayout = preg_replace_callback('/@yield\([\'"](.+?)[\'"]\)/', function ($m) {
-                return $this->sections->get($m[1]);
-            }, $layoutContent);
-
-            // Compile and render layout
-            $compiledLayout = $this->compiler->compile($compiledLayout);
-            ob_start();
-            eval('?>' . $compiledLayout);
-            return ob_get_clean();
+            $content = str_replace($match[0], '', $content);
         }
 
-        // No layout, just render child
-        $compiledChild = $this->compiler->compile($childContent);
+        // Child sections are captured inside SectionManager while it runs
+        $output = $this->evaluate($this->compiler->compile($content), $data);
+
+        if ($layout === null) {
+            return $output;
+        }
+
+        // Layout is compiled from its own source only; @yield reads the
+        // captured sections at runtime, so rendered HTML is never re-compiled
+        return $this->render($layout, $data);
+    }
+
+    /**
+     * Run compiled view code in an isolated scope and return its output
+     */
+    protected function evaluate(string $__compiled, array $__data): string
+    {
+        extract($__data, EXTR_SKIP);
         ob_start();
-        eval('?>' . $compiledChild);
+        try {
+            eval('?>' . $__compiled);
+        } catch (\Throwable $__e) {
+            ob_end_clean();
+            throw $__e;
+        }
         return ob_get_clean();
     }
 

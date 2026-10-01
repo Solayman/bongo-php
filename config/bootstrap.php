@@ -46,6 +46,10 @@ if (file_exists($envPath)) {
         $line = trim($line);
         if ($line === '' || strpos($line, '#') === 0) continue;
         [$name, $value] = array_map('trim', explode('=', $line, 2));
+        // Strip matching surrounding quotes: APP_NAME="My App" -> My App
+        if (strlen($value) >= 2 && ($value[0] === '"' || $value[0] === "'") && $value[-1] === $value[0]) {
+            $value = substr($value, 1, -1);
+        }
         $_ENV[$name] = $value;
         putenv("$name=$value");
     }

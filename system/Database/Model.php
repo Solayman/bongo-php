@@ -38,7 +38,8 @@ class Model
     // === Static query methods ===
     public static function where(string $column, $operator = null, $value = null): QueryBuilder
     {
-        return static::query()->where($column, $operator, $value);
+        // Forward the real argument count so where('col', 'value') keeps working
+        return static::query()->where(...func_get_args());
     }
 
     public static function whereIn(string $column, array $values): QueryBuilder
