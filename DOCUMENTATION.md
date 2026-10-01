@@ -16,8 +16,10 @@ Built in:
 | Auth & security | Multiple guards (session, JWT) and providers, `auth:api` middleware, own HS256 JWT with refresh and revocation, peppered Argon2id passwords, AES-256-GCM encryption, login throttling |
 | Testing | `php bongo test`: unit + HTTP tests on a separate test database |
 | Debugging | `dump()`/`dd()` for browser, CLI and JSON; developer error page with source and stack trace; `php bongo tinker` |
+| Cache & rate limits | File cache (`Cache::remember`), `throttle:60,1` middleware with rate-limit headers, `RateLimiter` |
+| Generators | `make:controller [--api]`, `make:model [--migration]`, `make:middleware`, `make:test [--unit]`, `make:migration` |
 | Logging | Built-in daily log files in `storage/logs`, levels, secret masking; framework events logged automatically |
-| CLI | `php bongo serve / tinker / route:list / view:clear / migrate / migrate:status / migrate:rollback / make:migration / db:seed / key:generate / log:clear / test` |
+| CLI | `php bongo serve / tinker / route:list / make:* / view:clear / cache:clear / migrate / migrate:status / migrate:rollback / make:migration / db:seed / key:generate / log:clear / test` |
 
 The repository currently includes an **e-commerce admin panel** (products, categories, orders, customers). It is the test application used to exercise the framework end to end, and it will be removed later so the framework ships fresh.
 
@@ -102,9 +104,11 @@ system/                  Framework core (namespace System\)
   Auth/                  Auth (guards), SessionGuard, JwtGuard, UserProvider, LoginThrottle
   Database/              Connection, DB (transactions, query log), QueryBuilder, Model, HasMany, BelongsTo, Migration, Migrator
   Database/Schema/       Schema, Blueprint, ColumnDefinition, Expression
+  Cache/                 Cache, FileStore, RateLimiter
+  Console/               Generator (make:*)
   Debug/                 Dumper (dump/dd), ExceptionPage (debug error page)
   Http/                  Request, Session, HttpException, ErrorPage
-  Http/Middleware/       Cors, SecurityHeaders, StartSession
+  Http/Middleware/       Cors, SecurityHeaders, StartSession, ThrottleRequests
   Log/                   Logger, Log
   Routing/               Router, Route, RouteDefinition, PendingGroup
   Security/              Key, Hash, Crypt, Jwt
@@ -225,7 +229,7 @@ A middleware is a class with `handle(...$params): void`. To stop the request it 
 ],
 'middleware_groups' => [                // named sets
     'web' => ['session', 'csrf'],
-    'api' => ['cors'],
+    'api' => ['cors', 'throttle:60,1'],
 ],
 'middleware_global' => [                // every request, before routing
     System\Http\Middleware\SecurityHeaders::class,
@@ -722,7 +726,47 @@ In production, also serve the site over **HTTPS**, set `APP_ENV=production`, and
 
 ---
 
-## 10. Logging
+## 10. Cache and rate limiting
+
+### Cache
+
+A file cache in `storage/cache/data`. It needs no Redis or Memcached, and works anywhere PHP can write files.
+
+```php
+use System\Cache\Cache;
+
+$stats = Cache::remember('dashboard.stats', 300, fn() => DB::table('orders')->sum('total'));  // computed at most every 5 min
+Cache::put('key', $value, 60);       // seconds; null = forever (also Cache::forever())
+Cache::get('key', 'default');
+Cache::has('key');  Cache::forget('key');  Cache::ttl('key');
+Cache::increment('visits', 1, 3600); // atomic counter (file lock)
+Cache::flush();                      // or: php bongo cache:clear
+```
+
+Values are serialized PHP, so arrays and objects work. Each key is one file, written atomically.
+
+### Rate limiting
+
+**On routes:** `->middleware('throttle:60,1')` allows 60 requests per 1 minute for each user (or IP) on each route.
+- Responses carry `X-RateLimit-Limit` and `X-RateLimit-Remaining`.
+- Over the limit, the client gets **429 Too Many Requests** with `Retry-After`: JSON for API clients, an error page for browsers. The event is logged as a warning.
+- The `api` group has `throttle:60,1` by default. Change it with `API_RATE_LIMIT` in `.env`.
+
+**In your own code:**
+
+```php
+use System\Cache\RateLimiter;
+
+$limiter = new RateLimiter();
+if ($limiter->tooManyAttempts("export:$userId", 3)) {
+    abort(429, 'Try again in ' . $limiter->availableIn("export:$userId") . ' seconds');
+}
+$limiter->hit("export:$userId", 3600);   // 3 exports per hour
+```
+
+---
+
+## 10b. Logging
 
 Logging is built into the framework. No package is needed.
 
@@ -817,6 +861,23 @@ An interactive PHP shell with the app loaded:
 
 ---
 
+### Code generators
+
+```bash
+php bongo make:controller ProductController           # app/Http/Controllers/ProductController.php
+php bongo make:controller Admin/ReportController      # sub-folder + namespace App\Http\Controllers\Admin
+php bongo make:controller Api/OrderController --api   # JSON actions: index, show, store
+php bongo make:model Coupon --migration               # app/Models/Coupon.php (table "coupons") + migration
+php bongo make:middleware EnsureIsAdmin               # register it in config/app.php
+php bongo make:test CouponApi                         # tests/Feature/CouponApiTest.php
+php bongo make:test Price --unit                      # tests/Unit/PriceTest.php
+php bongo make:migration add_notes_to_orders
+```
+
+Generators never overwrite an existing file. New migrations always sort after the existing ones, whatever the clock or timezone.
+
+---
+
 ## 12. Helpers
 
 | Helper | Description |
@@ -837,6 +898,7 @@ An interactive PHP shell with the app loaded:
 | `e($value)` | HTML-escape |
 | `money($n)`, `is_active('/prefix')` | Formatting and nav helpers |
 | `base_path('x')` | Absolute project path |
+| `debug_stats()` | Query count/time, page time and memory (used by the debug footer) |
 | `logger()`, `logger('msg', $context)` | The logger, or write a debug line |
 | `dump(...$vars)`, `dd(...$vars)` | Show values (and stop, for `dd`); see Debugging |
 

@@ -22,6 +22,7 @@ class HttpException extends RuntimeException
             404 => 'Page Not Found',
             405 => 'Method Not Allowed',
             419 => 'Page Expired',
+            429 => 'Too Many Requests',
             default => 'Server Error',
         };
     }

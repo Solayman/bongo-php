@@ -87,4 +87,25 @@ class HttpLayerTest extends HttpTestCase
             ->assertSee('action="' . \System\Testing\Runner::$baseUrl . '/products/20"')
             ->assertSee('name="_method" value="DELETE"');
     }
+
+    public function testApiIsRateLimited(): void
+    {
+        $first = $this->get('/api/health');
+        $this->assertSame('60', $first->header('X-RateLimit-Limit'));
+        $remaining = (int) $first->header('X-RateLimit-Remaining');
+
+        // Use up the rest of this minute's allowance
+        for ($i = 0; $i < $remaining; $i++) {
+            $this->get('/api/health');
+        }
+
+        $blocked = $this->get('/api/health');
+        $blocked->assertStatus(429);
+        $this->assertSame('0', $blocked->header('X-RateLimit-Remaining'));
+        $this->assertTrue((int) $blocked->header('Retry-After') > 0);
+        $this->assertSame('Too Many Requests', json_decode($blocked->body, true)['error']['message']);
+
+        // Other routes have their own counter
+        $this->jsonRequest('POST', '/api/auth/login', ['email' => 'nobody@example.com', 'password' => 'x'])->assertStatus(401);
+    }
 }

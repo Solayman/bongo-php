@@ -61,7 +61,7 @@ try {
                 exit(1);
             }
             $file = (new Migrator(base_path('database/migrations')))->make($options[0]);
-            echo 'Created: ' . str_replace(BASE_PATH . DIRECTORY_SEPARATOR, '', $file) . "\n";
+            echo 'Created: ' . relativePath($file) . PHP_EOL;
             break;
 
         case 'migrate:fresh':
@@ -159,6 +159,35 @@ try {
             }
             break;
 
+        case 'make:controller':
+        case 'make:model':
+        case 'make:middleware':
+        case 'make:test':
+            $name = $options[0] ?? '';
+            if ($name === '' || str_starts_with($name, '--')) {
+                $flags = ['make:controller' => ' [--api]', 'make:model' => ' [--migration]', 'make:test' => ' [--unit]'];
+                echo "Usage: php bongo $command <Name>" . ($flags[$command] ?? '') . PHP_EOL;
+                exit(1);
+            }
+            $generator = new System\Console\Generator(BASE_PATH);
+            $created = match ($command) {
+                'make:controller' => $generator->controller($name, $hasOption('api')),
+                'make:model'      => $generator->model($name),
+                'make:middleware' => $generator->middleware($name),
+                'make:test'       => $generator->test($name, $hasOption('unit')),
+            };
+            echo "Created: $created" . PHP_EOL;
+            if ($command === 'make:model' && $hasOption('migration')) {
+                $table = $generator->tableName(basename(strtr($name, '\\', '/')));
+                $file = (new Migrator(base_path('database/migrations')))->make("create_{$table}_table");
+                echo 'Created: ' . relativePath($file) . PHP_EOL;
+            }
+            break;
+
+        case 'cache:clear':
+            echo 'Removed ' . System\Cache\Cache::flush() . ' cache file(s)' . PHP_EOL;
+            break;
+
         case 'view:clear':
             $removed = System\View\ViewEngine::shared()->clearCache();
             echo "Removed $removed compiled view(s)
@@ -193,6 +222,16 @@ try {
 ";
             echo "  tinker                                   Interactive PHP shell with the app loaded
 ";
+            echo "  make:controller <Name> [--api]           Create a controller in app/Http/Controllers
+";
+            echo "  make:model <Name> [--migration]          Create a model (and its migration)
+";
+            echo "  make:middleware <Name>                   Create a middleware class
+";
+            echo "  make:test <Name> [--unit]                Create a feature (or unit) test
+";
+            echo "  cache:clear                              Delete everything in the file cache
+";
             echo "  view:clear                               Delete compiled templates in storage/cache/views
 ";
             echo "  log:clear                                Delete the log files in storage/logs
@@ -204,6 +243,14 @@ try {
 } catch (Throwable $e) {
     fwrite(STDERR, get_class($e) . ': ' . $e->getMessage() . "\n");
     exit(1);
+}
+
+/** "D:\project/database\x.php" → "database/x.php" */
+function relativePath(string $file): string
+{
+    $file = str_replace('\\', '/', $file);
+    $base = str_replace('\\', '/', BASE_PATH) . '/';
+    return str_starts_with($file, $base) ? substr($file, strlen($base)) : $file;
 }
 
 function runSeeder(): void

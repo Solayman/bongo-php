@@ -161,7 +161,14 @@ class Migrator
         }
 
         $table = preg_match('/^create_(\w+)_table$/', $name, $m) ? $m[1] : null;
-        $file = rtrim($this->path, '/\\') . '/' . date('Y_m_d_His') . "_$name.php";
+        // The prefix must sort after every existing migration, whatever the clock or timezone says
+        $prefix = date('Y_m_d_His');
+        $existing = array_keys($this->files());
+        $last = $existing ? substr((string) end($existing), 0, 17) : '';
+        if ($last !== '' && strcmp($prefix, $last) <= 0) {
+            $prefix = substr($last, 0, 11) . str_pad((string) ((int) substr($last, 11, 6) + 1), 6, '0', STR_PAD_LEFT);
+        }
+        $file = rtrim($this->path, '/\\') . DIRECTORY_SEPARATOR . $prefix . "_$name.php";
 
         $up = $table
             ? "        Schema::create('$table', function (Blueprint \$table) {\n            \$table->id();\n            \$table->timestamps();\n        });"
