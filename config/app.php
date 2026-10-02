@@ -20,13 +20,14 @@ return [
         'guest' => App\Http\Middleware\RedirectIfAuthenticated::class,
         'csrf'  => App\Http\Middleware\VerifyCsrfToken::class,
         'cors'    => System\Http\Middleware\Cors::class,
-        'session' => System\Http\Middleware\StartSession::class,
+        'session'  => System\Http\Middleware\StartSession::class,
+        'throttle' => System\Http\Middleware\ThrottleRequests::class,
     ],
 
     // Named sets of middleware
     'middleware_groups' => [
         'web' => ['session', 'csrf'],
-        'api' => ['cors'],
+        'api' => ['cors', 'throttle:' . env('API_RATE_LIMIT', 60) . ',1'],
     ],
 
     // Run on every request, before routing

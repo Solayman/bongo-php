@@ -53,6 +53,8 @@ Use any HTTP client (curl, Postman, Insomnia):
 | 1b.9 | While signed in to the web dashboard, open `/api/auth/me` in the same browser | `401`: the browser session does not unlock the API |
 | 1b.10 | Check the response headers of any `/api/...` call | No `Set-Cookie`; the API is stateless |
 
+| 1b.11 | Call `GET /api/health` 61 times within a minute (e.g. a loop in a shell) | Responses 1–60 have `X-RateLimit-Remaining` counting down; the 61st is `429` with `Retry-After` |
+
 ## 2. CSRF protection
 
 | # | Do this | You should see |
@@ -131,6 +133,18 @@ Run these in a terminal, on a **development** database:
 | 6.5 | `php bongo migrate:rollback` | "Rolled back: …create_notes_table". Only that batch is undone; status shows it as **Pending**. |
 | 6.6 | Check the log | `INFO Migrated …` and `INFO Rolled back …` |
 | 6.7 | Delete the test migration file | `migrate:status` no longer lists it |
+
+## 6b. Generators and cache
+
+| # | Do this | You should see |
+| --- | --- | --- |
+| 6b.1 | `php bongo make:controller Admin/ReportController` | "Created: app/Http/Controllers/Admin/ReportController.php" in namespace `App\Http\Controllers\Admin` |
+| 6b.2 | Run the same command again | "…already exists". Nothing is overwritten. |
+| 6b.3 | `php bongo make:model Coupon --migration` | A model (table `coupons`) and a migration that sorts **after** all existing ones (`php bongo migrate:status` shows it as Pending, last) |
+| 6b.4 | In `php bongo tinker`: `Cache::remember('x', 60, fn() => rand())` twice | The same number both times |
+| 6b.5 | `php bongo cache:clear` | "Removed N cache file(s)" |
+
+Delete the generated test files afterwards.
 
 ## 7. Security
 
