@@ -9,7 +9,7 @@ Built in:
 | Routing | `Route::get/post/put/patch/delete/any/match`, groups, named routes, multiple route files (`web.php`, `api.php`), method spoofing, 404/405 |
 | Middleware | Aliases, groups (`web`, `api`), global stack, parameters (`role:admin`); built-in `auth`, `guest`, `csrf`, `cors`, security headers |
 | Views | Own template engine: `@if/@foreach/@forelse`, `@csrf/@method/@error`, `@auth`, `@json`, layouts, `@include`, `@push/@stack`, custom directives, compiled-view cache |
-| Database | PDO query builder, models, pagination, aggregates, joins |
+| Database | Query builder (grouped `orWhere`, joins, `groupBy/having`, aggregates, `pluck/value/exists`, `increment`, `chunk`, pagination), transactions with savepoints, query log, models with relations and eager loading |
 | Schema & migrations | PHP migrations with a schema builder; each run is tracked in the database; rollback |
 | Sessions | Flash messages, old input, CSRF tokens |
 | Validation | `required`, `email`, `min`, `max`, `unique`, `exists`, `confirmed`, … |
@@ -100,7 +100,7 @@ resources/views/         Templates (dot notation: products.index → products/in
 storage/logs/            Log files (git-ignored)
 system/                  Framework core (namespace System\)
   Auth/                  Auth (guards), SessionGuard, JwtGuard, UserProvider, LoginThrottle
-  Database/              Connection, DB, QueryBuilder, Model, Migration, Migrator
+  Database/              Connection, DB (transactions, query log), QueryBuilder, Model, HasMany, BelongsTo, Migration, Migrator
   Database/Schema/       Schema, Blueprint, ColumnDefinition, Expression
   Debug/                 Dumper (dump/dd), ExceptionPage (debug error page)
   Http/                  Request, Session, HttpException, ErrorPage
@@ -440,43 +440,109 @@ Custom error pages: `resources/views/errors/{404,405,419,...}.php`.
 ```php
 use System\Database\DB;
 
-DB::table('products')->get();                                   // stdClass rows
+DB::table('products')->get();                                  // stdClass rows
 DB::table('products')->where('price', '>', 10)->first();
 DB::table('products')
     ->select('products.*', 'categories.name AS category')
     ->leftJoin('categories', 'categories.id', '=', 'products.category_id')
-    ->whereIn('status', ['active'])
-    ->whereRaw('products.name LIKE ? OR products.sku LIKE ?', ["%$q%", "%$q%"])
+    ->where('status', 'active')
+    ->where(fn($q) => $q->where('price', '<', 10)->orWhere('stock', '<', 5))   // ( ... OR ... )
+    ->whereIn('category_id', [1, 2])->whereNotIn('id', [7])->whereBetween('price', 5, 50)
     ->orderBy('products.id', 'DESC')
     ->paginate(15);   // ['data', 'total', 'per_page', 'current_page', 'last_page']
 
-DB::table('orders')->where('status', '!=', 'cancelled')->sum('total');
-DB::table('users')->where('role', 'customer')->count();
+DB::table('orders')->select('status', 'COUNT(*) AS n')->groupBy('status')->having('COUNT(*)', '>', 2)->pluck('n', 'status');
+DB::table('orders')->where('status', '!=', 'cancelled')->sum('total');   // also count, avg, max, min
+DB::table('products')->where('id', 1)->value('name');                   // one value
+DB::table('products')->pluck('name', 'id');                             // [id => name]
+DB::table('users')->where('email', $email)->exists();                    // or doesntExist()
+DB::table('products')->distinct()->select('category_id')->get();
 
 $id = DB::table('categories')->insertGetId(['name' => 'Books', 'slug' => 'books']);
 DB::table('categories')->where('id', $id)->update(['name' => 'Novels']);
+DB::table('products')->where('id', 5)->decrement('stock', 2);           // atomic; also increment()
 DB::table('categories')->where('id', $id)->delete();
 
-DB::raw('SELECT * FROM users WHERE email = ?', [$email]);      // arrays for SELECT, bool otherwise
+DB::table('orders')->orderBy('id')->chunk(500, function (array $rows) { /* ... */ });   // big tables, low memory
+
+DB::raw('SELECT * FROM users WHERE email = ?', [$email]);   // rows for SELECT/SHOW/..., true otherwise
 ```
 
 Safety rules:
 - Values are always bound with `?`.
 - Operators and `ASC`/`DESC` are whitelisted.
-- `update()` and `delete()` **refuse to run without a `where()`**. Pass `true` to really affect every row.
+- `update()`, `delete()`, `increment()` and `decrement()` **refuse to run without a `where()`**. Pass `true` to `update`/`delete` to really affect every row.
 - Column and table names are not escaped, so never pass user input as an identifier.
+
+### Transactions
+
+```php
+DB::transaction(function () use ($order, $items) {
+    $id = DB::table('orders')->insertGetId($order);
+    foreach ($items as $item) {
+        DB::table('order_items')->insert($item + ['order_id' => $id]);
+        DB::table('products')->where('id', $item['product_id'])->decrement('stock', $item['quantity']);
+    }
+});   // committed if the function returns, rolled back if it throws
+```
+
+Nested `DB::transaction()` calls use savepoints: if an inner one fails, only the inner work is undone. For manual control there are `DB::beginTransaction()`, `DB::commit()` and `DB::rollBack()`.
+
+### Query log
+
+```php
+DB::enableQueryLog();
+// ... run code ...
+DB::getQueryLog();   // [['sql' => 'SELECT ...', 'bindings' => [...], 'ms' => 0.42], ...]
+```
+
+With `APP_DEBUG=true`, the query log is on for every web request, and admin pages show a **debug footer** with the query count, query time, page time and memory. Click **Show queries** to see every query. Use it to spot pages that run too many queries.
 
 ### Models
 
-```php
-class Product extends System\Database\Model
-{
-    protected static $table = 'products';   // optional: default = lowercase class + "s"
-}
+A model is a table row as an object, with saving, mass-assignment protection, hidden fields, casts and relations:
 
-Product::all();  Product::find(3);  Product::where('status', 'active')->get();
-Product::whereIn('id', [1, 2])->get();  Product::create([...]);  Product::query()->latest()->limit(5)->get();
+```php
+use System\Database\BelongsTo;
+use System\Database\HasMany;
+use System\Database\Model;
+
+class Order extends Model
+{
+    protected static $table = 'orders';                        // default: lowercase class + "s"
+    protected array $fillable = ['user_id', 'status', 'total']; // what create()/fill() may set
+    protected array $hidden = [];                              // left out of toArray()/JSON
+    protected array $casts = ['total' => 'float'];             // int, float, bool, string, array/json
+
+    public function items(): HasMany  { return $this->hasMany(OrderItem::class); }  // order_items.order_id
+    public function user(): BelongsTo { return $this->belongsTo(User::class); }     // orders.user_id
+}
 ```
+
+```php
+$order = Order::find(5);                 // or findOrFail(5): 404 page if missing
+$order->status = 'shipped';
+$order->save();                          // UPDATE orders SET status = ? WHERE id = ?  (changed columns only)
+$order->update(['status' => 'delivered']);
+$order->delete();
+
+$order = Order::create(['user_id' => 3, 'status' => 'pending', 'total' => 0]);   // returns the saved model
+Order::destroy([7, 8]);
+
+Order::where('status', 'paid')->latest()->get();   // every query-builder method works, returning models
+Order::all();
+
+$order->items;                                     // relation as a property: loaded once, then remembered
+$order->items()->where('quantity', '>', 1)->get(); // relation as a query
+$order->items()->create([...]);                    // order_id filled in
+$order->user->name;
+
+Order::with('items', 'user')->latest()->limit(20)->get();   // eager loading: 3 queries instead of 41
+```
+
+- **`isDirty()`, `getDirty()`, `getOriginal()`** show what changed. `refresh()` reloads the row. Saving an unchanged model runs no query.
+- **`toArray()`, `toJson()` and `json_encode($model)`** include loaded relations and leave out `$hidden` columns. The `User` model hides `password`, so a user can be returned from an API action as it is.
+- **Mass assignment:** `create()` and `fill()` only set `$fillable` columns. If `$fillable` is empty, every column except `$guarded` (default `['id']`) is allowed.
 
 ### Migrations
 

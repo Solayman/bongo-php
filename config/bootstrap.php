@@ -126,4 +126,10 @@ register_shutdown_function(function () {
     }
 });
 
+// Debug mode: record queries for the debug footer (see debug_stats())
+define('BONGO_START', $_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true));
+if (config('app.debug') && PHP_SAPI !== 'cli') {
+    System\Database\DB::enableQueryLog();
+}
+
 // The session is started by the "session" middleware (web routes only), so API routes stay stateless

@@ -237,6 +237,20 @@ if (!function_exists('dd')) {
     }
 }
 
+if (!function_exists('debug_stats')) {
+    /** Numbers for the debug footer: queries, query time, page time, memory */
+    function debug_stats(): array {
+        $log = \System\Database\DB::getQueryLog();
+        return [
+            'queries'  => count($log),
+            'query_ms' => round(array_sum(array_column($log, 'ms')), 1),
+            'page_ms'  => round((microtime(true) - (defined('BONGO_START') ? BONGO_START : microtime(true))) * 1000, 1),
+            'memory'   => round(memory_get_peak_usage() / 1048576, 1),
+            'log'      => $log,
+        ];
+    }
+}
+
 if (!function_exists('money')) {
     function money($amount) {
         return '$' . number_format((float) $amount, 2);

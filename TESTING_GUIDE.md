@@ -114,6 +114,10 @@ Use any HTTP client (curl, Postman, Insomnia):
 | 5.6 | Delete a category that has products | The products remain, now "Uncategorised" (`ON DELETE SET NULL`) |
 | 5.7 | **Orders → an order → Update status** | "Order … marked as shipped." and the badge changes |
 
+| 5.8 | Look at the bottom of any admin page (with `APP_DEBUG=true`) | Debug footer: "N queries · X ms", page time, memory. **Show queries** lists every SQL statement with its bindings and time. |
+| 5.9 | `php bongo tinker`, then `App\Models\Order::with('items')->limit(3)->get()` | Three orders, each with its `items` loaded |
+| 5.10 | In tinker: `$o = App\Models\Order::find(1); $o->user->name` | The customer's name, through the `belongsTo` relation |
+
 ## 6. Migrations (tracked in the database)
 
 Run these in a terminal, on a **development** database:
