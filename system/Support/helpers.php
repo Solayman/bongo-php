@@ -156,6 +156,13 @@ if (!function_exists('auth')) {
     }
 }
 
+if (!function_exists('can')) {
+    /** May the signed-in user do this? can('delete', $product) · can('manage-system') */
+    function can(string $ability, mixed ...$arguments): bool {
+        return \System\Auth\Gate::allows($ability, ...$arguments);
+    }
+}
+
 if (!function_exists('abort')) {
     function abort(int $status, string $message = '') {
         throw new HttpException($status, $message);

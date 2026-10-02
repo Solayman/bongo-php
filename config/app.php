@@ -28,6 +28,7 @@ return [
         'session'  => System\Http\Middleware\StartSession::class,
         'throttle' => System\Http\Middleware\ThrottleRequests::class,
         'locale'   => System\Http\Middleware\SetLocale::class,
+        'can'      => System\Http\Middleware\Authorize::class,   // can:ability[,routeParam]
     ],
 
     // Named sets of middleware

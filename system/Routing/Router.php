@@ -192,6 +192,9 @@ class Router
                 continue;
             }
 
+            // Middleware may need them too (e.g. "can:update,product")
+            \System\Http\Request::setRouteParameters($params);
+
             foreach ($this->resolveMiddleware($route) as [$class, $args]) {
                 $this->call($class, $args);
             }

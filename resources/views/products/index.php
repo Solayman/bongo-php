@@ -48,12 +48,17 @@
                     </td>
                     <td class="text-end text-nowrap">
                         <a href="<?= url('/products/' . $product->id . '/edit') ?>" class="btn btn-sm btn-outline-secondary">Edit</a>
-                        <form method="POST" action="<?= route('products.destroy', ['product' => $product->id]) ?>" class="d-inline"
-                              onsubmit="return confirm('Delete this product?');">
-                            @csrf
-                            @method('DELETE')
-                            <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
-                        </form>
+                        @if($product->order_count > 0)
+                            {{-- ProductPolicy::delete: ordered products stay, so order history keeps them --}}
+                            <button class="btn btn-sm btn-outline-danger" type="button" disabled title="Ordered {{ $product->order_count }} time(s): set it to Draft instead">Delete</button>
+                        @else
+                            <form method="POST" action="<?= route('products.destroy', ['product' => $product->id]) ?>" class="d-inline"
+                                  onsubmit="return confirm('Delete this product?');">
+                                @csrf
+                                @method('DELETE')
+                                <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                            </form>
+                        @endif
                     </td>
                 </tr>
             @endforeach

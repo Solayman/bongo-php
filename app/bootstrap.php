@@ -6,3 +6,6 @@ use App\Listeners\SendOrderConfirmation;
 use System\Events\Event;
 
 Event::listen('order.placed', [SendOrderConfirmation::class, 'handle']);
+
+// Authorization: abilities here, model rules in app/Policies (found automatically)
+System\Auth\Gate::define('manage-system', fn($user) => $user->role === 'admin');
