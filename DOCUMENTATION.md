@@ -1101,6 +1101,76 @@ Tests write to `storage/logs/testing/` instead, so they never mix with your app'
 
 ---
 
+## 10c. Queues and scheduled tasks
+
+### Queues
+
+Slow work, such as sending mail or building a report, can run outside the request. A job is a class that extends `System\Queue\Job` and has a `handle()` method:
+
+```php
+namespace App\Jobs;
+
+use System\Queue\Job;
+
+class SendLowStockReport extends Job
+{
+    public int $tries = 3;           // attempts before it counts as failed
+    public int|array $backoff = 60;  // seconds between tries (or [10, 60, 300])
+
+    public function __construct(public int $threshold = 10) {}
+
+    public function handle(): void { /* ... */ }
+
+    public function failed(\Throwable $e): void { /* optional: called after the last try */ }
+}
+
+dispatch(new SendLowStockReport(5));           // queue it now
+System\Queue\Queue::later(300, new SendLowStockReport()); // run in 5 minutes
+Mail::to($user->email)->subject('Hi')->text('...')->queue(); // queued mail
+```
+
+Choose the driver in `.env` with `QUEUE_DRIVER`:
+
+| Driver | Behavior |
+|---|---|
+| `sync` (default) | Runs the job immediately, inside the request, with retries. No worker is needed. |
+| `database` | Stores the job in the `jobs` table. Run `php bongo migrate` once to create it, then keep a worker running. |
+
+| Command | What it does |
+|---|---|
+| `php bongo queue:work` | Processes jobs until stopped. Add `--once` to run a single job, or `--stop-when-empty` to exit when the queue is empty. |
+| `php bongo queue:failed` | Lists the jobs in `failed_jobs`, with their errors. |
+| `php bongo queue:retry <id\|all>` | Moves failed jobs back onto the queue. |
+| `php bongo queue:flush` | Deletes all failed jobs. |
+
+Several workers can run at once: reserving a job locks its row. If a worker crashes, its job becomes available again after `QUEUE_RETRY_AFTER` seconds (default 90).
+
+### Scheduled tasks
+
+Define tasks in `app/schedule.php`:
+
+```php
+$schedule->job(new SendLowStockReport(10))->dailyAt('08:00')->name('Email the low stock report');
+$schedule->command('view:clear')->weekly();
+$schedule->call(fn() => ...)->everyFifteenMinutes()->weekdays()->withoutOverlapping();
+$schedule->call(fn() => ...)->cron('30 2 * * 1-5');
+```
+
+Run the scheduler once a minute:
+
+* Linux cron: `* * * * * cd /path/to/app && php bongo schedule:run`
+* Windows: a Task Scheduler entry that repeats every minute.
+
+`php bongo schedule:list` shows each task and its next run time. The framework adds two maintenance tasks of its own: pruning expired reset tokens and login attempts, and flushing the expired cache.
+
+**See it in the browser:** **System status → Queue** and **Scheduled tasks**.
+
+### "Table doesn't exist" errors
+
+If a query fails because a table or column is missing and migrations are pending, BongoMVC says so in four places: the log line (`| HINT: ... Run: php bongo migrate`), the debug error page, `php bongo security:check`, and the `php bongo serve` startup output.
+
+---
+
 ## 11. Debugging
 
 ### `dump()` and `dd()`

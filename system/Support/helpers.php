@@ -280,6 +280,13 @@ if (!function_exists('debug_stats')) {
     }
 }
 
+if (!function_exists('dispatch')) {
+    /** Queue a job: dispatch(new SendInvoice($id)) or dispatch($job, 60) to delay it a minute */
+    function dispatch(\System\Queue\Job $job, int $delaySeconds = 0): ?int {
+        return \System\Queue\Queue::push($job, $delaySeconds);
+    }
+}
+
 if (!function_exists('money')) {
     function money($amount) {
         return '$' . number_format((float) $amount, 2);

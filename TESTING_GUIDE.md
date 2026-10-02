@@ -241,6 +241,15 @@ Delete the generated test files afterwards.
 | 9b.11 | Sign in to `/login` as admin in the same browser | Both sessions work side by side (two guards) |
 | 9b.12 | Try `/shop/login` with the admin account | "These credentials do not match our records." Admins are not customers. |
 
+## 9c. Queue and scheduler
+
+- [ ] Run `php bongo migrate`. It creates the `jobs` and `failed_jobs` tables.
+- [ ] Set `QUEUE_DRIVER=database` in `.env`. Place a shop order, then open **System status → Queue**: one job is **pending**.
+- [ ] Run `php bongo queue:work --stop-when-empty`. The order confirmation mail is sent (see `storage/mail/` with `MAIL_DRIVER=file`), and the pending count returns to 0.
+- [ ] Run `php bongo schedule:list`. It shows "Email the low stock report" (daily 08:00), "Clear compiled views", and the framework maintenance tasks, each with a next run time.
+- [ ] Run `php bongo schedule:run`. It runs whatever is due this minute, or prints "No scheduled tasks are due".
+- [ ] Edit a product and save **without** choosing an image. You are redirected to the list, and the existing image is kept (this was a 500 before PR #17).
+
 ## 10. Automated tests
 
 ```bash

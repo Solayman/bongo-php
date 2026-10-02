@@ -22,6 +22,15 @@ try {
         case 'serve':
             $host = $optionValue('host', '127.0.0.1');
             $port = (int) $optionValue('port', env('APP_PORT', 8000));
+            // Warn about the usual first-run problems before starting
+            try {
+                System\Security\Key::get();
+            } catch (Throwable $e) {
+                echo "\033[33mWarning:\033[0m APP_KEY is missing. Sign-in will fail. Run: php bongo key:generate" . PHP_EOL;
+            }
+            if ($pending = System\Database\MigrationHint::pending()) {
+                echo "\033[33mWarning:\033[0m " . count($pending) . ' migration(s) have not run. Run: php bongo migrate' . PHP_EOL;
+            }
             echo "Starting development server: http://$host:$port\n";
             echo "Press Ctrl+C to stop.\n";
             passthru(escapeshellarg(PHP_BINARY) . " -S $host:$port -t " . escapeshellarg(__DIR__ . '/public'));
@@ -196,6 +205,74 @@ try {
             echo PHP_EOL . ($summary === 'ok' ? 'All checks passed.' : ($summary === 'warn' ? 'Some warnings: review them before going live.' : 'Some checks FAILED: fix them before going live.')) . PHP_EOL;
             exit($summary === 'fail' ? 1 : 0);
 
+        case 'queue:work':
+            if (System\Queue\Queue::driver() === 'sync') {
+                echo 'QUEUE_DRIVER is "sync": jobs already run immediately. Set QUEUE_DRIVER=database to use a worker.' . PHP_EOL;
+            }
+            $worker = new System\Queue\Worker(fn($line) => print(date('[H:i:s] ') . $line . PHP_EOL));
+            $count = $worker->work([
+                'queue' => $optionValue('queue', 'default'),
+                'sleep' => (int) $optionValue('sleep', 3),
+                'max_jobs' => (int) $optionValue('max-jobs', 0),
+                'max_time' => (int) $optionValue('max-time', 0),
+                'stop_when_empty' => $hasOption('stop-when-empty'),
+                'once' => $hasOption('once'),
+            ]);
+            echo "Processed $count job(s)." . PHP_EOL;
+            break;
+
+        case 'queue:failed':
+            $failed = System\Database\DB::table('failed_jobs')->orderBy('id', 'DESC')->limit(50)->get();
+            if (!$failed) {
+                echo 'No failed jobs.' . PHP_EOL;
+                break;
+            }
+            foreach ($failed as $f) {
+                $job = @unserialize(base64_decode((string) $f->payload));
+                printf("#%d  %s  %s  %s%s", $f->id, $f->failed_at, $job instanceof System\Queue\Job ? $job->displayName() : '?', strtok((string) $f->exception, "\n"), PHP_EOL);
+            }
+            echo PHP_EOL . 'Retry with: php bongo queue:retry <id|all>' . PHP_EOL;
+            break;
+
+        case 'queue:retry':
+            $n = System\Queue\Worker::retry($options[0] ?? 'all');
+            echo "Moved $n job(s) back onto the queue." . PHP_EOL;
+            break;
+
+        case 'queue:flush':
+            System\Database\DB::table('failed_jobs')->delete(true);
+            echo 'Deleted all failed jobs.' . PHP_EOL;
+            break;
+
+        case 'schedule:run':
+            $now = new DateTimeImmutable();
+            $due = System\Scheduling\Schedule::load()->due($now);
+            if (!$due) {
+                echo 'No scheduled tasks are due at ' . $now->format('H:i') . '.' . PHP_EOL;
+                break;
+            }
+            $failed = 0;
+            foreach ($due as $task) {
+                try {
+                    echo date('[H:i:s] ') . $task->getName() . ': ' . $task->run() . PHP_EOL;
+                } catch (Throwable $e) {
+                    $failed++;
+                    System\Log\Log::error('Scheduled task "{task}" failed: ' . $e->getMessage(), ['task' => $task->getName(), 'exception' => $e]);
+                    echo date('[H:i:s] ') . $task->getName() . ': FAILED ' . $e->getMessage() . PHP_EOL;
+                }
+            }
+            exit($failed ? 1 : 0);
+
+        case 'schedule:list':
+            $tasks = System\Scheduling\Schedule::load()->tasks();
+            $now = new DateTimeImmutable();
+            $width = max(array_map(fn($t) => strlen($t->getName()), $tasks)) + 2;
+            printf("%-15s %-{$width}s %s%s", 'Cron', 'Task', 'Next run', PHP_EOL);
+            foreach ($tasks as $task) {
+                printf("%-15s %-{$width}s %s%s", $task->expression(), $task->getName(), $task->nextRun($now)?->format('Y-m-d H:i') ?? '-', PHP_EOL);
+            }
+            break;
+
         case 'cache:clear':
             echo 'Removed ' . System\Cache\Cache::flush() . ' cache file(s)' . PHP_EOL;
             break;
@@ -243,6 +320,16 @@ try {
             echo "  make:test <Name> [--unit]                Create a feature (or unit) test
 ";
             echo "  security:check                           Deployment security checklist (exit 1 on failures)
+";
+            echo "  queue:work [--once] [--stop-when-empty]   Run queued jobs (QUEUE_DRIVER=database)
+";
+            echo "  queue:failed / queue:retry <id|all>      List / retry failed jobs
+";
+            echo "  queue:flush                              Delete all failed jobs
+";
+            echo "  schedule:run                             Run due scheduled tasks (call it every minute)
+";
+            echo "  schedule:list                            Show scheduled tasks and their next run
 ";
             echo "  cache:clear                              Delete everything in the file cache
 ";
