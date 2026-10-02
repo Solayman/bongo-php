@@ -297,6 +297,7 @@ class Router
     protected function callAction(array|\Closure $action, array $params): void
     {
         $container = \System\Container\Container::getInstance();
+        \System\Http\Request::setRouteParameters($params);
 
         if ($action instanceof \Closure) {
             $this->send($container->call($action, $params));

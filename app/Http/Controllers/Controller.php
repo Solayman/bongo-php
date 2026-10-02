@@ -19,29 +19,21 @@ class Controller
     }
 
     /**
-     * Validate request input. On failure: flash errors + old input and go back.
-     * Returns only the validated fields.
+     * Validate request input. On failure: flash errors + old input and go back
+     * (422 JSON for API clients). Returns only the validated fields.
+     * For bigger forms, a FormRequest class keeps the rules out of the controller.
      */
-    protected function validate(array $rules, ?array $data = null): array
+    protected function validate(array $rules, ?array $data = null, array $messages = [], array $attributes = []): array
     {
         $data ??= Request::all() + Request::files();
-        $errors = Validator::make($data, $rules);
+        $errors = Validator::make($data, $rules, $messages, $attributes);
 
         if ($errors) {
-            // API clients get 422 JSON instead of a redirect
-            if (Request::wantsJson()) {
-                response(['message' => 'The given data was invalid.', 'errors' => $errors], 'json', 422);
-            }
-            Session::flash('_errors', $errors);
-            Session::flash('_old', array_filter(
-                $data,
-                fn($value, $key) => !str_contains((string) $key, 'password') && $key !== '_token' && !$value instanceof \System\Http\UploadedFile,
-                ARRAY_FILTER_USE_BOTH
-            ));
-            back();
+            Validator::respondWithErrors($errors, $data);
         }
 
-        return array_intersect_key($data, $rules);
+        $keys = array_unique(array_map(fn($field) => explode('.', $field)[0], array_keys($rules)));
+        return array_intersect_key($data, array_flip($keys));
     }
 
     protected function respondSuccess(string $message, array|string|null $data = null)

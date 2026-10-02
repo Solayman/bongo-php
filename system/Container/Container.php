@@ -78,6 +78,11 @@ class Container
             ? $concrete($this, $parameters)
             : ($concrete === $abstract ? $this->build($concrete, $parameters) : $this->make($concrete, $parameters));
 
+        // e.g. a FormRequest validates the input as soon as it exists
+        if ($object instanceof WhenResolved && $concrete === $abstract) {
+            $object->resolved();
+        }
+
         if ($shared) {
             $this->instances[$abstract] = $object;
         }

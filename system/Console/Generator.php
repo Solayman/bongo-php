@@ -102,6 +102,38 @@ class $class
 PHP);
     }
 
+    /** make:request StoreProductRequest → app/Http/Requests/StoreProductRequest.php */
+    public function request(string $name): string
+    {
+        [$namespace, $class, $path] = $this->locate($name, 'App\\Http\\Requests', 'app/Http/Requests', 'Request');
+
+        return $this->write($path, <<<PHP
+<?php
+namespace $namespace;
+
+use System\\Http\\FormRequest;
+
+/**
+ * Type-hint it in an action: public function store($class \$request) { \$request->validated(); }
+ */
+class $class extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;   // e.g. return auth()?->role === 'admin';
+    }
+
+    public function rules(): array
+    {
+        return [
+            // 'name' => 'required|string|max:100',
+        ];
+    }
+}
+
+PHP);
+    }
+
     /** make:test ProductApiTest [--unit] → tests/Feature/ProductApiTest.php */
     public function test(string $name, bool $unit = false): string
     {

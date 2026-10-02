@@ -21,7 +21,7 @@ Built in:
 | Localization | `__()`, `trans_choice()`, JSON + group translation files, `?lang=` / session / `Accept-Language`, translated validation messages; English and বাংলা included |
 | Cache & rate limits | File cache (`Cache::remember`), `throttle:60,1` middleware with rate-limit headers, `RateLimiter` |
 | Container & DI | Service container (`app()`, `bind/singleton/instance`, autowiring), controller method injection, route model binding (`edit(Product $product)` → 404 if missing) |
-| Generators | `make:controller [--api]`, `make:model [--migration]`, `make:middleware`, `make:test [--unit]`, `make:migration` |
+| Generators | `make:controller [--api]`, `make:model [--migration]`, `make:middleware`, `make:request`, `make:test [--unit]`, `make:migration` |
 | Logging | Built-in daily log files in `storage/logs`, levels, secret masking; framework events logged automatically |
 | CLI | `php bongo serve / tinker / route:list / make:* / view:cache / view:clear / cache:clear / migrate / migrate:status / migrate:rollback / make:migration / db:seed / key:generate / log:clear / test` |
 
@@ -442,6 +442,65 @@ Validator::make($data, $rules,
     ['email.required' => 'We need your :attribute to send the receipt.', 'min' => ':attribute is too small'],
     ['qty' => 'quantity']);   // "The quantity must be at least 1."
 ```
+
+### Form requests
+
+When a form has many rules, or the same rules are used for create and edit, put them in a form request class. `php bongo make:request ProductRequest` creates `app/Http/Requests/ProductRequest.php`:
+
+```php
+namespace App\Http\Requests;
+
+use System\Http\FormRequest;
+
+class ProductRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return auth()?->role === 'admin';            // false → 403
+    }
+
+    public function rules(): array
+    {
+        $id = $this->route('product');               // /products/{product}: ignore this product's own SKU
+        return [
+            'name' => 'required|string|max:150',
+            'sku'  => 'required|unique:products,sku' . ($id ? ",$id" : ''),
+            'image' => 'nullable|image|max:2048',
+        ];
+    }
+
+    public function messages(): array   { return ['sku.unique' => 'That SKU is already used.']; }   // optional
+    public function attributes(): array { return ['category_id' => 'category']; }               // optional
+
+    protected function prepare(array $data): array   // optional: adjust input before validation
+    {
+        $data['category_id'] = ($data['category_id'] ?? null) ?: null;
+        return $data;
+    }
+}
+```
+
+Type-hint it in an action. It is checked before the action runs, so the action only ever sees valid input:
+
+```php
+public function store(ProductRequest $request)
+{
+    Product::create($request->validated());
+}
+
+public function update(Product $product, ProductRequest $request) { ... }
+```
+
+| Method | Returns |
+| --- | --- |
+| `$request->validated()` · `validated('name')` | Only the fields that have rules, after `prepare()` |
+| `$request->only(['name', 'sku'])` | Some validated fields |
+| `$request->has('image')` | The validated field is present and not empty |
+| `$request->file('image')` | The validated upload, or `null` |
+| `$request->input('x')` | Any input, validated or not |
+| `$request->route('product')` | A route parameter (also `Request::route('product')` anywhere) |
+
+On failure the result is the same as `$this->validate()`: the browser goes back with the errors and the old input, and API clients get a 422 JSON response.
 
 ### File uploads
 
@@ -1200,6 +1259,7 @@ If a query fails because a table or column is missing and migrations are pending
 
 ---
 
+php bongo make:request StoreOrderRequest             # rules + authorize() in app/Http/Requests
 ## 11. Debugging
 
 ### `dump()` and `dd()`
