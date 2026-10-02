@@ -18,15 +18,15 @@
                 <p class="text-secondary small mb-0">{{ __('Sign in to the admin dashboard') }}</p>
             </div>
 
-            {: if $message = flash('success') :}
+            @if($message = flash('success'))
                 <div class="alert alert-success py-2 small">{{ $message }}</div>
-            {: end :}
-            {: if $message = flash('error') :}
+            @endif
+            @if($message = flash('error'))
                 <div class="alert alert-warning py-2 small">{{ $message }}</div>
-            {: end :}
+            @endif
 
             <form method="POST" action="<?= url('/login') ?>" novalidate>
-                {: csrf :}
+                @csrf
                 <div class="mb-3">
                     <label for="email" class="form-label">{{ __('Email') }}</label>
                     <input type="email" id="email" name="email" value="{{ old('email') }}" autocomplete="username" autofocus
@@ -46,13 +46,13 @@
             </form>
 
             <div class="text-center small mt-3">
-                {: each System\Translation\Lang::locales() as $code => $label :}
-                    <a href="?lang={{ $code }}" lang="{{ $code }}" class="mx-1 {: if $code === locale() :} fw-semibold text-body {: end :}">{{ $label }}</a>
-                {: end :}
+                @foreach(System\Translation\Lang::locales() as $code => $label)
+                    <a href="?lang={{ $code }}" lang="{{ $code }}" class="mx-1 @if($code === locale()) fw-semibold text-body @endif">{{ $label }}</a>
+                @endforeach
             </div>
-            {: if config('app.env') !== 'production' :}
+            @if(config('app.env') !== 'production')
                 <p class="text-secondary small text-center mt-3 mb-0">{{ __('Demo login') }}: admin@example.com / password</p>
-            {: end :}
+            @endif
         </div>
     </div>
 </div>

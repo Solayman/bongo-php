@@ -1,5 +1,5 @@
-{: layout 'admin.master' :}
-{: block 'content' :}
+@extends('admin.master')
+@section('content')
 <div class="row g-3 mb-4">
     <div class="col-md-4">
         <button class="btn btn-custom w-100 py-3" onclick="run('clearViewCache')">👀 Clear View Cache</button>
@@ -29,14 +29,14 @@
 
 
 
-{: end :}
+@endsection
 
 
-{: block 'dashboard_menu_title', 'OC Cleanup Manager Dashboard' :}
+@set('dashboard_menu_title', 'OC Cleanup Manager Dashboard')
 
-{: block 'scripts' :}
+@section('scripts')
 <script>
     const AJAX_URL = '/cleanup/ajax';
 </script>
 <script src="<?= asset('asset/js/common.js') ?>"></script>
-{: end :}
+@endsection

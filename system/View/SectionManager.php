@@ -2,7 +2,7 @@
 namespace System\View;
 
 /**
- * Holds {: block :} content and {: push :} stacks while a page renders.
+ * Holds @section content and @push stacks while a page renders.
  */
 class SectionManager
 {
@@ -11,7 +11,7 @@ class SectionManager
     protected array $pushes = [];
     protected array $pushStack = [];
 
-    /** {: block 'name' :} starts capturing; start('name', 'text') sets it directly */
+    /** @section('name') starts capturing; @section('name', 'text') sets it directly */
     public function start(string $name, ?string $content = null): void
     {
         if ($content !== null) {
@@ -25,7 +25,7 @@ class SectionManager
     public function end(): void
     {
         if (!$this->sectionStack) {
-            throw new ViewException('{: end :} without a matching {: block :}');
+            throw new ViewException('@endsection without a matching @section');
         }
         $name = array_pop($this->sectionStack);
         $this->sections[$name] = ob_get_clean();
@@ -55,7 +55,7 @@ class SectionManager
     public function endPush(): void
     {
         if (!$this->pushStack) {
-            throw new ViewException('{: end :} without a matching {: push :}');
+            throw new ViewException('@endpush without a matching @push');
         }
         $stack = array_pop($this->pushStack);
         $this->pushes[$stack][] = ob_get_clean();

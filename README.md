@@ -17,7 +17,7 @@ Requires PHP 8.0+ with `pdo_mysql` and `openssl`, plus MySQL or MariaDB. Compose
 ## What's inside
 
 - **Routing:** `Route::get/post/put/patch/delete`, groups, named routes, route files (`web.php`, `api.php`), middleware with parameters, method spoofing.
-- **Templates:** BongoMVC's own `{: tag :}` syntax: `{: if :}`, `{: each :}` with `$loop`, `{: csrf :}`, `{: error :}`, `{: auth :}`, layouts, `{: insert :}`, `{: push :}`/`{: stack :}`, a compiled-view cache.
+- **Templates:** `@if`, `@foreach`/`@forelse`, `@csrf`, `@error`, `@auth`, layouts, `@include`, `@push/@stack`, a compiled-view cache.
 - **Database:** query builder, transactions, a migration system with tracked batches and rollback, models with relations and eager loading.
 - **Security:**
   - CSRF protection, CORS, and security headers.
