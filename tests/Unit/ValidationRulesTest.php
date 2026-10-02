@@ -181,6 +181,65 @@ class ValidationRulesTest extends TestCase
         $this->assertSame('The photo field is required.', Validator::make(['photo' => $missing], ['photo' => 'required|image'])['photo']);
     }
 
+    public function testMimetypesUsesTheRealContentType(): void
+    {
+        $png = UploadedFile::fake($this->png(), 'photo.png');
+        $this->assertSame([], Validator::make(['doc' => $png], ['doc' => 'mimetypes:image/*,application/pdf']));
+        $this->assertSame([], Validator::make(['doc' => $png], ['doc' => 'mimetypes:image/png']));
+
+        $text = UploadedFile::fake($this->textFile('hello'), 'fake.pdf');
+        $this->assertSame('The doc must be a file of type: image/*, application/pdf.', Validator::make(['doc' => $text], ['doc' => 'mimetypes:image/*,application/pdf'])['doc']);
+    }
+
+    public function testImageDimensions(): void
+    {
+        $wide = UploadedFile::fake($this->png(160, 90), 'banner.png');
+        $this->assertSame([], Validator::make(['img' => $wide], ['img' => 'dimensions:min_width=100,max_height=100,ratio=16/9']));
+        $this->assertSame([], Validator::make(['img' => $wide], ['img' => 'dimensions:width=160,height=90']));
+
+        $error = Validator::make(['img' => $wide], ['img' => 'dimensions:min_width=200'])['img'];
+        $this->assertSame('The img has invalid image dimensions (160x90 px, needs min_width 200).', $error);
+        $this->assertArrayHasKey('img', Validator::make(['img' => $wide], ['img' => 'dimensions:ratio=1/1']));
+
+        $text = UploadedFile::fake($this->textFile('not an image'), 'x.png');
+        $this->assertArrayHasKey('img', Validator::make(['img' => $text], ['img' => 'dimensions:min_width=1']));
+    }
+
+    public function testMultipleUploadsFromFilesArray(): void
+    {
+        $old = $_FILES;
+        $a = $this->png();
+        $b = $this->textFile('<?php echo 1;');
+        // <input type="file" name="photos[]" multiple> with two files, plus an empty single field
+        $_FILES = [
+            'photos' => [
+                'name' => ['a.png', 'b.png', ''], 'type' => ['image/png', 'image/png', ''],
+                'tmp_name' => [$a, $b, ''], 'error' => [UPLOAD_ERR_OK, UPLOAD_ERR_OK, UPLOAD_ERR_NO_FILE], 'size' => [filesize($a), filesize($b), 0],
+            ],
+            'avatar' => ['name' => '', 'type' => '', 'tmp_name' => '', 'error' => UPLOAD_ERR_NO_FILE, 'size' => 0],
+        ];
+        try {
+            $photos = \System\Http\Request::files('photos');
+            $this->assertCount(2, $photos, 'the empty third slot is skipped');
+            $this->assertSame('a.png', $photos[0]->clientName());
+            $this->assertNull(\System\Http\Request::file('photos'), 'file() is for single uploads');
+            $this->assertTrue(\System\Http\Request::hasFile('photos'));
+            $this->assertFalse(\System\Http\Request::hasFile('avatar'), 'nothing chosen');
+            $this->assertSame(['photos'], array_keys(\System\Http\Request::files()));
+
+            $this->assertFalse($photos[0]->isValid(), 'a file not really uploaded by PHP is never trusted');
+            $this->assertArrayHasKey('photos', Validator::make(\System\Http\Request::files(), ['photos' => 'array|max:1']), 'too many files');
+        } finally {
+            $_FILES = $old;
+        }
+
+        // Validate every file in a list (test uploads; real ones are covered by the HTTP tests)
+        $list = ['photos' => [UploadedFile::fake($a, 'a.png'), UploadedFile::fake($b, 'b.png')]];
+        $errors = Validator::make($list, ['photos' => 'required|array|max:5', 'photos.*' => 'image|max:2048']);
+        $this->assertSame(['photos.1'], array_keys($errors), 'the second "png" is really PHP');
+        $this->assertSame('The photos must be an image (jpg, png, gif or webp).', $errors['photos.1']);
+    }
+
     public function testStoreUsesRandomNameAndRealExtension(): void
     {
         $file = UploadedFile::fake($this->png(), 'my holiday photo.php.png');

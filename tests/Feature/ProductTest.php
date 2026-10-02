@@ -148,4 +148,29 @@ class ProductTest extends HttpTestCase
         $this->assertNull($this->db('products')->where('sku', 'EVIL-1')->first());
         @unlink($evil);
     }
+
+    public function testMultipleUploadsAreValidatedOneByOne(): void
+    {
+        $evil = tempnam(sys_get_temp_dir(), 'evil');
+        file_put_contents($evil, '<?php echo "pwned"; ?>');
+
+        // Two real images in photos[]: both pass
+        $this->submit('/system', '/system/upload-test', [
+            'photos[0]' => new \CURLFile($this->makePng(), 'image/png', 'one.png'),
+            'photos[1]' => new \CURLFile($this->makePng(), 'image/png', 'two.png'),
+        ])->assertRedirect('/system');
+        $this->get('/system')->assertSee('2 image(s) passed validation')->assertSee('one.png (image/png')->assertSee('20x20 px');
+
+        // A renamed PHP file in the list is reported by its position
+        $this->submit('/system', '/system/upload-test', [
+            'photos[0]' => new \CURLFile($this->makePng(), 'image/png', 'ok.png'),
+            'photos[1]' => new \CURLFile($evil, 'image/png', 'evil.png'),
+        ])->assertRedirect('/system');
+        $this->get('/system')->assertSee('File 2: The photos must be an image');
+
+        // Nothing chosen
+        $this->submit('/system', '/system/upload-test', [])->assertRedirect('/system');
+        $this->get('/system')->assertSee('Choose at least one image.');
+        @unlink($evil);
+    }
 }

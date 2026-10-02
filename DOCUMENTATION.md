@@ -551,6 +551,32 @@ Uploads are safe by default:
 - **Paths can't leave the storage folder,** and `public/storage/.htaccess` stops Apache from running scripts there.
 - Forms need `enctype="multipart/form-data"`.
 
+**Several files in one field:** `<input type="file" name="photos[]" multiple>`
+
+```php
+$this->validate([
+    'photos'   => 'required|array|max:5',                          // 1 to 5 files
+    'photos.*' => 'image|max:2048|dimensions:min_width=400',        // every file
+]);
+
+foreach (Request::files('photos') as $photo) {   // a list of UploadedFile; empty slots are skipped
+    $paths[] = $photo->store('gallery');
+}
+// In a form request: $request->files('photos')
+```
+
+`Request::files()` without a key returns every field, with lists for multi-file fields. `Request::file('x')` is for single-file fields.
+
+| File rule | |
+| --- | --- |
+| `file` · `image` | An uploaded file · a real jpg, png, gif or webp |
+| `mimes:jpg,png,pdf` | By extension, taken from the real content |
+| `mimetypes:image/*,application/pdf` | By content type; `image/*` matches any image |
+| `max:2048` · `min:10` | Size in KB |
+| `dimensions:min_width=…,max_width=…,min_height=…,max_height=…,width=…,height=…,ratio=16/9` | Image size in pixels |
+
+**Try it:** **System status → Upload test** validates up to 5 images and reports each file's type, size and dimensions. Nothing is stored.
+
 ---
 
 ## 7. Views (template engine)

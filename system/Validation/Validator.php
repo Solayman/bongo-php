@@ -56,11 +56,22 @@ class Validator
         \System\Http\Session::flash('_errors', $errors);
         \System\Http\Session::flash('_old', array_filter(
             $data,
-            fn($value, $key) => !str_contains((string) $key, 'password') && $key !== '_token' && !$value instanceof UploadedFile,
+            fn($value, $key) => !str_contains((string) $key, 'password') && $key !== '_token' && !self::containsUpload($value),
             ARRAY_FILTER_USE_BOTH
         ));
         back();
         exit;
+    }
+
+    /** An upload, or a list holding one (uploads are never kept in the session) */
+    protected static function containsUpload($value): bool
+    {
+        if ($value instanceof UploadedFile) return true;
+        if (!is_array($value)) return false;
+        foreach ($value as $item) {
+            if (self::containsUpload($item)) return true;
+        }
+        return false;
     }
 
     public function validate(): array
@@ -401,9 +412,63 @@ class Validator
                 $this->replace = [':values' => implode(', ', $params)];
                 return $value instanceof UploadedFile && $value->isValid() && in_array($value->extension(), $params, true)
                     ? null : 'The :attribute must be a file of type: :values.';
+
+            // mimetypes:image/*,application/pdf (the real content type, not the client's claim)
+            case 'mimetypes':
+                $this->replace = [':values' => implode(', ', $params)];
+                if (!$value instanceof UploadedFile || !$value->isValid()) return 'The :attribute must be a file of type: :values.';
+                $mime = $value->mimeType();
+                foreach ($params as $allowed) {
+                    if ($allowed === $mime || (str_ends_with($allowed, '/*') && str_starts_with($mime, substr($allowed, 0, -1)))) {
+                        return null;
+                    }
+                }
+                return 'The :attribute must be a file of type: :values.';
+
+            // dimensions:min_width=100,max_width=2000,min_height=..,max_height=..,width=..,height=..,ratio=16/9
+            case 'dimensions':
+                if (!$value instanceof UploadedFile || !$value->isValid() || !$value->isImage()) return 'The :attribute must be an image (jpg, png, gif or webp).';
+                return $this->checkDimensions($value, $params);
         }
 
         throw new \InvalidArgumentException("Unknown validation rule [$rule]");
+    }
+
+    /** The image size limits of the dimensions rule; null when they are all met */
+    protected function checkDimensions(UploadedFile $file, array $params): ?string
+    {
+        $size = @getimagesize($file->path());
+        if (!$size) {
+            return 'The :attribute must be an image (jpg, png, gif or webp).';
+        }
+        [$width, $height] = $size;
+        $this->replace = [':width' => (string) $width, ':height' => (string) $height];
+
+        foreach ($params as $param) {
+            [$name, $limit] = array_pad(explode('=', $param, 2), 2, '');
+            $ok = match ($name) {
+                'width'      => $width === (int) $limit,
+                'height'     => $height === (int) $limit,
+                'min_width'  => $width >= (int) $limit,
+                'max_width'  => $width <= (int) $limit,
+                'min_height' => $height >= (int) $limit,
+                'max_height' => $height <= (int) $limit,
+                'ratio'      => $this->ratioMatches($width, $height, $limit),
+                default      => throw new \InvalidArgumentException("Unknown dimensions limit [$name]"),
+            };
+            if (!$ok) {
+                $this->replace[':limit'] = $name . ' ' . $limit;
+                return 'The :attribute has invalid image dimensions (:widthx:height px, needs :limit).';
+            }
+        }
+        return null;
+    }
+
+    /** ratio=16/9 or ratio=1.5, with a small tolerance for rounding */
+    protected function ratioMatches(int $width, int $height, string $ratio): bool
+    {
+        [$w, $h] = array_pad(explode('/', $ratio, 2), 2, '1');
+        return $height > 0 && (float) $h > 0 && abs($width / $height - (float) $w / (float) $h) < 0.01;
     }
 
     protected function measure($value, string $kind): float

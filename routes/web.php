@@ -77,6 +77,7 @@ Route::middleware('auth')->group(function () {
     // System status
     Route::get('/system', [SystemController::class, 'index'])->name('system');
     Route::post('/system/log-test', [SystemController::class, 'logTest'])->name('system.log-test');
+    Route::post('/system/upload-test', [SystemController::class, 'uploadTest'])->name('system.upload-test');
     Route::get('/system/error-test', [SystemController::class, 'errorTest'])->name('system.error-test');
     Route::get('/system/dump-test', [SystemController::class, 'dumpTest'])->name('system.dump-test');
 
