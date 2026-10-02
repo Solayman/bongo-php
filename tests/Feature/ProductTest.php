@@ -107,6 +107,22 @@ class ProductTest extends HttpTestCase
         clearstatcache(); // the server deleted it; don't trust this process's cached stat
         $this->assertFalse(is_file($file), 'the replaced image is removed');
 
+        // Edit without choosing a file: browsers still send an empty file part; the image must stay
+        $token = $this->get("/products/{$product->id}/edit")->csrfToken();
+        $boundary = 'bongo' . bin2hex(random_bytes(6));
+        $body = '';
+        foreach (['_token' => $token, '_method' => 'PUT', 'name' => 'Photo Mug 2', 'sku' => 'IMG-1', 'price' => '9', 'stock' => '3', 'status' => 'active'] as $k => $v) {
+            $body .= "--$boundary\r\nContent-Disposition: form-data; name=\"$k\"\r\n\r\n$v\r\n";
+        }
+        $body .= "--$boundary\r\nContent-Disposition: form-data; name=\"image\"; filename=\"\"\r\nContent-Type: application/octet-stream\r\n\r\n\r\n--$boundary--\r\n";
+        $this->request('POST', "/products/{$product->id}", $body, ['Content-Type' => "multipart/form-data; boundary=$boundary"])
+            ->assertRedirect('/products');
+        $row = $this->db('products')->where('id', $product->id)->first();
+        $this->assertSame('Photo Mug 2', $row->name);
+        $this->assertSame($new, $row->image, 'an empty file field keeps the current image');
+        clearstatcache();
+        $this->assertTrue(is_file(BASE_PATH . '/public/storage/' . $new));
+
         // Remove the image
         $this->submit("/products/{$product->id}/edit", "/products/{$product->id}", [
             '_method' => 'PUT', 'name' => 'Photo Mug', 'sku' => 'IMG-1', 'price' => '9', 'stock' => '3', 'status' => 'active', 'remove_image' => '1',
