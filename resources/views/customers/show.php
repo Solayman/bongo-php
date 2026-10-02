@@ -1,8 +1,8 @@
-@extends('layouts.admin')
+{: layout 'layouts.admin' :}
 
-@set('title', __('Customer'))
+{: block 'title', __('Customer') :}
 
-@section('content')
+{: block 'content' :}
 <a href="<?= url('/customers') ?>" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> Back to customers</a>
 
 <div class="row g-3 mt-1">
@@ -26,21 +26,21 @@
                 <table class="table table-hover mb-0">
                     <thead class="table-light"><tr><th>Order</th><th>Status</th><th>Date</th><th class="num">Total</th></tr></thead>
                     <tbody>
-                    @foreach($orders as $order)
+                    {: each $orders as $order :}
                         <tr>
                             <td><a href="<?= url('/orders/' . $order->id) ?>">{{ $order->order_number }}</a></td>
                             <td><span class="badge <?= App\Models\Order::badge($order->status) ?>">{{ ucfirst($order->status) }}</span></td>
                             <td class="small text-secondary">{{ date('M j, Y', strtotime($order->created_at)) }}</td>
                             <td class="num">{{ money($order->total) }}</td>
                         </tr>
-                    @endforeach
-                    @if(!$orders)
+                    {: end :}
+                    {: if !$orders :}
                         <tr><td colspan="4" class="text-center text-secondary py-4">No orders yet.</td></tr>
-                    @endif
+                    {: end :}
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 </div>
-@endsection
+{: end :}

@@ -8,7 +8,7 @@ Built in:
 | --- | --- |
 | Routing | `Route::get/post/put/patch/delete/any/match`, groups, named routes, multiple route files (`web.php`, `api.php`), method spoofing, 404/405 |
 | Middleware | Aliases, groups (`web`, `api`), global stack, parameters (`role:admin`); built-in `auth`, `guest`, `csrf`, `cors`, security headers |
-| Views | Own template engine: `@if/@foreach/@forelse`, `@csrf/@method/@error`, `@auth`, `@json`, layouts, `@include`, `@push/@stack`, custom directives, compiled-view cache |
+| Views | Own template engine with `{: tag :}` syntax: `if/each` (with `$loop`), `csrf/method/error`, `auth`, `json`, layouts, `insert`, `push/stack`, custom tags, compiled-view cache, errors with line numbers |
 | Database | Query builder (row locks, grouped `orWhere`, joins, `groupBy/having`, aggregates, `pluck/value/exists`, `increment`, `chunk`, pagination), transactions with savepoints, query log, models with relations and eager loading |
 | Schema & migrations | PHP migrations with a schema builder; each run is tracked in the database; rollback |
 | Sessions | Flash messages, old input, CSRF tokens |
@@ -380,11 +380,11 @@ Plain `edit($id)` methods keep working exactly as before.
 
 ### The application boot file
 
-`app/bootstrap.php` (if present) runs on every request and command, after config and helpers. Register event listeners, view directives and container bindings there:
+`app/bootstrap.php` (if present) runs on every request and command, after config and helpers. Register event listeners, custom template tags and container bindings there:
 
 ```php
 Event::listen('order.placed', [SendOrderConfirmation::class, 'handle']);
-ViewCompiler::directive('money', fn($args) => "<?php echo money($args); ?>");
+ViewCompiler::tag('money', fn($args) => "<?php echo money($args); ?>");
 app()->singleton(Cart::class);
 ```
 
@@ -469,7 +469,7 @@ Uploads are safe by default:
 
 ## 7. Views (template engine)
 
-Templates are `.php` files in `resources/views`, named with dots: `products.index` → `resources/views/products/index.php`. Plain PHP always works; the directives below are shorter and safer.
+Templates are `.php` files in `resources/views`, named with dots: `products.index` → `resources/views/products/index.php`. Plain PHP always works; the tags below are shorter and safer.
 
 A controller action returns its view. If you leave out the name, the conventional view for the action is used:
 
@@ -479,79 +479,107 @@ return $this->view(data: ['products' => $products]);           // ProductControl
 // Shop\CatalogController::show → shop.catalogs.show, OrderItemController::bulkEdit → order_items.bulk-edit
 ```
 
-```php
-@extends('layouts.admin')
-@section('title', 'Products')
+BongoMVC templates use **tags** in `{: … :}`. Every block closes with the same `{: end :}`, and the whole tag language is listed on this page.
 
-@section('content')
-    @forelse($products as $product)
-        <p>{{ $product->name }}: {{ money($product->price) }}</p>
-    @empty
+```php
+{: layout 'layouts.admin' :}
+{: block 'title', 'Products' :}
+
+{: block 'content' :}
+    {: each $products as $product :}
+        <p class="{{ $loop->odd ? 'odd' : '' }}">{{ $product->name }}: {{ money($product->price) }}</p>
+    {: else :}
         <p>No products yet.</p>
-    @endforelse
+    {: end :}
 
     <form method="POST" action="{{ route('products.store') }}">
-        @csrf
-        <input name="name" value="{{ old('name') }}" class="@error('name') is-invalid @enderror">
-        @error('name') <div class="invalid-feedback">{{ $message }}</div> @enderror
+        {: csrf :}
+        <input name="name" value="{{ old('name') }}" class="{: error 'name' :}is-invalid{: end :}">
+        {: error 'name' :} <div class="invalid-feedback">{{ $message }}</div> {: end :}
     </form>
-@endsection
+{: end :}
 
-@push('scripts')
-    <script>const products = @json($products);</script>
-@endpush
+{: push 'scripts' :}
+    <script>const products = {: json $products :};</script>
+{: end :}
 ```
+
+Arguments are plain PHP expressions, without brackets: `{: if $user && $user->isAdmin() :}`. An `@` is ordinary text, so e-mail addresses and CSS `@media` need no escaping.
 
 ### Output
 
 | Syntax | Meaning |
 | --- | --- |
 | `{{ $value }}` | Escaped output (HTML-safe). `null` prints nothing. |
-| `{!! $html !!}` | Raw output: trusted HTML only |
-| `{{-- note --}}` | Comment, removed from the output |
-| `@{{ value }}` | Prints `{{ value }}` literally (for Vue/Alpine) |
-| `@@if` | Prints `@if` literally |
-| `@json($data)` | JSON that is safe inside `<script>` (`<`, `>`, `&`, quotes escaped) |
+| `{{! $html }}` | Raw output: trusted HTML only |
+| `{-- note --}` | Comment, removed from the output |
+| `\{{ value }}` · `\{: tag :}` | Print the braces literally |
+| `{: verbatim :}` … `{: end :}` | Everything inside is left untouched (Vue, Alpine templates) |
+| `{: json $data :}` | JSON that is safe inside `<script>` (`<`, `>`, `&`, quotes escaped) |
 
-### Control flow
+### Conditions and loops
 
-| Directive | |
+| Tag | |
 | --- | --- |
-| `@if(...)` `@elseif(...)` `@else` `@endif` | Conditions |
-| `@unless(...)` `@endunless` | If not |
-| `@isset($x)` `@endisset` · `@empty($x)` `@endempty` | Set / empty checks |
-| `@foreach(...)` `@endforeach` · `@for(...)` `@endfor` · `@while(...)` `@endwhile` | Loops |
-| `@forelse($items as $item)` … `@empty` … `@endforelse` | Loop with a "no items" part |
-| `@break` `@continue`, or `@break($i > 5)` `@continue($skip)` | Inside loops |
-| `@php ... @endphp` · `@php($total = 0)` | A block or one statement of PHP |
+| `{: if … :}` `{: elseif … :}` `{: else :}` `{: end :}` | Conditions |
+| `{: unless … :}` · `{: isset $x :}` · `{: empty $x :}` | If not / is set / is empty (each closes with `{: end :}`) |
+| `{: each $items as $item :}` · `{: each $map as $key => $value :}` | Loop. An optional `{: else :}` part shows when there are no items. |
+| `{: for $i = 0; $i < 3; $i++ :}` · `{: while $x :}` | Other loops |
+| `{: break :}` `{: continue :}` · `{: break $i > 5 :}` `{: continue $skip :}` | Inside loops, optionally with a condition |
+| `{: php $total = 0 :}` · `{: php :}` … `{: end :}` | One statement, or a block of PHP |
+
+Inside `{: each :}`, `$loop` describes the current pass:
+
+| `$loop->…` | |
+| --- | --- |
+| `index` / `iteration` | 0, 1, 2 … / 1, 2, 3 … |
+| `first` / `last` | First or last pass |
+| `odd` / `even` | By iteration, for striped rows |
+| `count` / `remaining` | Total items / items still to come |
+| `depth` / `parent` | Nesting level (1 = outer loop) / the outer loop's `$loop` |
+
+For items that cannot be counted (a generator), `count`, `remaining` and `last` are `null`.
 
 ### Forms and auth
 
-| Directive | Output |
+| Tag | Output |
 | --- | --- |
-| `@csrf` | Hidden `_token` field |
-| `@method('PUT')` | Hidden `_method` field, so a form can send PUT/PATCH/DELETE |
-| `@error('field')` … `{{ $message }}` … `@enderror` | Shown when the field failed validation |
-| `@auth` … `@endauth` · `@guest` … `@endguest` | Signed in / signed out |
+| `{: csrf :}` | Hidden `_token` field |
+| `{: method 'PUT' :}` | Hidden `_method` field, so a form can send PUT/PATCH/DELETE |
+| `{: error 'field' :}` … `{{ $message }}` … `{: end :}` | Shown when the field failed validation |
+| `{: auth :}` · `{: auth 'customer' :}` · `{: guest :}` · `{: guest 'customer' :}` | Signed in / signed out, for the default guard or a named one. `{: else :}` works too. |
 
-### Layouts, sections, partials, stacks
+### Layouts, blocks, inserts, stacks
 
-| Directive | |
+| Tag | |
 | --- | --- |
-| `@extends('layouts.admin')` | Render inside a layout. Layouts can extend other layouts. |
-| `@section('name')` … `@endsection` · `@section('title', 'Text')` | Fill a section (`@set('title', 'Text')` also works) |
-| `@yield('name')` · `@yield('title', 'Default')` | Print a section, with an optional default |
-| `@include('partials.box')` · `@include('partials.box', ['label' => 'X'])` | Render a partial with the current variables plus extras |
-| `@push('scripts')` … `@endpush` · `@stack('scripts')` | Collect scripts/styles from any view, print them in the layout |
+| `{: layout 'layouts.admin' :}` | Render inside a layout. Layouts can use other layouts. |
+| `{: block 'content' :}` … `{: end :}` | Fill a block with HTML |
+| `{: block 'title', $product->name :}` | Set a block to plain text. The value is escaped. |
+| `{: show 'content' :}` · `{: show 'title', 'Default' :}` | Print a block in the layout, with an optional default |
+| `{: insert 'partials.box' :}` · `{: insert 'partials.box', ['label' => 'X'] :}` | Render a partial with the current variables plus extras |
+| `{: push 'scripts' :}` … `{: end :}` · `{: stack 'scripts' :}` | Collect scripts and styles from any view, and print them in the layout |
 
-Each page starts with fresh sections and stacks. Rendering two views in one request never mixes their content.
+Each page starts with fresh blocks and stacks. Rendering two views in one request never mixes their content.
 
-### Custom directives
+### Mistakes are reported with the line
+
+A broken template fails with the file and line, never with a blank page:
+
+```
+products/index.php: Unclosed {: if :} opened on line 12: add {: end :}
+products/index.php: Unknown template tag {: foreach :} on line 4
+products/index.php: Second {: else :} on line 20 for the {: if :} opened on line 15
+```
+
+`php bongo view:cache` reports these for every template at once.
+
+### Custom tags
 
 ```php
-// e.g. in config/bootstrap.php or a service file
-System\View\ViewCompiler::directive('money', fn($args) => "<?php echo money($args); ?>");
-// template:  @money($order->total)
+// e.g. in app/bootstrap.php
+System\View\ViewCompiler::tag('money', fn($args) => "<?php echo money($args); ?>");
+// template:  {: money $order->total :}
 ```
 
 ### Compiled-view cache
@@ -560,7 +588,7 @@ The first render compiles a template to plain PHP in `storage/cache/views`. Late
 - A template is recompiled automatically when its modification time or size changes, and the old compiled copy is deleted.
 - `php bongo view:clear` empties the cache.
 - `php bongo view:cache` compiles every template ahead of time and checks each one with `php -l`. Run it when you deploy: no visitor pays the first compile, and a broken template fails the deploy (exit code 1, with the view name) instead of showing a 500.
-- Within one page, each template is located and checked once. An `@include` inside a `@foreach` over 100 rows costs one file lookup, not 100. Long-running processes such as `queue:work` still pick up edited templates on their next render.
+- Within one page, each template is located and checked once. An `{: insert :}` inside an `{: each :}` over 100 rows costs one file lookup, not 100. Long-running processes such as `queue:work` still pick up edited templates on their next render.
 - `VIEW_CACHE=false` turns caching off (only useful when debugging the compiler).
 - User data is never compiled as template code: `{{ $name }}` with the value `{{ phpversion() }}` prints that text.
 
@@ -994,7 +1022,7 @@ trans_choice('apple|apples', $count)                 // simple singular|plural
 locale();                                            // "en" or "bn"
 ```
 
-In templates, write `{{ __('Orders') }}` and `@set('title', __('Products'))`.
+In templates, write `{{ __('Orders') }}` and `{: block 'title', __('Products') :}`.
 
 Translations live in `lang/`:
 

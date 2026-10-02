@@ -1,8 +1,8 @@
-@extends('layouts.admin')
+{: layout 'layouts.admin' :}
 
-@set('title', __('Product'))
+{: block 'title', __('Product') :}
 
-@section('content')
+{: block 'content' :}
 <?php
 $editing = $product !== null;
 // Old input wins over saved values after a failed validation
@@ -15,7 +15,7 @@ $invalid = fn(string $field) => error($field) ? 'is-invalid' : '';
 </div>
 
 <form method="POST" action="<?= $editing ? route('products.update', ['product' => $product->id]) : route('products.store') ?>" enctype="multipart/form-data" novalidate>
-    @csrf
+    {: csrf :}
     <?= $editing ? method_field('PUT') : '' ?>
     <div class="card"><div class="card-body">
         <div class="row g-3">
@@ -33,9 +33,9 @@ $invalid = fn(string $field) => error($field) ? 'is-invalid' : '';
                 <label class="form-label" for="category_id">Category</label>
                 <select class="form-select <?= $invalid('category_id') ?>" id="category_id" name="category_id">
                     <option value="">Uncategorised</option>
-                    @foreach($categories as $category)
+                    {: each $categories as $category :}
                         <option value="{{ $category->id }}" <?= (string) $value('category_id') === (string) $category->id ? 'selected' : '' ?>>{{ $category->name }}</option>
-                    @endforeach
+                    {: end :}
                 </select>
                 <div class="invalid-feedback">{{ error('category_id') }}</div>
             </div>
@@ -68,7 +68,7 @@ $invalid = fn(string $field) => error($field) ? 'is-invalid' : '';
                 <div class="invalid-feedback">{{ error('image') }}</div>
                 <div class="form-text">JPG, PNG, GIF or WebP, up to 2 MB.</div>
             </div>
-            @if($editing && $product->image)
+            {: if $editing && $product->image :}
                 <div class="col-md-4">
                     <img src="{{ $product->imageUrl() }}" alt="{{ $product->name }}" class="img-thumbnail" style="max-height: 120px;">
                     <div class="form-check mt-2">
@@ -76,7 +76,7 @@ $invalid = fn(string $field) => error($field) ? 'is-invalid' : '';
                         <label class="form-check-label" for="remove_image">Remove image</label>
                     </div>
                 </div>
-            @endif
+            {: end :}
         </div>
     </div>
     <div class="card-footer bg-white text-end">
@@ -84,4 +84,4 @@ $invalid = fn(string $field) => error($field) ? 'is-invalid' : '';
         <button type="submit" class="btn btn-dark"><?= $editing ? 'Save changes' : 'Create product' ?></button>
     </div></div>
 </form>
-@endsection
+{: end :}
