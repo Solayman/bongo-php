@@ -2,7 +2,9 @@
 
 // Routes array: "METHOD path" => [Controller, method]
 return [
-    'GET /' => ['CleanupController', 'dashboard'],
+    'GET /' => ['DashboardController', 'index'],
+    'GET /dashboard' => ['DashboardController', 'index'],
+    'GET /cleanup' => ['CleanupController', 'dashboard'],
     'POST /cleanup/ajax' => ['CleanupController', 'ajaxHandler'],
     'POST /cleanup/run' => ['CleanupController', 'runAction'],
     'GET /database' => ['DatabaseController', 'index'],
