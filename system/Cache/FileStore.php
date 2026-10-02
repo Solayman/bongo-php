@@ -7,6 +7,9 @@ namespace System\Cache;
  */
 class FileStore
 {
+    /** Seconds after which an unused .lock file counts as stale */
+    protected const LOCK_TTL = 3600;
+
     public function __construct(protected string $path) {}
 
     protected function file(string $key): string
@@ -104,6 +107,17 @@ class FileStore
             }
             $count += (int) @unlink($file);
         }
+
+        // Lock files are held for microseconds; one unused for an hour is left over from an old key
+        $staleBefore = time() - self::LOCK_TTL;
+        foreach (glob($this->path . '/*.lock') ?: [] as $lock) {
+            if (!$expiredOnly || (int) @filemtime($lock) < $staleBefore) @unlink($lock);
+        }
+        if (!$expiredOnly) {
+            foreach (glob($this->path . '/*', GLOB_ONLYDIR) ?: [] as $dir) {
+                @rmdir($dir);   // only succeeds when empty
+            }
+        }
         return $count;
     }
 
@@ -128,8 +142,12 @@ class FileStore
     protected function lock(string $key)
     {
         if (!is_dir($this->path)) @mkdir($this->path, 0775, true);
-        $handle = @fopen($this->path . '/' . sha1($key) . '.lock', 'c');
-        if ($handle) flock($handle, LOCK_EX);
+        $file = $this->path . '/' . sha1($key) . '.lock';
+        $handle = @fopen($file, 'c');
+        if ($handle) {
+            flock($handle, LOCK_EX);
+            @touch($file);   // last use, so flush(true) can tell stale locks apart
+        }
         return $handle ?: null;
     }
 
