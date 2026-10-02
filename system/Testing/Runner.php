@@ -66,6 +66,8 @@ class Runner
         }
 
         self::stopServer();
+        // Leave the test cache empty: rate-limit counters and their lock files are only for this run
+        (new \System\Cache\FileStore(BASE_PATH . '/storage/cache/testing'))->flush();
 
         foreach ($failures as [$name, $e]) {
             echo "\n\033[31m✗ $name\033[0m\n  " . get_class($e) . ': ' . $e->getMessage() . "\n";

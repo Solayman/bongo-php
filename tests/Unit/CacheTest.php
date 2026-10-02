@@ -72,6 +72,23 @@ class CacheTest extends TestCase
         $this->assertSame(1, $this->store->flush(true), 'flush(true) removes only expired entries');
         $this->assertSame(6, $this->store->get('n'));
         $this->assertSame(1, $this->store->flush());
+        $this->assertSame([], glob("$this->dir/*") ?: [], 'a full flush leaves no lock files or empty folders');
+    }
+
+    public function testExpiredFlushRemovesOnlyStaleLockFiles(): void
+    {
+        $this->store->increment('fresh');
+        $this->store->increment('old');
+        $old = "$this->dir/" . sha1('old') . '.lock';
+        $fresh = "$this->dir/" . sha1('fresh') . '.lock';
+        $this->assertTrue(is_file($old) && is_file($fresh), 'increment locks the key with a .lock file');
+
+        touch($old, time() - 7200);
+        $this->store->flush(true);
+        clearstatcache();
+        $this->assertFalse(is_file($old), 'a lock unused for 2 hours is removed');
+        $this->assertTrue(is_file($fresh), 'a recently used lock is kept');
+        $this->assertSame(1, $this->store->get('old'), 'the value itself is untouched');
     }
 
     public function testRateLimiter(): void
