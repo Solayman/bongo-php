@@ -15,7 +15,7 @@ $invalid = fn(string $field) => error($field) ? 'is-invalid' : '';
 </div>
 
 <form method="POST" action="<?= $editing ? route('products.update', ['id' => $product->id]) : route('products.store') ?>" novalidate>
-    <?= csrf_field() ?>
+    @csrf
     <?= $editing ? method_field('PUT') : '' ?>
     <div class="card"><div class="card-body">
         <div class="row g-3">
@@ -33,9 +33,9 @@ $invalid = fn(string $field) => error($field) ? 'is-invalid' : '';
                 <label class="form-label" for="category_id">Category</label>
                 <select class="form-select <?= $invalid('category_id') ?>" id="category_id" name="category_id">
                     <option value="">Uncategorised</option>
-                    <?php foreach ($categories as $category): ?>
+                    @foreach($categories as $category)
                         <option value="{{ $category->id }}" <?= (string) $value('category_id') === (string) $category->id ? 'selected' : '' ?>>{{ $category->name }}</option>
-                    <?php endforeach; ?>
+                    @endforeach
                 </select>
                 <div class="invalid-feedback">{{ error('category_id') }}</div>
             </div>

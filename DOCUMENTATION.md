@@ -8,7 +8,7 @@ Built in:
 | --- | --- |
 | Routing | `Route::get/post/put/patch/delete/any/match`, groups, named routes, multiple route files (`web.php`, `api.php`), method spoofing, 404/405 |
 | Middleware | Aliases, groups (`web`, `api`), global stack, parameters (`role:admin`); built-in `auth`, `guest`, `csrf`, `cors`, security headers |
-| Views | Template directives: `@extends`, `@section`, `@yield`, `@set`, `@include`, `{{ }}`, `{!! !!}` |
+| Views | Own template engine: `@if/@foreach/@forelse`, `@csrf/@method/@error`, `@auth`, `@json`, layouts, `@include`, `@push/@stack`, custom directives, compiled-view cache |
 | Database | PDO query builder, models, pagination, aggregates, joins |
 | Schema & migrations | PHP migrations with a schema builder; each run is tracked in the database; rollback |
 | Sessions | Flash messages, old input, CSRF tokens |
@@ -17,7 +17,7 @@ Built in:
 | Testing | `php bongo test`: unit + HTTP tests on a separate test database |
 | Debugging | `dump()`/`dd()` for browser, CLI and JSON; developer error page with source and stack trace; `php bongo tinker` |
 | Logging | Built-in daily log files in `storage/logs`, levels, secret masking; framework events logged automatically |
-| CLI | `php bongo serve / tinker / route:list / migrate / migrate:status / migrate:rollback / make:migration / db:seed / key:generate / log:clear / test` |
+| CLI | `php bongo serve / tinker / route:list / view:clear / migrate / migrate:status / migrate:rollback / make:migration / db:seed / key:generate / log:clear / test` |
 
 The repository currently includes an **e-commerce admin panel** (products, categories, orders, customers). It is the test application used to exercise the framework end to end, and it will be removed later so the framework ships fresh.
 
@@ -111,7 +111,7 @@ system/                  Framework core (namespace System\)
   Support/helpers.php    Framework helpers
   Testing/               TestCase, HttpTestCase, TestResponse, Runner
   Validation/Validator.php
-  View/                  ViewEngine, ViewCompiler, SectionManager
+  View/                  ViewEngine (cache, layouts), ViewCompiler (directives), SectionManager (sections, stacks)
 tests/
   Unit/                  Framework unit tests
   Feature/               HTTP tests against the running app
@@ -342,37 +342,94 @@ class ProductController extends Controller
 
 ---
 
-## 7. Views
+## 7. Views (template engine)
+
+Templates are `.php` files in `resources/views`, named with dots: `products.index` → `resources/views/products/index.php`. Plain PHP always works; the directives below are shorter and safer.
 
 ```php
 @extends('layouts.admin')
-@set('title', 'Products')
+@section('title', 'Products')
 
 @section('content')
-    <?php foreach ($products['data'] as $product): ?>
-        <p>{{ $product->name }} – {{ money($product->price) }}</p>
-    <?php endforeach; ?>
+    @forelse($products as $product)
+        <p>{{ $product->name }}: {{ money($product->price) }}</p>
+    @empty
+        <p>No products yet.</p>
+    @endforelse
 
-    <form method="POST" action="<?= url('/products') ?>">
-        <?= csrf_field() ?>
-        <input name="name" value="{{ old('name') }}" class="<?= error('name') ? 'is-invalid' : '' ?>">
-        <div>{{ error('name') }}</div>
+    <form method="POST" action="{{ route('products.store') }}">
+        @csrf
+        <input name="name" value="{{ old('name') }}" class="@error('name') is-invalid @enderror">
+        @error('name') <div class="invalid-feedback">{{ $message }}</div> @enderror
     </form>
-
-    @include('partials.pagination')
 @endsection
+
+@push('scripts')
+    <script>const products = @json($products);</script>
+@endpush
 ```
+
+### Output
 
 | Syntax | Meaning |
 | --- | --- |
-| `@extends('layouts.admin')` | Render inside a layout |
-| `@section('x') … @endsection` / `@yield('x')` | Define / print a section |
-| `@set('x', 'text')` | Set a section to a short string |
-| `@include('partials.flash')` | Render a partial with the current variables |
-| `{{ $value }}` | Escaped output |
-| `{!! $html !!}` | Raw output (trusted HTML only) |
+| `{{ $value }}` | Escaped output (HTML-safe). `null` prints nothing. |
+| `{!! $html !!}` | Raw output: trusted HTML only |
+| `{{-- note --}}` | Comment, removed from the output |
+| `@{{ value }}` | Prints `{{ value }}` literally (for Vue/Alpine) |
+| `@@if` | Prints `@if` literally |
+| `@json($data)` | JSON that is safe inside `<script>` (`<`, `>`, `&`, quotes escaped) |
 
-Rendered output is never compiled again, so user data such as `{{ phpversion() }}` prints as plain text. Error pages can be customised in `resources/views/errors/{404,405,419,...}.php`.
+### Control flow
+
+| Directive | |
+| --- | --- |
+| `@if(...)` `@elseif(...)` `@else` `@endif` | Conditions |
+| `@unless(...)` `@endunless` | If not |
+| `@isset($x)` `@endisset` · `@empty($x)` `@endempty` | Set / empty checks |
+| `@foreach(...)` `@endforeach` · `@for(...)` `@endfor` · `@while(...)` `@endwhile` | Loops |
+| `@forelse($items as $item)` … `@empty` … `@endforelse` | Loop with a "no items" part |
+| `@break` `@continue`, or `@break($i > 5)` `@continue($skip)` | Inside loops |
+| `@php ... @endphp` · `@php($total = 0)` | A block or one statement of PHP |
+
+### Forms and auth
+
+| Directive | Output |
+| --- | --- |
+| `@csrf` | Hidden `_token` field |
+| `@method('PUT')` | Hidden `_method` field, so a form can send PUT/PATCH/DELETE |
+| `@error('field')` … `{{ $message }}` … `@enderror` | Shown when the field failed validation |
+| `@auth` … `@endauth` · `@guest` … `@endguest` | Signed in / signed out |
+
+### Layouts, sections, partials, stacks
+
+| Directive | |
+| --- | --- |
+| `@extends('layouts.admin')` | Render inside a layout. Layouts can extend other layouts. |
+| `@section('name')` … `@endsection` · `@section('title', 'Text')` | Fill a section (`@set('title', 'Text')` also works) |
+| `@yield('name')` · `@yield('title', 'Default')` | Print a section, with an optional default |
+| `@include('partials.box')` · `@include('partials.box', ['label' => 'X'])` | Render a partial with the current variables plus extras |
+| `@push('scripts')` … `@endpush` · `@stack('scripts')` | Collect scripts/styles from any view, print them in the layout |
+
+Each page starts with fresh sections and stacks. Rendering two views in one request never mixes their content.
+
+### Custom directives
+
+```php
+// e.g. in config/bootstrap.php or a service file
+System\View\ViewCompiler::directive('money', fn($args) => "<?php echo money($args); ?>");
+// template:  @money($order->total)
+```
+
+### Compiled-view cache
+
+The first render compiles a template to plain PHP in `storage/cache/views`. Later renders `include` that file, so there is no parsing and PHP's opcache can keep it in memory.
+- A template is recompiled automatically when its modification time or size changes, and the old compiled copy is deleted.
+- `php bongo view:clear` empties the cache.
+- `VIEW_CACHE=false` turns caching off (only useful when debugging the compiler).
+- User data is never compiled as template code: `{{ $name }}` with the value `{{ phpversion() }}` prints that text.
+
+Custom error pages: `resources/views/errors/{404,405,419,...}.php`.
 
 ---
 

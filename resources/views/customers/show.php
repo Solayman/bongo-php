@@ -26,17 +26,17 @@
                 <table class="table table-hover mb-0">
                     <thead class="table-light"><tr><th>Order</th><th>Status</th><th>Date</th><th class="num">Total</th></tr></thead>
                     <tbody>
-                    <?php foreach ($orders as $order): ?>
+                    @foreach($orders as $order)
                         <tr>
                             <td><a href="<?= url('/orders/' . $order->id) ?>">{{ $order->order_number }}</a></td>
                             <td><span class="badge <?= App\Models\Order::badge($order->status) ?>">{{ ucfirst($order->status) }}</span></td>
                             <td class="small text-secondary">{{ date('M j, Y', strtotime($order->created_at)) }}</td>
                             <td class="num">{{ money($order->total) }}</td>
                         </tr>
-                    <?php endforeach; ?>
-                    <?php if (!$orders): ?>
+                    @endforeach
+                    @if(!$orders)
                         <tr><td colspan="4" class="text-center text-secondary py-4">No orders yet.</td></tr>
-                    <?php endif; ?>
+                    @endif
                     </tbody>
                 </table>
             </div>

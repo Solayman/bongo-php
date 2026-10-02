@@ -6,7 +6,7 @@ $link = function (int $n) use ($query) {
     return '?' . http_build_query($query);
 };
 ?>
-<?php if ($page['last_page'] > 1): ?>
+@if($page['last_page'] > 1)
 <nav class="d-flex justify-content-between align-items-center mt-3" aria-label="Pagination">
     <span class="small text-secondary">
         Page {{ $page['current_page'] }} of {{ $page['last_page'] }} · {{ $page['total'] }} results
@@ -25,4 +25,4 @@ $link = function (int $n) use ($query) {
         </li>
     </ul>
 </nav>
-<?php endif; ?>
+@endif

@@ -7,9 +7,9 @@
     <input type="search" name="q" value="{{ $filters['q'] ?? '' }}" class="form-control" placeholder="Order number or customer" style="width: 240px;">
     <select name="status" class="form-select" style="width: 160px;">
         <option value="">All statuses</option>
-        <?php foreach ($statuses as $status): ?>
+        @foreach($statuses as $status)
             <option value="{{ $status }}" <?= $filters['status'] === $status ? 'selected' : '' ?>>{{ ucfirst($status) }}</option>
-        <?php endforeach; ?>
+        @endforeach
     </select>
     <button class="btn btn-outline-secondary" type="submit">Filter</button>
 </form>
@@ -21,7 +21,7 @@
                 <tr><th>Order</th><th>Customer</th><th>Status</th><th>Date</th><th class="num">Total</th></tr>
             </thead>
             <tbody>
-            <?php foreach ($orders['data'] as $order): ?>
+            @foreach($orders['data'] as $order)
                 <tr>
                     <td><a href="<?= url('/orders/' . $order->id) ?>" class="fw-medium">{{ $order->order_number }}</a></td>
                     <td>
@@ -32,10 +32,10 @@
                     <td class="text-secondary small">{{ date('M j, Y H:i', strtotime($order->created_at)) }}</td>
                     <td class="num">{{ money($order->total) }}</td>
                 </tr>
-            <?php endforeach; ?>
-            <?php if (!$orders['data']): ?>
+            @endforeach
+            @if(!$orders['data'])
                 <tr><td colspan="5" class="text-center text-secondary py-4">No orders found.</td></tr>
-            <?php endif; ?>
+            @endif
             </tbody>
         </table>
     </div>

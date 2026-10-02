@@ -21,7 +21,7 @@
                     <i class="bi bi-person-circle me-1"></i>{{ auth()->name }}
                 </a>
                 <form method="POST" action="<?= url('/logout') ?>" class="m-0">
-                    <?= csrf_field() ?>
+                    @csrf
                     <button class="btn btn-sm btn-outline-secondary" type="submit">
                         <i class="bi bi-box-arrow-right me-1"></i>Sign out
                     </button>
@@ -37,5 +37,6 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 @yield('scripts')
+@stack('scripts')
 </body>
 </html>

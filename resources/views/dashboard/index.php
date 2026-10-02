@@ -30,11 +30,11 @@
             <div class="label">Products</div>
             <div class="value">{{ number_format($stats['products']) }}</div>
             <div class="sub">
-                <?php if ($stats['lowStock']): ?>
+                @if($stats['lowStock'])
                     <i class="bi bi-exclamation-triangle-fill text-warning"></i> {{ $stats['lowStock'] }} low on stock
-                <?php else: ?>
+                @else
                     All products in stock
-                <?php endif; ?>
+                @endif
             </div>
         </div></div>
     </div>
@@ -51,7 +51,7 @@
                 <table class="table table-hover mb-0">
                     <thead class="table-light"><tr><th>Order</th><th>Customer</th><th>Status</th><th>Date</th><th class="num">Total</th></tr></thead>
                     <tbody>
-                    <?php foreach ($recentOrders as $order): ?>
+                    @foreach($recentOrders as $order)
                         <tr>
                             <td><a href="<?= url('/orders/' . $order->id) ?>">{{ $order->order_number }}</a></td>
                             <td>{{ $order->customer_name ?? 'Guest' }}</td>
@@ -59,10 +59,10 @@
                             <td class="text-secondary small">{{ date('M j, Y', strtotime($order->created_at)) }}</td>
                             <td class="num">{{ money($order->total) }}</td>
                         </tr>
-                    <?php endforeach; ?>
-                    <?php if (!$recentOrders): ?>
+                    @endforeach
+                    @if(!$recentOrders)
                         <tr><td colspan="5" class="text-center text-secondary py-4">No orders yet.</td></tr>
-                    <?php endif; ?>
+                    @endif
                     </tbody>
                 </table>
             </div>
@@ -73,46 +73,46 @@
         <div class="card">
             <div class="card-header bg-white fw-semibold">Orders by status</div>
             <ul class="list-group list-group-flush">
-                <?php foreach ($statusCounts as $status => $count): ?>
+                @foreach($statusCounts as $status => $count)
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         <a href="<?= url('/orders?status=' . $status) ?>" class="text-body text-decoration-none">
                             <span class="badge <?= App\Models\Order::badge($status) ?> me-2">&nbsp;</span>{{ ucfirst($status) }}
                         </a>
                         <span class="num">{{ $count }}</span>
                     </li>
-                <?php endforeach; ?>
+                @endforeach
             </ul>
         </div>
 
         <div class="card">
             <div class="card-header bg-white fw-semibold">Top products</div>
             <ul class="list-group list-group-flush">
-                <?php foreach ($topProducts as $product): ?>
+                @foreach($topProducts as $product)
                     <li class="list-group-item d-flex justify-content-between">
                         <span>{{ $product['product_name'] }}</span>
                         <span class="text-secondary small num">{{ $product['units'] }} sold · {{ money($product['revenue']) }}</span>
                     </li>
-                <?php endforeach; ?>
-                <?php if (!$topProducts): ?>
+                @endforeach
+                @if(!$topProducts)
                     <li class="list-group-item text-secondary">No sales yet.</li>
-                <?php endif; ?>
+                @endif
             </ul>
         </div>
 
         <div class="card">
             <div class="card-header bg-white fw-semibold">Low stock</div>
             <ul class="list-group list-group-flush">
-                <?php foreach ($lowStock as $product): ?>
+                @foreach($lowStock as $product)
                     <li class="list-group-item d-flex justify-content-between">
                         <a href="<?= url('/products/' . $product->id . '/edit') ?>">{{ $product->name }}</a>
                         <span class="num <?= $product->stock == 0 ? 'text-danger fw-semibold' : '' ?>">
                             <?= $product->stock == 0 ? 'Out of stock' : e($product->stock) . ' left' ?>
                         </span>
                     </li>
-                <?php endforeach; ?>
-                <?php if (!$lowStock): ?>
+                @endforeach
+                @if(!$lowStock)
                     <li class="list-group-item text-secondary">Nothing is running low.</li>
-                <?php endif; ?>
+                @endif
             </ul>
         </div>
     </div>

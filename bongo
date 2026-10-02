@@ -159,6 +159,12 @@ try {
             }
             break;
 
+        case 'view:clear':
+            $removed = System\View\ViewEngine::shared()->clearCache();
+            echo "Removed $removed compiled view(s)
+";
+            break;
+
         case 'log:clear':
             $dir = config('logging.path');
             $removed = 0;
@@ -186,6 +192,8 @@ try {
             echo "  route:list [filter]                      Show every route with its name, action and middleware
 ";
             echo "  tinker                                   Interactive PHP shell with the app loaded
+";
+            echo "  view:clear                               Delete compiled templates in storage/cache/views
 ";
             echo "  log:clear                                Delete the log files in storage/logs
 ";
