@@ -1,54 +1,51 @@
 <?php
 // config/bootstrap.php
+// Boots the framework: autoloaders, .env, config, helpers, session.
+
+define('BASE_PATH', dirname(__DIR__));
 
 // ---------------------------
-// Load .env manually
+// Autoloaders: App\ -> app/, System\ -> system/
 // ---------------------------
-
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 spl_autoload_register(function ($class) {
-    $prefix = 'App\\';
-    $base_dir = __DIR__ . '/../app/';
-    $len = strlen($prefix);
-    if (strncmp($prefix, $class, $len) !== 0) return;
-    $relative_class = substr($class, $len);
-    $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
-    if (file_exists($file)) require_once $file;
-});
-
-require_once __DIR__ . '/../app/Helpers/commonHelper.php';
-// Autoload custom system
-spl_autoload_register(function ($class) {
-    $prefix = 'System\\';
-    $baseDir = __DIR__ . '/../system/';
-    if (strncmp($prefix, $class, strlen($prefix)) !== 0) {
-        return;
-    }
-
-    $relative = substr($class, strlen($prefix));
-    $file = $baseDir . str_replace('\\', '/', $relative) . '.php';
-
-    if (file_exists($file)) {
-        require $file;
+    $map = [
+        'App\\'    => BASE_PATH . '/app/',
+        'System\\' => BASE_PATH . '/system/',
+    ];
+    foreach ($map as $prefix => $baseDir) {
+        if (strncmp($prefix, $class, strlen($prefix)) === 0) {
+            $file = $baseDir . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+            if (file_exists($file)) {
+                require_once $file;
+            }
+            return;
+        }
     }
 });
 
-require_once __DIR__ . '/../system/View/helpers.php';
+// Optional: Composer packages are loaded only if the user installed them
+if (file_exists(BASE_PATH . '/vendor/autoload.php')) {
+    require_once BASE_PATH . '/vendor/autoload.php';
+}
 
-
-$envPath = __DIR__ . '/../.env';
+// ---------------------------
+// Load .env (real environment variables win, so tests can override them)
+// ---------------------------
+$envPath = BASE_PATH . '/.env';
 if (file_exists($envPath)) {
-    $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
+    foreach (file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
         $line = trim($line);
-        if ($line === '' || strpos($line, '#') === 0) continue;
+        if ($line === '' || str_starts_with($line, '#') || !str_contains($line, '=')) continue;
+
         [$name, $value] = array_map('trim', explode('=', $line, 2));
         // Strip matching surrounding quotes: APP_NAME="My App" -> My App
         if (strlen($value) >= 2 && ($value[0] === '"' || $value[0] === "'") && $value[-1] === $value[0]) {
             $value = substr($value, 1, -1);
+        }
+
+        if (getenv($name) !== false) {
+            $_ENV[$name] = getenv($name);
+            continue;
         }
         $_ENV[$name] = $value;
         putenv("$name=$value");
@@ -66,44 +63,39 @@ if (!function_exists('env')) {
         $lower = strtolower($value);
         if ($lower === 'true') return true;
         if ($lower === 'false') return false;
+        if ($lower === 'null') return null;
 
         return $value;
     }
 }
 
 // ---------------------------
-// Load config files
+// Helpers
 // ---------------------------
-$GLOBALS['config'] = [
-    'app' => require __DIR__ . '/app.php',
-    'database' => require __DIR__ . '/database.php',
-];
+require_once BASE_PATH . '/system/Support/helpers.php';
+require_once BASE_PATH . '/system/View/helpers.php';
+require_once BASE_PATH . '/app/Helpers/commonHelper.php';
 
 // ---------------------------
-// config() helper
+// Load every config/*.php (except this file) into config('<file>.<key>')
 // ---------------------------
-if (!function_exists('config')) {
-    function config($key, $default = null) {
-        $keys = explode('.', $key);
-        $value = $GLOBALS['config'];
-        foreach ($keys as $k) {
-            if (isset($value[$k])) {
-                $value = $value[$k];
-            } else {
-                return $default;
-            }
-        }
-        return $value;
+$GLOBALS['config'] = [];
+foreach (glob(__DIR__ . '/*.php') as $configFile) {
+    $name = basename($configFile, '.php');
+    if ($name !== 'bootstrap') {
+        $GLOBALS['config'][$name] = require $configFile;
     }
 }
 
 // ---------------------------
-// route() helper (optional)
+// Errors
 // ---------------------------
-if (!function_exists('route')) {
-    function route($path) {
-        $base = rtrim(config('app.url', ''), '/');
-        return $base . '/' . ltrim($path, '/');
-    }
-}
+error_reporting(E_ALL);
+ini_set('display_errors', config('app.debug') ? '1' : '0');
 
+// ---------------------------
+// Session (web requests only)
+// ---------------------------
+if (PHP_SAPI !== 'cli') {
+    System\Http\Session::start();
+}

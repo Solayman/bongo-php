@@ -2,4 +2,5 @@
 /storage/*
 public/files/*
 .idea/
-
+/vendor/
+/node_modules/

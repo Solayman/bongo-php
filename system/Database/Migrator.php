@@ -1,0 +1,181 @@
+<?php
+namespace System\Database;
+
+use PDO;
+use RuntimeException;
+
+/**
+ * Runs database/migrations/*.php in filename order.
+ * Every run is tracked in the `migrations` table (name + batch number),
+ * so a migration only runs once and a whole batch can be rolled back.
+ */
+class Migrator
+{
+    public const TABLE = 'migrations';
+
+    protected PDO $pdo;
+
+    public function __construct(protected string $path)
+    {
+        $this->pdo = Connection::getInstance();
+    }
+
+    public function ensureTable(): void
+    {
+        $this->pdo->exec('CREATE TABLE IF NOT EXISTS ' . self::TABLE . ' (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            migration VARCHAR(255) NOT NULL UNIQUE,
+            batch INT UNSIGNED NOT NULL,
+            ran_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB');
+    }
+
+    /** name => file path, sorted by name */
+    public function files(): array
+    {
+        $files = [];
+        foreach (glob(rtrim($this->path, '/\\') . '/*.php') ?: [] as $file) {
+            $files[basename($file, '.php')] = $file;
+        }
+        ksort($files);
+        return $files;
+    }
+
+    /** name => batch for every migration that has run */
+    public function ran(): array
+    {
+        $this->ensureTable();
+        return $this->pdo->query('SELECT migration, batch FROM ' . self::TABLE . ' ORDER BY id')
+            ->fetchAll(PDO::FETCH_KEY_PAIR);
+    }
+
+    /**
+     * Status of every migration: [name, ran (bool), batch|null, ran_at|null]
+     */
+    public function status(): array
+    {
+        $this->ensureTable();
+        $rows = $this->pdo->query('SELECT migration, batch, ran_at FROM ' . self::TABLE)->fetchAll(PDO::FETCH_ASSOC);
+        $ran = array_column($rows, null, 'migration');
+
+        $names = array_unique(array_merge(array_keys($this->files()), array_keys($ran)));
+        sort($names);
+
+        return array_map(fn($name) => [
+            'migration' => $name,
+            'ran'       => isset($ran[$name]),
+            'batch'     => $ran[$name]['batch'] ?? null,
+            'ran_at'    => $ran[$name]['ran_at'] ?? null,
+            'missing'   => !isset($this->files()[$name]),
+        ], $names);
+    }
+
+    /**
+     * Run pending migrations as one new batch; returns the names that ran
+     */
+    public function migrate(?callable $log = null): array
+    {
+        $ran = $this->ran();
+        $batch = ($ran ? max($ran) : 0) + 1;
+        $done = [];
+
+        foreach ($this->files() as $name => $file) {
+            if (isset($ran[$name])) {
+                continue;
+            }
+
+            $this->resolve($file)->up();
+
+            $stmt = $this->pdo->prepare('INSERT INTO ' . self::TABLE . ' (migration, batch) VALUES (?, ?)');
+            $stmt->execute([$name, $batch]);
+
+            $done[] = $name;
+            if ($log) $log($name);
+        }
+
+        return $done;
+    }
+
+    /**
+     * Undo the last batch (or the last $steps batches), newest migration first
+     */
+    public function rollback(int $steps = 1, ?callable $log = null): array
+    {
+        $this->ensureTable();
+        $batches = $this->pdo->query('SELECT DISTINCT batch FROM ' . self::TABLE . ' ORDER BY batch DESC')
+            ->fetchAll(PDO::FETCH_COLUMN);
+        $batches = array_slice($batches, 0, max(1, $steps));
+        if (!$batches) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($batches), '?'));
+        $stmt = $this->pdo->prepare('SELECT migration FROM ' . self::TABLE . " WHERE batch IN ($placeholders) ORDER BY id DESC");
+        $stmt->execute($batches);
+
+        $files = $this->files();
+        $done = [];
+
+        foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $name) {
+            if (!isset($files[$name])) {
+                throw new RuntimeException("Cannot roll back [$name]: its file is missing from database/migrations");
+            }
+
+            $this->resolve($files[$name])->down();
+            $this->pdo->prepare('DELETE FROM ' . self::TABLE . ' WHERE migration = ?')->execute([$name]);
+
+            $done[] = $name;
+            if ($log) $log($name);
+        }
+
+        return $done;
+    }
+
+    /**
+     * Drop every table in the current database
+     */
+    public function dropAllTables(): array
+    {
+        $tables = $this->pdo->query('SHOW FULL TABLES WHERE Table_type = "BASE TABLE"')->fetchAll(PDO::FETCH_COLUMN);
+
+        $this->pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
+        foreach ($tables as $table) {
+            $this->pdo->exec('DROP TABLE `' . str_replace('`', '``', $table) . '`');
+        }
+        $this->pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+
+        return $tables;
+    }
+
+    /**
+     * Create a new migration file from a name like "create_posts_table"
+     */
+    public function make(string $name): string
+    {
+        if (!preg_match('/^[a-z0-9_]+$/', $name)) {
+            throw new RuntimeException('Migration names may only contain a-z, 0-9 and _ (e.g. create_posts_table)');
+        }
+
+        $table = preg_match('/^create_(\w+)_table$/', $name, $m) ? $m[1] : null;
+        $file = rtrim($this->path, '/\\') . '/' . date('Y_m_d_His') . "_$name.php";
+
+        $up = $table
+            ? "        Schema::create('$table', function (Blueprint \$table) {\n            \$table->id();\n            \$table->timestamps();\n        });"
+            : "        Schema::table('table_name', function (Blueprint \$table) {\n            //\n        });";
+        $down = $table ? "        Schema::dropIfExists('$table');" : "        //";
+
+        file_put_contents($file, "<?php\n\nuse System\\Database\\Migration;\nuse System\\Database\\Schema\\Blueprint;\nuse System\\Database\\Schema\\Schema;\n\n"
+            . "return new class extends Migration\n{\n    public function up(): void\n    {\n$up\n    }\n\n    public function down(): void\n    {\n$down\n    }\n};\n");
+
+        return $file;
+    }
+
+    protected function resolve(string $file): Migration
+    {
+        $migration = require $file;
+        if (!$migration instanceof Migration) {
+            throw new RuntimeException(basename($file) . ' must return an instance of ' . Migration::class);
+        }
+        return $migration;
+    }
+}

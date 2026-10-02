@@ -1,25 +1,142 @@
 #!/usr/bin/env php
 <?php
+// BongoMvc command line tool: php artisan <command>
 
-// Simple artisan-like CLI for your mini Laravel
+require __DIR__ . '/config/bootstrap.php';
 
-$argv = $_SERVER['argv'];
-$command = $argv[1] ?? null;
+use System\Database\Migrator;
 
-switch ($command) {
-    case 'serve':
-        $host = '127.0.0.1';
-        $port = 8000;
-        echo "🚀 Starting development server: http://$host:$port\n";
-        echo "Press Ctrl+C to stop.\n";
-        // Run PHP built-in server (points to public folder)
-        passthru("php -S $host:$port -t public");
-        break;
+$args = array_slice($_SERVER['argv'], 1);
+$command = $args[0] ?? 'help';
+$options = array_slice($args, 1);
+$hasOption = fn(string $name) => in_array("--$name", $options, true);
+$optionValue = function (string $name, $default = null) use ($options) {
+    foreach ($options as $opt) {
+        if (str_starts_with($opt, "--$name=")) return substr($opt, strlen($name) + 3);
+    }
+    return $default;
+};
 
-    case 'help':
-    default:
-        echo "Available commands:\n";
-        echo "  serve        Start the local development server\n";
-        echo "  help         Show this help message\n";
-        break;
+try {
+    switch ($command) {
+        case 'serve':
+            $host = $optionValue('host', '127.0.0.1');
+            $port = (int) $optionValue('port', env('APP_PORT', 8000));
+            echo "Starting development server: http://$host:$port\n";
+            echo "Press Ctrl+C to stop.\n";
+            passthru(escapeshellarg(PHP_BINARY) . " -S $host:$port -t " . escapeshellarg(__DIR__ . '/public'));
+            break;
+
+        case 'migrate':
+            $done = (new Migrator(base_path('database/migrations')))->migrate(fn($name) => print("Migrated: $name\n"));
+            echo $done ? "Done.\n" : "Nothing to migrate.\n";
+            break;
+
+        case 'migrate:status':
+            $rows = (new Migrator(base_path('database/migrations')))->status();
+            if (!$rows) {
+                echo "No migrations found.\n";
+                break;
+            }
+            $width = max(array_map(fn($r) => strlen($r['migration']), $rows)) + 2;
+            printf("%-{$width}s %-8s %-6s %s\n", 'Migration', 'Status', 'Batch', 'Ran at');
+            foreach ($rows as $r) {
+                $status = $r['ran'] ? ($r['missing'] ? 'Ran*' : 'Ran') : 'Pending';
+                printf("%-{$width}s %-8s %-6s %s\n", $r['migration'], $status, $r['batch'] ?? '', $r['ran_at'] ?? '');
+            }
+            if (array_filter($rows, fn($r) => $r['missing'])) {
+                echo "\n* recorded in the migrations table but the file is missing\n";
+            }
+            break;
+
+        case 'migrate:rollback':
+            $steps = (int) $optionValue('step', 1);
+            $done = (new Migrator(base_path('database/migrations')))->rollback($steps, fn($name) => print("Rolled back: $name\n"));
+            echo $done ? "Done.\n" : "Nothing to roll back.\n";
+            break;
+
+        case 'make:migration':
+            if (empty($options[0])) {
+                echo "Usage: php artisan make:migration create_posts_table\n";
+                exit(1);
+            }
+            $file = (new Migrator(base_path('database/migrations')))->make($options[0]);
+            echo 'Created: ' . str_replace(BASE_PATH . DIRECTORY_SEPARATOR, '', $file) . "\n";
+            break;
+
+        case 'migrate:fresh':
+            $database = config('database.connections.' . config('database.default') . '.database');
+            if (!$hasOption('force')) {
+                echo "This drops ALL tables in database [$database]. Type the database name to continue: ";
+                if (trim((string) fgets(STDIN)) !== $database) {
+                    echo "Cancelled.\n";
+                    exit(1);
+                }
+            }
+            $migrator = new Migrator(base_path('database/migrations'));
+            foreach ($migrator->dropAllTables() as $table) echo "Dropped: $table\n";
+            $migrator->migrate(fn($name) => print("Migrated: $name\n"));
+            if ($hasOption('seed')) {
+                runSeeder();
+            }
+            break;
+
+        case 'db:seed':
+            runSeeder();
+            break;
+
+        case 'key:generate':
+            $key = System\Security\Key::generate();
+            if ($hasOption('show')) {
+                echo $key . "\n";
+                break;
+            }
+
+            $envFile = base_path('.env');
+            if (!file_exists($envFile)) {
+                copy(base_path('.env.example'), $envFile);
+            }
+            $contents = file_get_contents($envFile);
+
+            if (preg_match('/^APP_KEY=(.+)$/m', $contents, $m) && trim($m[1]) !== '' && !$hasOption('force')) {
+                echo "APP_KEY is already set. Changing it invalidates every stored password and encrypted value.\n";
+                echo "Use --force only if you really want a new key.\n";
+                exit(1);
+            }
+
+            $contents = preg_match('/^APP_KEY=.*$/m', $contents)
+                ? preg_replace('/^APP_KEY=.*$/m', 'APP_KEY=' . $key, $contents)
+                : rtrim($contents) . "\nAPP_KEY=" . $key . "\n";
+            file_put_contents($envFile, $contents);
+            echo "Application key set in .env\n";
+            break;
+
+        case 'test':
+            exit(System\Testing\Runner::run(base_path('tests'), $options[0] ?? null));
+
+        case 'help':
+        default:
+            echo "BongoMvc commands:\n";
+            echo "  serve [--port=8000] [--host=127.0.0.1]  Start the development server\n";
+            echo "  migrate                                  Run pending database/migrations/*.php\n";
+            echo "  migrate:status                           Show which migrations have run (and their batch)\n";
+            echo "  migrate:rollback [--step=1]              Undo the last batch(es) of migrations\n";
+            echo "  make:migration <name>                    Create a migration file, e.g. create_posts_table\n";
+            echo "  migrate:fresh [--force] [--seed]         Drop all tables, migrate (and seed)\n";
+            echo "  db:seed                                  Run database/seeders/DatabaseSeeder.php\n";
+            echo "  key:generate [--show] [--force]          Create APP_KEY in .env (password pepper + encryption)\n";
+            echo "  test [filter]                            Run the tests in tests/\n";
+            echo "  help                                     Show this help\n";
+            break;
+    }
+} catch (Throwable $e) {
+    fwrite(STDERR, get_class($e) . ': ' . $e->getMessage() . "\n");
+    exit(1);
+}
+
+function runSeeder(): void
+{
+    require_once base_path('database/seeders/DatabaseSeeder.php');
+    (new Database\Seeders\DatabaseSeeder())->run();
+    echo "Database seeded.\n";
 }
