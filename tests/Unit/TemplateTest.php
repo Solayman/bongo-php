@@ -199,4 +199,65 @@ class TemplateTest extends TestCase
             'a product name cannot inject HTML into the page title'
         );
     }
+
+    public function testSwitch(): void
+    {
+        $tpl = "@switch(\$status)\n    @case('paid')\n        Paid\n        @break\n    @case('shipped')\n    @case('delivered')\n        On its way\n        @break\n    @default\n        Pending\n@endswitch";
+        $this->assertSame('Paid', $this->render($tpl, ['status' => 'paid']));
+        $this->assertSame('On its way', $this->render($tpl, ['status' => 'delivered']), 'cases can share a body');
+        $this->assertSame('Pending', $this->render($tpl, ['status' => 'new']));
+
+        // Nested in a loop, and nested switches
+        $nested = "@foreach(\$xs as \$x)@switch(\$x)@case(1)one@break@default @switch(\$x % 2)@case(0)even@break@default odd@endswitch@endswitch,@endforeach";
+        $this->assertSame('one, even, odd,', $this->render($nested, ['xs' => [1, 2, 3]]));
+    }
+
+    public function testFormAttributeHelpers(): void
+    {
+        $out = $this->render("<input type=\"checkbox\" @checked(\$on)><option @selected(\$id === 2)>x</option><button @disabled(!\$ok) @readonly(false) @required(true)>", ['on' => true, 'id' => 2, 'ok' => false]);
+        $this->assertSame('<input type="checkbox" checked><option selected>x</option><button disabled required>', $out);
+        $this->assertSame('<input type="checkbox" >', $this->render("<input type=\"checkbox\" @checked(\$on)>", ['on' => false]));
+
+        $this->assertSame('<p class="btn btn-primary">', $this->render("<p @class(['btn', 'btn-primary' => \$active, 'd-none' => !\$show, null])>", ['active' => true, 'show' => true]));
+        $this->assertSame('<p class="a &quot;b">', $this->render("<p @class([\$cls])>", ['cls' => 'a "b']), 'class names are escaped');
+    }
+
+    public function testConditionalIncludesAndEach(): void
+    {
+        $this->view('partials.badge', "[{{ \$label ?? 'badge' }}]");
+        $this->view('partials.card', "<{{ \$item }}>");
+        $this->view('partials.none', "(none)");
+
+        $this->assertSame('[x]', $this->render("@includeIf('partials.badge', ['label' => 'x'])@includeIf('partials.missing')"));
+        $this->assertSame('[yes]', $this->render("@includeWhen(\$admin, 'partials.badge', ['label' => 'yes'])@includeUnless(\$admin, 'partials.badge')", ['admin' => true]));
+        $this->assertSame('[badge]', $this->render("@includeFirst(['partials.custom', 'partials.badge'])"));
+        $this->assertThrows(\System\View\ViewException::class, fn() => $this->render("@includeFirst(['partials.a', 'partials.b'])"));
+
+        $this->assertSame('<a><b>', $this->render("@each('partials.card', \$items, 'item', 'partials.none')", ['items' => ['a', 'b']]));
+        $this->assertSame('(none)', $this->render("@each('partials.card', [], 'item', 'partials.none')"));
+        $this->assertSame('Nothing yet', $this->render("@each('partials.card', [], 'item', 'raw|Nothing yet')"));
+    }
+
+    public function testHasSectionOnceEnvAndSharedData(): void
+    {
+        $this->view('shell', "@hasSection('aside')<aside>@yield('aside')</aside>@endif @sectionMissing('aside')<p>no aside</p>@endif");
+        $this->view('with', "@extends('shell')@section('aside')A@endsection");
+        $this->view('without', "@extends('shell')");
+        $this->assertSame('<aside>A</aside>', trim($this->engine->render('with')));
+        $this->assertSame('<p>no aside</p>', trim($this->engine->render('without')));
+
+        // @once inside a partial rendered three times: printed once per page
+        $this->view('partials.picker', "@once<script src=\"picker.js\"></script>@endonce<input>");
+        $page = "@include('partials.picker')@include('partials.picker')@include('partials.picker')";
+        $this->assertSame('<script src="picker.js"></script><input><input><input>', $this->render($page));
+        $this->assertSame('<script src="picker.js"></script><input><input><input>', $this->render($page), 'and again on the next page');
+
+        $env = config('app.env');
+        $this->assertSame('T', $this->render("@env('testing')T@endenv @env(['local', 'production'])X@endenv @production P@endproduction"), "app.env is $env in tests");
+
+        \System\View\ViewEngine::share(['siteName' => 'Bongo Shop', 'visits' => fn() => 41 + 1]);
+        $this->assertSame('Bongo Shop 42', $this->render("{{ \$siteName }} {{ \$visits }}"));
+        $this->assertSame('Mine 42', $this->render("{{ \$siteName }} {{ \$visits }}", ['siteName' => 'Mine']), 'passed data wins');
+        \System\View\ViewEngine::share(['siteName' => null, 'visits' => null]);
+    }
 }

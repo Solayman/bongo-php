@@ -21,17 +21,21 @@ namespace System\View;
 class ViewCompiler
 {
     /** Bump when the compiled output changes, so cached views are rebuilt */
-    public const VERSION = '2.2';
+    public const VERSION = '2.3';
 
     protected const DIRECTIVE = '/@(\w+)(?:[ \t]*(\((?:[^()\'"]++|\'(?:[^\'\\\\]|\\\\.)*\'|"(?:[^"\\\\]|\\\\.)*"|(?2))*\)))?/';
 
     /** Directives that may follow text directly ("Home@endsection"); others need a non-word char before @ */
-    protected const CLOSING = ['else', 'elseif', 'elsecan', 'stop', 'show', 'break', 'continue', 'empty'];
+    protected const CLOSING = ['else', 'elseif', 'elsecan', 'stop', 'show', 'break', 'continue', 'empty', 'case', 'default'];
 
     protected static array $custom = [];
     protected array $verbatim = [];
     protected int $forelse = 0;
     protected array $forelseStack = [];
+    /** Open @switch blocks: true until their first @case/@default */
+    protected array $switchStack = [];
+    protected string $file = '';
+    protected int $once = 0;
 
     /** Register a custom directive: @name(args) → the PHP your callback returns */
     public static function directive(string $name, callable $compiler): void
@@ -43,6 +47,9 @@ class ViewCompiler
     {
         $this->verbatim = [];
         $this->forelseStack = [];
+        $this->switchStack = [];
+        $this->once = 0;
+        $this->file = substr(sha1($content), 0, 12);   // stable ids for @once
 
         // {{-- comments --}} disappear
         $content = preg_replace('/\{\{--.*?--\}\}/s', '', $content);
@@ -183,6 +190,122 @@ class ViewCompiler
     {
         return "<?php echo json_encode($a, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE); ?>";
     }
+
+    // --- @switch ------------------------------------------------------
+
+    /**
+     * PHP allows nothing (not even a newline) between "switch (): ?>" and the first case,
+     * so @switch leaves PHP open and the first @case/@default closes it.
+     */
+    protected function compileSwitch($a)
+    {
+        $this->switchStack[] = true;
+        return "<?php switch ($a):";
+    }
+
+    protected function compileCase($a)
+    {
+        return $this->switchArm("case ($a):");
+    }
+
+    protected function compileDefault()
+    {
+        return $this->switchArm('default:');
+    }
+
+    protected function switchArm(string $arm): string
+    {
+        if (!$this->switchStack) {
+            throw new ViewException('@case/@default must be inside @switch');
+        }
+        $first = end($this->switchStack);
+        $this->switchStack[array_key_last($this->switchStack)] = false;
+        return $first ? " $arm ?>" : "<?php $arm ?>";
+    }
+
+    protected function compileEndswitch()
+    {
+        if (!$this->switchStack) {
+            throw new ViewException('@endswitch without a matching @switch');
+        }
+        $first = array_pop($this->switchStack);
+        return $first ? ' endswitch; ?>' : '<?php endswitch; ?>';
+    }
+
+    // --- Form attributes ----------------------------------------------
+
+    protected function compileChecked($a)   { return "<?php if ($a) echo 'checked'; ?>"; }
+    protected function compileSelected($a)  { return "<?php if ($a) echo 'selected'; ?>"; }
+    protected function compileDisabled($a)  { return "<?php if ($a) echo 'disabled'; ?>"; }
+    protected function compileReadonly($a)  { return "<?php if ($a) echo 'readonly'; ?>"; }
+    protected function compileRequired($a)  { return "<?php if ($a) echo 'required'; ?>"; }
+
+    /** @class(['btn', 'btn-primary' => $active, 'd-none' => !$show]) → class="btn btn-primary" */
+    protected function compileClass($a)
+    {
+        return "<?php echo 'class=\"' . htmlspecialchars(\\System\\View\\ViewEngine::classList($a), ENT_QUOTES, 'UTF-8') . '\"'; ?>";
+    }
+
+    // --- Conditional includes -----------------------------------------
+
+    /** @includeIf('partials.promo', [...]): only when the view exists */
+    protected function compileIncludeIf($a)
+    {
+        $parts = $this->splitArguments((string) $a);
+        return "<?php if (\$this->exists({$parts[0]})) echo \$this->includeView(get_defined_vars(), $a); ?>";
+    }
+
+    /** @includeWhen($user->isAdmin(), 'partials.admin-bar', [...]) */
+    protected function compileIncludeWhen($a)
+    {
+        $parts = $this->splitArguments((string) $a);
+        $condition = array_shift($parts);
+        return "<?php if ($condition) echo \$this->includeView(get_defined_vars(), " . implode(', ', $parts) . '); ?>';
+    }
+
+    protected function compileIncludeUnless($a)
+    {
+        $parts = $this->splitArguments((string) $a);
+        $condition = array_shift($parts);
+        return "<?php if (!($condition)) echo \$this->includeView(get_defined_vars(), " . implode(', ', $parts) . '); ?>';
+    }
+
+    /** @includeFirst(['shop.custom-banner', 'partials.banner'], [...]): the first view that exists */
+    protected function compileIncludeFirst($a)
+    {
+        $parts = $this->splitArguments((string) $a);
+        $views = array_shift($parts);
+        $data = $parts ? ', ' . implode(', ', $parts) : '';
+        return "<?php echo \$this->includeView(get_defined_vars(), \$this->firstExisting($views)$data); ?>";
+    }
+
+    /** @each('partials.product-card', $products, 'product', 'partials.no-products'): one view per item */
+    protected function compileEach($a)
+    {
+        return "<?php echo \$this->renderEach($a); ?>";
+    }
+
+    // --- Sections, once, environment, debugging -----------------------
+
+    protected function compileHasSection($a)      { return "<?php if (\$this->sections->has($a)): ?>"; }
+    protected function compileSectionMissing($a)  { return "<?php if (!\$this->sections->has($a)): ?>"; }
+
+    /** @once ... @endonce: printed the first time on a page only (e.g. a script a partial needs) */
+    protected function compileOnce()
+    {
+        $id = $this->file . ':' . ++$this->once;
+        return "<?php if (\$this->sections->once('$id')): ?>";
+    }
+
+    protected function compileEndonce()        { return '<?php endif; ?>'; }
+
+    /** @env('local') / @env(['local', 'testing']) ... @endenv · @production ... @endproduction */
+    protected function compileEnv($a)          { return "<?php if (in_array(config('app.env'), (array) ($a), true)): ?>"; }
+    protected function compileEndenv()         { return '<?php endif; ?>'; }
+    protected function compileProduction()     { return "<?php if (config('app.env') === 'production'): ?>"; }
+    protected function compileEndproduction()  { return '<?php endif; ?>'; }
+
+    protected function compileDump($a)         { return "<?php dump($a); ?>"; }
 
     // --- Layouts, sections, includes, stacks ---------------------------
 

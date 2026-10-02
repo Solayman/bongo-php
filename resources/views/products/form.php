@@ -34,7 +34,7 @@ $invalid = fn(string $field) => error($field) ? 'is-invalid' : '';
                 <select class="form-select <?= $invalid('category_id') ?>" id="category_id" name="category_id">
                     <option value="">Uncategorised</option>
                     @foreach($categories as $category)
-                        <option value="{{ $category->id }}" <?= (string) $value('category_id') === (string) $category->id ? 'selected' : '' ?>>{{ $category->name }}</option>
+                        <option value="{{ $category->id }}" @selected((string) $value('category_id') === (string) $category->id)>{{ $category->name }}</option>
                     @endforeach
                 </select>
                 <div class="invalid-feedback">{{ error('category_id') }}</div>
@@ -52,8 +52,8 @@ $invalid = fn(string $field) => error($field) ? 'is-invalid' : '';
             <div class="col-md-3">
                 <label class="form-label" for="status">Status</label>
                 <select class="form-select <?= $invalid('status') ?>" id="status" name="status">
-                    <option value="active" <?= $value('status', 'active') === 'active' ? 'selected' : '' ?>>Active</option>
-                    <option value="draft" <?= $value('status', 'active') === 'draft' ? 'selected' : '' ?>>Draft</option>
+                    <option value="active" @selected($value('status', 'active') === 'active')>Active</option>
+                    <option value="draft" @selected($value('status', 'active') === 'draft')>Draft</option>
                 </select>
                 <div class="invalid-feedback">{{ error('status') }}</div>
             </div>

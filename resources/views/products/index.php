@@ -9,13 +9,13 @@
         <select name="category" class="form-select" style="width: 180px;">
             <option value="">All categories</option>
             @foreach($categories as $category)
-                <option value="{{ $category->id }}" <?= (string) $filters['category'] === (string) $category->id ? 'selected' : '' ?>>{{ $category->name }}</option>
+                <option value="{{ $category->id }}" @selected((string) $filters['category'] === (string) $category->id)>{{ $category->name }}</option>
             @endforeach
         </select>
         <select name="status" class="form-select" style="width: 140px;">
             <option value="">Any status</option>
-            <option value="active" <?= $filters['status'] === 'active' ? 'selected' : '' ?>>Active</option>
-            <option value="draft" <?= $filters['status'] === 'draft' ? 'selected' : '' ?>>Draft</option>
+            <option value="active" @selected($filters['status'] === 'active')>Active</option>
+            <option value="draft" @selected($filters['status'] === 'draft')>Draft</option>
         </select>
         <button class="btn btn-outline-secondary" type="submit">Filter</button>
     </form>

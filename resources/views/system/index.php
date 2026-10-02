@@ -218,7 +218,7 @@
                 <select name="level" class="form-select form-select-sm" aria-label="Minimum level" onchange="this.form.submit()">
                     <option value="">All levels</option>
                     @foreach(['info', 'warning', 'error'] as $level)
-                        <option value="{{ $level }}" <?= $logLevel === $level ? 'selected' : '' ?>>{{ ucfirst($level) }} and above</option>
+                        <option value="{{ $level }}" @selected($logLevel === $level)>{{ ucfirst($level) }} and above</option>
                     @endforeach
                 </select>
             </form>

@@ -19,6 +19,8 @@ class ViewEngine
     /** view name => compiled file, for the current top-level render (an @include in a loop is resolved once) */
     protected array $resolved = [];
     protected static ?ViewEngine $shared = null;
+    /** Variables every view gets (see share()) */
+    protected static array $sharedData = [];
 
     public function __construct(string $viewPath, string $cachePath, protected bool $cache = true)
     {
@@ -38,11 +40,29 @@ class ViewEngine
         );
     }
 
+    /**
+     * Give every view a variable (in app/bootstrap.php):
+     *   ViewEngine::share('appName', 'Bongo Shop');
+     *   ViewEngine::share('cartCount', fn() => app(Cart::class)->count());   // a closure runs once per page, only when rendering
+     * Data passed to render() wins over shared values.
+     */
+    public static function share(string|array $key, mixed $value = null): void
+    {
+        foreach (is_array($key) ? $key : [$key => $value] as $name => $item) {
+            self::$sharedData[$name] = $item;
+        }
+    }
+
     public function render(string $view, array $data = []): string
     {
         if ($this->depth === 0) {
             $this->sections->reset();
             $this->resolved = [];   // fresh per page, so edited templates are picked up by long-running workers
+            foreach (self::$sharedData as $name => $value) {
+                if (!array_key_exists($name, $data)) {
+                    $data[$name] = $value instanceof \Closure ? $value() : $value;
+                }
+            }
         }
         $this->depth++;
 
@@ -67,6 +87,42 @@ class ViewEngine
     public function exists(string $view): bool
     {
         return is_file($this->pathFor($view));
+    }
+
+    /** Used by compiled @includeFirst */
+    public function firstExisting(array $views): string
+    {
+        foreach ($views as $view) {
+            if ($this->exists($view)) return $view;
+        }
+        throw new ViewException('None of these views exist: ' . implode(', ', $views));
+    }
+
+    /** Used by compiled @each('partials.card', $items, 'item', 'partials.empty') */
+    public function renderEach(string $view, iterable $items, string $as, ?string $empty = null): string
+    {
+        $html = '';
+        foreach ($items as $key => $item) {
+            $html .= $this->render($view, ['key' => $key, $as => $item]);
+        }
+        if ($html === '' && $empty !== null) {
+            $html = str_starts_with($empty, 'raw|') ? substr($empty, 4) : $this->render($empty);
+        }
+        return $html;
+    }
+
+    /** @class(['btn', 'active' => $on]) → "btn active": number keys always, string keys when their value is true */
+    public static function classList(array $classes): string
+    {
+        $list = [];
+        foreach ($classes as $key => $value) {
+            if (is_int($key)) {
+                if ($value !== null && $value !== '') $list[] = (string) $value;
+            } elseif ($value) {
+                $list[] = $key;
+            }
+        }
+        return implode(' ', array_unique($list));
     }
 
     /** Used by compiled @extends */
