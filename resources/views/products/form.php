@@ -14,8 +14,9 @@ $invalid = fn(string $field) => error($field) ? 'is-invalid' : '';
     <h2 class="h4 mt-2"><?= $editing ? 'Edit ' . e($product->name) : 'New product' ?></h2>
 </div>
 
-<form method="POST" action="<?= url($editing ? '/products/' . $product->id : '/products') ?>" novalidate>
+<form method="POST" action="<?= $editing ? route('products.update', ['id' => $product->id]) : route('products.store') ?>" novalidate>
     <?= csrf_field() ?>
+    <?= $editing ? method_field('PUT') : '' ?>
     <div class="card"><div class="card-body">
         <div class="row g-3">
             <div class="col-md-8">

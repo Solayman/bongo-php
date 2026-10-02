@@ -9,8 +9,9 @@
         <div class="card">
             <div class="card-header bg-white fw-semibold">Account details</div>
             <div class="card-body">
-                <form method="POST" action="<?= url('/profile') ?>" novalidate>
+                <form method="POST" action="<?= route('profile.update') ?>" novalidate>
                     <?= csrf_field() ?>
+                    <?= method_field('PUT') ?>
                     <div class="mb-3">
                         <label class="form-label" for="name">Name</label>
                         <input class="form-control <?= $invalid('name') ?>" id="name" name="name" value="{{ old('name', $user->name) }}">
@@ -35,8 +36,9 @@
         <div class="card">
             <div class="card-header bg-white fw-semibold">Change password</div>
             <div class="card-body">
-                <form method="POST" action="<?= url('/profile/password') ?>" novalidate>
+                <form method="POST" action="<?= route('profile.password') ?>" novalidate>
                     <?= csrf_field() ?>
+                    <?= method_field('PUT') ?>
                     <div class="mb-3">
                         <label class="form-label" for="current_password">Current password</label>
                         <input class="form-control <?= $invalid('current_password') ?>" id="current_password" name="current_password" type="password" autocomplete="current-password">

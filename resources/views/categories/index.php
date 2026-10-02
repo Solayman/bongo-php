@@ -31,9 +31,10 @@
                             <td class="num"><a href="<?= url('/products?category=' . $category['id']) ?>">{{ $category['product_count'] }}</a></td>
                             <td class="text-end text-nowrap">
                                 <a href="<?= url('/categories/' . $category['id'] . '/edit') ?>" class="btn btn-sm btn-outline-secondary">Edit</a>
-                                <form method="POST" action="<?= url('/categories/' . $category['id'] . '/delete') ?>" class="d-inline"
+                                <form method="POST" action="<?= route('categories.destroy', ['id' => $category['id']]) ?>" class="d-inline"
                                       onsubmit="return confirm('Delete this category? Its products will become uncategorised.');">
                                     <?= csrf_field() ?>
+                                    <?= method_field('DELETE') ?>
                                     <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
                                 </form>
                             </td>

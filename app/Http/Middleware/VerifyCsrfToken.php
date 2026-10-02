@@ -9,7 +9,8 @@ class VerifyCsrfToken
 {
     public function handle(): void
     {
-        if (Request::method() === 'GET') {
+        // Reading requests never change data, so they need no token
+        if (in_array(Request::realMethod(), ['GET', 'HEAD', 'OPTIONS'], true)) {
             return;
         }
 

@@ -41,9 +41,10 @@
                     </td>
                     <td class="text-end text-nowrap">
                         <a href="<?= url('/products/' . $product->id . '/edit') ?>" class="btn btn-sm btn-outline-secondary">Edit</a>
-                        <form method="POST" action="<?= url('/products/' . $product->id . '/delete') ?>" class="d-inline"
+                        <form method="POST" action="<?= route('products.destroy', ['id' => $product->id]) ?>" class="d-inline"
                               onsubmit="return confirm('Delete this product?');">
                             <?= csrf_field() ?>
+                            <?= method_field('DELETE') ?>
                             <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
                         </form>
                     </td>

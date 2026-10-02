@@ -8,8 +8,7 @@ use System\Log\Log;
 use System\Routing\Router;
 
 try {
-    $router = new Router(require base_path('routes/web.php'), config('app.middleware', []));
-    $router->dispatch(Request::method(), Request::path());
+    Router::fromConfig()->dispatch(Request::method(), Request::path());
 } catch (HttpException $e) {
     $context = ['status' => $e->status(), 'method' => Request::method(), 'path' => Request::path(), 'ip' => $_SERVER['REMOTE_ADDR'] ?? null];
     // 403 and 419 (bad CSRF token) can mean an attack; 404/405 are routine

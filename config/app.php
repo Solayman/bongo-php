@@ -8,10 +8,28 @@ return [
     // Used by PHP dates, log timestamps and the MySQL session (e.g. Asia/Dhaka)
     'timezone' => env('APP_TIMEZONE', 'UTC'),
 
-    // Route middleware aliases: 'GET /path' => [Controller, method, ['auth', 'csrf']]
+    // Route files: each is loaded inside a group with its prefix and middleware
+    'routes' => [
+        'web' => ['file' => 'routes/web.php', 'middleware' => ['web']],
+        'api' => ['file' => 'routes/api.php', 'prefix' => '/api', 'middleware' => ['api'], 'name' => 'api.'],
+    ],
+
+    // Middleware aliases, used on routes as ->middleware('auth') or 'auth:param1,param2'
     'middleware' => [
         'auth'  => App\Http\Middleware\Authenticate::class,
         'guest' => App\Http\Middleware\RedirectIfAuthenticated::class,
         'csrf'  => App\Http\Middleware\VerifyCsrfToken::class,
+        'cors'  => System\Http\Middleware\Cors::class,
+    ],
+
+    // Named sets of middleware
+    'middleware_groups' => [
+        'web' => ['csrf'],
+        'api' => ['cors'],
+    ],
+
+    // Run on every request, before routing
+    'middleware_global' => [
+        System\Http\Middleware\SecurityHeaders::class,
     ],
 ];
