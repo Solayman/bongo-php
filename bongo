@@ -277,6 +277,16 @@ try {
             echo 'Removed ' . System\Cache\Cache::flush() . ' cache file(s)' . PHP_EOL;
             break;
 
+        case 'view:cache':
+            $engine = System\View\ViewEngine::shared();
+            $engine->clearCache();
+            $result = $engine->compileAll(lint: true);
+            foreach ($result['errors'] as $view => $message) {
+                echo "  FAIL  $view: $message" . PHP_EOL;
+            }
+            echo "Compiled {$result['compiled']} view(s)" . ($result['errors'] ? ', ' . count($result['errors']) . ' failed' : '') . PHP_EOL;
+            exit($result['errors'] ? 1 : 0);
+
         case 'view:clear':
             $removed = System\View\ViewEngine::shared()->clearCache();
             echo "Removed $removed compiled view(s)
@@ -333,6 +343,7 @@ try {
 ";
             echo "  cache:clear                              Delete everything in the file cache
 ";
+            echo "  view:cache                               Precompile and lint every template (run on deploy)" . PHP_EOL;
             echo "  view:clear                               Delete compiled templates in storage/cache/views
 ";
             echo "  log:clear                                Delete the log files in storage/logs

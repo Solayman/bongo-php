@@ -25,6 +25,8 @@ class ViewEngineTest extends TestCase
     public function tearDown(): void
     {
         foreach (['layout', 'page', 'plain', 'partials/note'] as $f) @unlink("$this->dir/$f.php");
+        array_map('unlink', glob("$this->dir/cache/*") ?: []);
+        @rmdir("$this->dir/cache");
         @rmdir("$this->dir/partials");
         @rmdir($this->dir);
     }
@@ -75,5 +77,39 @@ class ViewEngineTest extends TestCase
     public function testMissingViewThrows(): void
     {
         $this->assertThrows(\Exception::class, fn() => $this->engine->render('nope'));
+    }
+
+    public function testIncludeInALoopAndEditedTemplatesBetweenRenders(): void
+    {
+        file_put_contents("$this->dir/loop.php", "@foreach(\$items as \$name)@include('partials.note')@endforeach");
+        $html = $this->engine->render('loop', ['items' => ['a', 'b', 'c']]);
+        $this->assertSame('<small>note for a</small><small>note for b</small><small>note for c</small>', $html);
+
+        // A long-running process (queue worker) sees template edits on its next render
+        file_put_contents("$this->dir/partials/note.php", "<i>{{ \$name }} (edited)</i>");
+        $this->assertSame('<i>a (edited)</i>', $this->engine->render('loop', ['items' => ['a']]));
+        @unlink("$this->dir/loop.php");
+    }
+
+    public function testGuessesTheViewForAnAction(): void
+    {
+        $this->assertSame('products.index', ViewEngine::guessName('App\\Http\\Controllers\\ProductController', 'index'));
+        $this->assertSame('categories.edit', ViewEngine::guessName('App\\Http\\Controllers\\CategoryController', 'edit'));
+        $this->assertSame('shop.catalogs.show', ViewEngine::guessName('App\\Http\\Controllers\\Shop\\CatalogController', 'show'));
+        $this->assertSame('order_items.bulk-edit', ViewEngine::guessName('App\\Http\\Controllers\\OrderItemController', 'bulkEdit'));
+    }
+
+    public function testCompileAllPrecompilesAndReportsBrokenTemplates(): void
+    {
+        $result = $this->engine->compileAll(lint: true);
+        $this->assertSame(4, $result['compiled']);
+        $this->assertSame([], $result['errors']);
+        $this->assertCount(4, glob("$this->dir/cache/*.php"));
+
+        file_put_contents("$this->dir/broken.php", "<?php if ( ?>oops");
+        $result = $this->engine->compileAll(lint: true);
+        $this->assertSame(['broken'], array_keys($result['errors']));
+        $this->assertContains('syntax error', $result['errors']['broken']);
+        @unlink("$this->dir/broken.php");
     }
 }

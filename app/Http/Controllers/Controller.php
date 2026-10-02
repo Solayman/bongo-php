@@ -8,8 +8,13 @@ use System\View\ViewEngine;
 
 class Controller
 {
-    protected function view(string $view, array $data = []): string
+    /**
+     * Render a template. Without a name the action's conventional view is used:
+     * ProductController::index → products.index
+     */
+    protected function view(?string $view = null, array $data = []): string
     {
+        $view ??= ViewEngine::guessName(static::class, debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1]['function'] ?? 'index');
         return ViewEngine::shared()->render($view, $data);
     }
 
