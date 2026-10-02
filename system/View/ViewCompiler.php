@@ -4,43 +4,37 @@ namespace System\View;
 /**
  * Compiles BongoMVC templates to plain PHP.
  *
- * Output
- *   {{ $x }}  escaped          {{! $x }}  raw HTML          {-- note --}  comment (removed)
- *   \{{ x }}  prints "{{ x }}"  \{: x :}  prints "{: x :}"   {: verbatim :} ... {: end :}  left untouched (Vue, Alpine)
+ *   {{ $x }}  escaped echo        {!! $x !!}  raw echo        {{-- note --}}  comment
+ *   @{{ x }}  prints "{{ x }}" literally
+ *   @if / @elseif / @else / @endif     @unless / @endunless     @isset / @endisset     @empty(x) / @endempty
+ *   @foreach / @endforeach   @forelse ... @empty ... @endforelse   @for / @endfor   @while / @endwhile
+ *   (inside @foreach/@forelse: $loop->index, iteration, first, last, odd, even, count, remaining, depth, parent)
+ *   @break / @continue (optionally with a condition)
+ *   @php ... @endphp   @php($x = 1)
+ *   @csrf   @method('PUT')   @error('field') {{ $message }} @enderror   @auth / @auth('customer') / @endauth   @guest / @endguest
+ *   @json($data)
+ *   @extends('layout')   @section('name') ... @endsection   @section('title', $text) (escaped)   @yield('name', 'default')
+ *   @include('partial', ['extra' => 1])   @push('scripts') ... @endpush   @stack('scripts')
  *
- * Tags: {: name arguments :}. Blocks are closed with {: end :}.
- *   {: if $a :} ... {: elseif $b :} ... {: else :} ... {: end :}
- *   {: unless $a :}   {: isset $a :}   {: empty $a :}   {: auth :} / {: auth 'customer' :}   {: guest :}
- *   {: each $items as $key => $item :} ... {: else :} no items ... {: end :}      ($loop->first, ->last, ->index ...)
- *   {: for $i = 0; $i < 3; $i++ :}   {: while $x :}   {: break :}  {: continue $item->hidden :}
- *   {: layout 'layouts.admin' :}   {: block 'content' :} ... {: end :}   {: block 'title', 'Products' :}
- *   {: show 'content' :}  {: show 'title', 'Default' :}   {: insert 'partials.note', ['x' => 1] :}
- *   {: push 'scripts' :} ... {: end :}   {: stack 'scripts' :}
- *   {: csrf :}   {: method 'PUT' :}   {: error 'email' :} {{ $message }} {: end :}   {: json $data :}
- *   {: php $total = 0 :}   {: php :} several; statements; {: end :}
- *
- * Add your own with ViewCompiler::tag('money', fn(?string $args) => "<?php echo money($args); ?>").
+ * Add your own with ViewCompiler::directive('name', fn(?string $args) => '<?php ... ?>').
  */
 class ViewCompiler
 {
     /** Bump when the compiled output changes, so cached views are rebuilt */
-    public const VERSION = '3.0';
+    public const VERSION = '2.1';
 
-    /** {: name args :}; quoted strings may contain ":}", and "::" / "?:" are fine inside the arguments */
-    protected const TAG = '/\{:\s*(\w+)((?:[^\'":]++|\'(?:[^\'\\\\]|\\\\.)*\'|"(?:[^"\\\\]|\\\\.)*"|:(?!\}))*):\}/s';
+    protected const DIRECTIVE = '/@(\w+)(?:[ \t]*(\((?:[^()\'"]++|\'(?:[^\'\\\\]|\\\\.)*\'|"(?:[^"\\\\]|\\\\.)*"|(?2))*\)))?/';
 
-    /** Tags that open a block closed by {: end :} */
-    protected const BLOCKS = ['if', 'unless', 'isset', 'empty', 'auth', 'guest', 'error', 'each', 'for', 'while', 'block', 'push'];
+    /** Directives that may follow text directly ("Home@endsection"); others need a non-word char before @ */
+    protected const CLOSING = ['else', 'stop', 'show', 'break', 'continue', 'empty'];
 
     protected static array $custom = [];
     protected array $verbatim = [];
-    /** Open blocks: [tag, line, number, hasElse] */
-    protected array $open = [];
-    protected int $counter = 0;
-    protected string $source = '';
+    protected int $forelse = 0;
+    protected array $forelseStack = [];
 
-    /** Register a custom tag: {: name args :} → the PHP your callback returns */
-    public static function tag(string $name, callable $compiler): void
+    /** Register a custom directive: @name(args) → the PHP your callback returns */
+    public static function directive(string $name, callable $compiler): void
     {
         static::$custom[$name] = $compiler;
     }
@@ -48,176 +42,164 @@ class ViewCompiler
     public function compile(string $content): string
     {
         $this->verbatim = [];
-        $this->open = [];
-        $this->counter = 0;
+        $this->forelseStack = [];
 
-        // Comments disappear, but keep their line breaks so error line numbers stay right
-        $content = preg_replace_callback('/\{--.*?--\}/s', fn($m) => str_repeat("\n", substr_count($m[0], "\n")), $content);
+        // {{-- comments --}} disappear
+        $content = preg_replace('/\{\{--.*?--\}\}/s', '', $content);
 
-        // Raw regions first, so nothing inside them is treated as a tag
-        $content = preg_replace_callback('/\{:\s*verbatim\s*:\}(.*?)\{:\s*end\s*:\}/s', fn($m) => $this->protect($m[1]), $content);
-        $content = preg_replace_callback('/\{:\s*php\s*:\}(.*?)\{:\s*end\s*:\}/s', fn($m) => $this->protect('<?php' . $m[1] . '?>'), $content);
+        // @{{ ... }} and @{!! ... !!} print literally (for JS frameworks)
+        $content = preg_replace_callback('/@(\{\{.*?\}\}|\{!!.*?!!\})/s', fn($m) => $this->protect($m[1]), $content);
 
-        // \{{ and \{: print the characters themselves
-        $content = preg_replace_callback('/\\\\(\{\{|\{:)/', fn($m) => $this->protect($m[1]), $content);
+        // @@if prints "@if" literally
+        $content = preg_replace_callback('/@@(\w+)/', fn($m) => $this->protect('@' . $m[1]), $content);
 
-        $this->source = $content;
-        $content = preg_replace_callback(self::TAG, function ($m) {
-            $line = substr_count($this->source, "\n", 0, $m[0][1]) + 1;
-            $args = trim($m[2][0]);
-            return $this->compileTag($m[1][0], $args === '' ? null : $args, $line);
+        // @php ... @endphp blocks are kept as they are
+        $content = preg_replace_callback('/\B@php(?![ \t]*\()(.*?)@endphp/s', fn($m) => $this->protect('<?php' . $m[1] . '?>'), $content);
+
+        $content = preg_replace_callback(self::DIRECTIVE, function ($m) use (&$content) {
+            [$whole, $offset] = $m[0];
+            $name = $m[1][0];
+            // After a letter or digit only closing directives count, so "user@example.com" stays text
+            $before = $offset > 0 ? $content[$offset - 1] : ' ';
+            if (preg_match('/\w/', $before) && !str_starts_with($name, 'end') && !in_array($name, self::CLOSING, true)) {
+                return $whole;
+            }
+            return $this->compileDirective([$whole, $name, isset($m[2]) && $m[2][1] >= 0 ? $m[2][0] : null]);
         }, $content, -1, $count, PREG_OFFSET_CAPTURE);
 
-        if ($this->open) {
-            [$tag, $line] = end($this->open);
-            throw new ViewException("Unclosed {: $tag :} opened on line $line: add {: end :}");
-        }
+        // {!! raw !!}
+        $content = preg_replace_callback('/\{!!\s*(.+?)\s*!!\}/s', fn($m) => "<?php echo {$m[1]}; ?>", $content);
 
-        // {{! raw }} then {{ escaped }} (null prints as an empty string)
-        $content = preg_replace_callback('/\{\{!\s*(.+?)\s*\}\}/s', fn($m) => "<?php echo {$m[1]}; ?>", $content);
+        // {{ escaped }}: null prints as an empty string
         $content = preg_replace_callback('/\{\{\s*(.+?)\s*\}\}/s', fn($m) => "<?php echo htmlspecialchars((string) (({$m[1]}) ?? ''), ENT_QUOTES, 'UTF-8'); ?>", $content);
 
         return $this->restore($content);
     }
 
-    protected function compileTag(string $name, ?string $args, int $line): string
+    protected function compileDirective(array $m): string
     {
+        $name = $m[1];
+        $args = $m[2] !== null ? substr($m[2], 1, -1) : null;
+
         if (isset(static::$custom[$name])) {
             return (static::$custom[$name])($args);
         }
 
         $method = 'compile' . ucfirst($name);
-        if (!method_exists($this, $method) || in_array($name, ['tag', 'string'], true)) {
-            throw new ViewException("Unknown template tag {: $name :} on line $line");
+        if (!method_exists($this, $method)) {
+            return $m[0]; // not a directive (e.g. an email address or CSS @media)
         }
 
-        if (in_array($name, self::BLOCKS, true) && !($name === 'block' && count($this->splitArguments((string) $args)) > 1)) {
-            $this->open[] = [$name, $line, ++$this->counter, false];
-        }
-        return $this->$method($args, $line);
+        return $this->$method($args);
     }
 
-    protected function requireArgs(?string $args, string $tag, int $line): string
+    // --- Conditions ---------------------------------------------------
+
+    protected function compileIf($a)       { return "<?php if ($a): ?>"; }
+    protected function compileElseif($a)   { return "<?php elseif ($a): ?>"; }
+    protected function compileElse()       { return '<?php else: ?>'; }
+    protected function compileEndif()      { return '<?php endif; ?>'; }
+    protected function compileUnless($a)   { return "<?php if (!($a)): ?>"; }
+    protected function compileEndunless()  { return '<?php endif; ?>'; }
+    protected function compileIsset($a)    { return "<?php if (isset($a)): ?>"; }
+    protected function compileEndisset()   { return '<?php endif; ?>'; }
+    protected function compileEndempty()   { return '<?php endif; ?>'; }
+    /** @auth / @auth('customer'): signed in with the default guard or a named one */
+    protected function compileAuth($a)     { return '<?php if (auth(' . ($a ?? '') . ')): ?>'; }
+    protected function compileEndauth()    { return '<?php endif; ?>'; }
+    protected function compileGuest($a)    { return '<?php if (!auth(' . ($a ?? '') . ')): ?>'; }
+    protected function compileEndguest()   { return '<?php endif; ?>'; }
+
+    /** @empty($x) is a condition; a bare @empty inside @forelse starts the "no items" part */
+    protected function compileEmpty($a)
     {
-        if ($args === null) {
-            throw new ViewException("{: $tag :} on line $line needs an argument");
+        if ($a !== null) {
+            return "<?php if (empty($a)): ?>";
         }
-        return $args;
+        if (!$this->forelseStack) {
+            throw new ViewException('@empty without arguments must be inside @forelse');
+        }
+        $key = array_key_last($this->forelseStack);
+        $this->forelseStack[$key][1] = true;
+        return "<?php endforeach; \$loop = array_pop(\$__loops); if (\$__empty_{$this->forelseStack[$key][0]}): ?>";
     }
 
-    // --- Conditions -----------------------------------------------------
+    // --- Loops --------------------------------------------------------
 
-    protected function compileIf($a, $l)     { return '<?php if (' . $this->requireArgs($a, 'if', $l) . '): ?>'; }
-    protected function compileUnless($a, $l) { return '<?php if (!(' . $this->requireArgs($a, 'unless', $l) . ')): ?>'; }
-    protected function compileIsset($a, $l)  { return '<?php if (isset(' . $this->requireArgs($a, 'isset', $l) . ')): ?>'; }
-    protected function compileEmpty($a, $l)  { return '<?php if (empty(' . $this->requireArgs($a, 'empty', $l) . ')): ?>'; }
-    protected function compileAuth($a)       { return '<?php if (auth(' . ($a ?? '') . ')): ?>'; }
-    protected function compileGuest($a)      { return '<?php if (!auth(' . ($a ?? '') . ')): ?>'; }
-    protected function compileError($a, $l)  { return '<?php if ($message = error(' . $this->requireArgs($a, 'error', $l) . ')): ?>'; }
-
-    protected function compileElseif($a, $l)
+    /**
+     * @foreach and @forelse give the body a $loop object:
+     * index, iteration, first, last, odd, even, count, remaining, depth, parent
+     */
+    protected function openLoop(string $a, int $n): string
     {
-        $block = $this->current('elseif', $l);
-        if (!in_array($block[0], ['if', 'unless'], true) || $block[3]) {
-            throw new ViewException("{: elseif :} on line $l must be inside {: if :}, before {: else :}");
-        }
-        return '<?php elseif (' . $this->requireArgs($a, 'elseif', $l) . '): ?>';
-    }
-
-    /** {: else :} in a condition, or the "no items" part of {: each :} */
-    protected function compileElse($a, $l)
-    {
-        $block = $this->current('else', $l);
-        if ($block[3]) {
-            throw new ViewException("Second {: else :} on line $l for the {: {$block[0]} :} opened on line {$block[1]}");
-        }
-        if (in_array($block[0], ['for', 'while', 'block', 'push'], true)) {
-            throw new ViewException("{: else :} on line $l cannot be used inside {: {$block[0]} :}");
-        }
-        $this->open[array_key_last($this->open)][3] = true;
-
-        if ($block[0] === 'each') {
-            return "<?php endforeach; \$loop = array_pop(\$__loops); if (\$__empty_{$block[2]}): ?>";
-        }
-        return '<?php else: ?>';
-    }
-
-    // --- Loops ----------------------------------------------------------
-
-    /** {: each $items as $item :} with a $loop object (index, iteration, first, last, odd, even, count, depth, parent) */
-    protected function compileEach($a, $l)
-    {
-        $a = $this->requireArgs($a, 'each', $l);
         if (!preg_match('/^(.+?)\s+as\s+(.+)$/s', $a, $m)) {
-            throw new ViewException("{: each :} on line $l must look like {: each \$items as \$item :}");
+            throw new ViewException("@foreach($a) must look like @foreach(\$items as \$item)");
         }
-        $n = $this->counter;
-        return "<?php \$__loops[] = \$loop ?? null; \$__items_$n = {$m[1]}; \$loop = new \\System\\View\\Loop(\$__items_$n, end(\$__loops) ?: null); "
-            . "\$__empty_$n = true; foreach (\$__items_$n as {$m[2]}): \$__empty_$n = false; \$loop->next(); ?>";
+        return "\$__loops[] = \$loop ?? null; \$__items_$n = {$m[1]}; \$loop = new \\System\\View\\Loop(\$__items_$n, end(\$__loops) ?: null); "
+            . "\$__empty_$n = true; foreach (\$__items_$n as {$m[2]}): \$__empty_$n = false; \$loop->next();";
     }
 
-    protected function compileFor($a, $l)   { return '<?php for (' . $this->requireArgs($a, 'for', $l) . '): ?>'; }
-    protected function compileWhile($a, $l) { return '<?php while (' . $this->requireArgs($a, 'while', $l) . '): ?>'; }
-    protected function compileBreak($a)     { return $a === null ? '<?php break; ?>' : "<?php if ($a) break; ?>"; }
-    protected function compileContinue($a)  { return $a === null ? '<?php continue; ?>' : "<?php if ($a) continue; ?>"; }
+    protected function compileForeach($a)    { return '<?php ' . $this->openLoop((string) $a, ++$this->forelse) . ' ?>'; }
+    protected function compileEndforeach()   { return '<?php endforeach; $loop = array_pop($__loops); ?>'; }
+    protected function compileFor($a)        { return "<?php for ($a): ?>"; }
+    protected function compileEndfor()       { return '<?php endfor; ?>'; }
+    protected function compileWhile($a)      { return "<?php while ($a): ?>"; }
+    protected function compileEndwhile()     { return '<?php endwhile; ?>'; }
+    protected function compileBreak($a)      { return $a === null ? '<?php break; ?>' : "<?php if ($a) break; ?>"; }
+    protected function compileContinue($a)   { return $a === null ? '<?php continue; ?>' : "<?php if ($a) continue; ?>"; }
 
-    // --- Closing --------------------------------------------------------
-
-    protected function compileEnd($a, $l)
+    protected function compileForelse($a)
     {
-        [$tag, , , $hasElse] = $this->current('end', $l);
-        array_pop($this->open);
-
-        return match ($tag) {
-            'each'  => $hasElse ? '<?php endif; ?>' : '<?php endforeach; $loop = array_pop($__loops); ?>',
-            'for'   => '<?php endfor; ?>',
-            'while' => '<?php endwhile; ?>',
-            'block' => '<?php $this->sections->end(); ?>',
-            'push'  => '<?php $this->sections->endPush(); ?>',
-            default => '<?php endif; ?>',
-        };
+        $n = ++$this->forelse;
+        $this->forelseStack[] = [$n, false];
+        return '<?php ' . $this->openLoop((string) $a, $n) . ' ?>';
     }
 
-    /** The innermost open block, or an error naming the stray tag */
-    protected function current(string $tag, int $line): array
+    protected function compileEndforelse()
     {
-        if (!$this->open) {
-            throw new ViewException("{: $tag :} on line $line has no open block to belong to");
+        if (!$this->forelseStack) {
+            throw new ViewException('@endforelse without a matching @forelse');
         }
-        return end($this->open);
+        [, $hadEmpty] = array_pop($this->forelseStack);
+        return $hadEmpty ? '<?php endif; ?>' : '<?php endforeach; $loop = array_pop($__loops); ?>';
     }
 
-    // --- Layouts, blocks, inserts, stacks --------------------------------
+    // --- Helpers ------------------------------------------------------
 
-    protected function compileLayout($a, $l) { return '<?php $this->extend(' . $this->requireArgs($a, 'layout', $l) . '); ?>'; }
-    protected function compileShow($a, $l)   { return '<?php echo $this->sections->get(' . $this->requireArgs($a, 'show', $l) . '); ?>'; }
-    protected function compileInsert($a, $l) { return '<?php echo $this->includeView(get_defined_vars(), ' . $this->requireArgs($a, 'insert', $l) . '); ?>'; }
-    protected function compilePush($a, $l)   { return '<?php $this->sections->startPush(' . $this->requireArgs($a, 'push', $l) . '); ?>'; }
-    protected function compileStack($a, $l)  { return '<?php echo $this->sections->stack(' . $this->requireArgs($a, 'stack', $l) . '); ?>'; }
+    protected function compilePhp($a)        { return "<?php ($a); ?>"; }
+    protected function compileCsrf()         { return '<?php echo csrf_field(); ?>'; }
+    protected function compileMethod($a)     { return "<?php echo method_field($a); ?>"; }
+    protected function compileError($a)      { return "<?php if (\$message = error($a)): ?>"; }
+    protected function compileEnderror()     { return '<?php endif; ?>'; }
 
-    /** {: block 'name' :} ... {: end :} captures; {: block 'title', $text :} sets plain text (escaped) */
-    protected function compileBlock($a, $l)
+    protected function compileJson($a)
     {
-        $parts = $this->splitArguments($this->requireArgs($a, 'block', $l));
-        if (count($parts) === 1) {
-            return "<?php \$this->sections->start({$parts[0]}); ?>";
+        return "<?php echo json_encode($a, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE); ?>";
+    }
+
+    // --- Layouts, sections, includes, stacks ---------------------------
+
+    protected function compileExtends($a)    { return "<?php \$this->extend($a); ?>"; }
+    /** @section('content') ... @endsection captures HTML; @section('title', $text) sets plain text (escaped) */
+    protected function compileSection($a)
+    {
+        $parts = $this->splitArguments((string) $a);
+        return count($parts) > 1 ? $this->compileSet($a) : "<?php \$this->sections->start($a); ?>";
+    }
+
+    protected function compileEndsection()   { return '<?php $this->sections->end(); ?>'; }
+    protected function compileStop()         { return '<?php $this->sections->end(); ?>'; }
+
+    /** @set('title', $product->name): the value is text, so it is escaped (a product name cannot inject HTML) */
+    protected function compileSet($a)
+    {
+        $parts = $this->splitArguments((string) $a);
+        if (count($parts) < 2) {
+            throw new ViewException("@set($a) needs a name and a value: @set('title', 'Products')");
         }
         $value = implode(',', array_slice($parts, 1));
         return "<?php \$this->sections->set({$parts[0]}, htmlspecialchars((string) (($value) ?? ''), ENT_QUOTES, 'UTF-8')); ?>";
     }
-
-    // --- Helpers --------------------------------------------------------
-
-    protected function compileCsrf()          { return '<?php echo csrf_field(); ?>'; }
-    protected function compileMethod($a, $l)  { return '<?php echo method_field(' . $this->requireArgs($a, 'method', $l) . '); ?>'; }
-    protected function compilePhp($a, $l)     { return '<?php ' . $this->requireArgs($a, 'php', $l) . '; ?>'; }
-
-    protected function compileJson($a, $l)
-    {
-        return '<?php echo json_encode(' . $this->requireArgs($a, 'json', $l) . ', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE); ?>';
-    }
-
-    // --------------------------------------------------------------------
 
     /** Split "a, f(b, c), 'd,e'" on top-level commas → ["a", "f(b, c)", "'d,e'"] */
     protected function splitArguments(string $args): array
@@ -247,16 +229,22 @@ class ViewCompiler
         $parts[] = trim($current);
         return $parts;
     }
+    protected function compileYield($a)      { return "<?php echo \$this->sections->get($a); ?>"; }
+    protected function compileInclude($a)    { return "<?php echo \$this->includeView(get_defined_vars(), $a); ?>"; }
+    protected function compilePush($a)       { return "<?php \$this->sections->startPush($a); ?>"; }
+    protected function compileEndpush()      { return '<?php $this->sections->endPush(); ?>'; }
+    protected function compileStack($a)      { return "<?php echo \$this->sections->stack($a); ?>"; }
 
-    /** Hide text from later passes; the placeholder keeps the line breaks for line numbers */
+    // ------------------------------------------------------------------
+
     protected function protect(string $text): string
     {
         $this->verbatim[] = $text;
-        return "\x00BV" . (count($this->verbatim) - 1) . str_repeat("\n", substr_count($text, "\n")) . "\x00";
+        return "\x00BONGO_VERBATIM_" . (count($this->verbatim) - 1) . "\x00";
     }
 
     protected function restore(string $content): string
     {
-        return preg_replace_callback("/\x00BV(\d+)\n*\x00/", fn($m) => $this->verbatim[(int) $m[1]], $content);
+        return preg_replace_callback("/\x00BONGO_VERBATIM_(\d+)\x00/", fn($m) => $this->verbatim[(int) $m[1]], $content);
     }
 }

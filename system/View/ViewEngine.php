@@ -75,14 +75,14 @@ class ViewEngine
         $this->extends = $layout;
     }
 
-    /** Used by compiled {: insert :}: the caller's variables (minus engine internals) plus $data */
+    /** Used by compiled @include: the caller's variables (minus engine internals) plus $data */
     public function includeView(array $scope, string $view, array $data = []): string
     {
         $scope = array_filter($scope, fn($key) => !str_starts_with((string) $key, '__'), ARRAY_FILTER_USE_KEY);
         return $this->render($view, array_merge($scope, $data));
     }
 
-    /** Compile one template file; errors name the file, e.g. "products/index.php: Unclosed {: if :} ..." */
+    /** Compile one template file; errors name the file, e.g. "products/index.php: @empty without arguments ..." */
     protected function compileFile(string $source): string
     {
         try {

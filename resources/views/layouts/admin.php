@@ -4,34 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="<?= e(csrf_token()) ?>">
-    <title>{: show 'title' :} · {{ config('app.name') }}</title>
+    <title>@yield('title') · {{ config('app.name') }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="<?= asset('asset/css/admin.css') ?>" rel="stylesheet">
 </head>
 <body>
 <div class="d-flex">
-    {: insert 'partials.sidebar' :}
+    @include('partials.sidebar')
 
     <div class="flex-grow-1 min-vw-0">
         <header class="topbar d-flex align-items-center justify-content-between px-4">
-            <h1 class="h5 mb-0">{: show 'title' :}</h1>
+            <h1 class="h5 mb-0">@yield('title')</h1>
             <div class="d-flex align-items-center gap-3">
                 <div class="dropdown">
                     <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="bi bi-translate me-1"></i>{{ System\Translation\Lang::locales()[locale()] ?? locale() }}
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        {: each System\Translation\Lang::locales() as $code => $label :}
-                            <li><a class="dropdown-item {: if $code === locale() :} active {: end :}" href="?lang={{ $code }}" lang="{{ $code }}">{{ $label }}</a></li>
-                        {: end :}
+                        @foreach(System\Translation\Lang::locales() as $code => $label)
+                            <li><a class="dropdown-item @if($code === locale()) active @endif" href="?lang={{ $code }}" lang="{{ $code }}">{{ $label }}</a></li>
+                        @endforeach
                     </ul>
                 </div>
                 <a href="<?= url('/profile') ?>" class="text-body text-decoration-none small">
                     <i class="bi bi-person-circle me-1"></i>{{ auth()->name }}
                 </a>
                 <form method="POST" action="<?= url('/logout') ?>" class="m-0">
-                    {: csrf :}
+                    @csrf
                     <button class="btn btn-sm btn-outline-secondary" type="submit">
                         <i class="bi bi-box-arrow-right me-1"></i>{{ __('Sign out') }}
                     </button>
@@ -40,17 +40,17 @@
         </header>
 
         <main class="p-4">
-            {: insert 'partials.flash' :}
-            {: show 'content' :}
+            @include('partials.flash')
+            @yield('content')
         </main>
 
-        {: if config('app.debug') :}
-            {: insert 'partials.debug-footer' :}
-        {: end :}
+        @if(config('app.debug'))
+            @include('partials.debug-footer')
+        @endif
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-{: show 'scripts' :}
-{: stack 'scripts' :}
+@yield('scripts')
+@stack('scripts')
 </body>
 </html>

@@ -9,12 +9,12 @@
         <p style="margin:0 0 20px;">{{ __('Thank you for your order. We will let you know when it ships.') }}</p>
         <p style="margin:0 0 8px;font-weight:bold;">{{ __('Order') }} {{ $order->order_number }}</p>
         <table role="presentation" width="100%" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
-            {: each $items as $item :}
+            @foreach($items as $item)
                 <tr style="border-bottom:1px solid #f5f5f4;">
                     <td>{{ $item->product_name }} × {{ $item->quantity }}</td>
                     <td align="right">{{ money($item->unit_price * $item->quantity) }}</td>
                 </tr>
-            {: end :}
+            @endforeach
             <tr><td style="font-weight:bold;">{{ __('Total') }}</td><td align="right" style="font-weight:bold;">{{ money($order->total) }}</td></tr>
         </table>
         <p style="margin:20px 0 0;font-size:13px;color:#78716c;">{{ __('Shipping address') }}: {{ $order->shipping_address }}</p>

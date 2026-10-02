@@ -1,8 +1,8 @@
-{: layout 'layouts.admin' :}
+@extends('layouts.admin')
 
-{: block 'title', __('Customers') :}
+@set('title', __('Customers'))
 
-{: block 'content' :}
+@section('content')
 <form method="GET" action="<?= url('/customers') ?>" class="d-flex gap-2 mb-3">
     <input type="search" name="q" value="{{ $search ?? '' }}" class="form-control" placeholder="Name or email" style="width: 240px;">
     <button class="btn btn-outline-secondary" type="submit">Search</button>
@@ -15,7 +15,7 @@
                 <tr><th>Customer</th><th>Phone</th><th class="num">Orders</th><th class="num">Total spent</th><th>Last order</th></tr>
             </thead>
             <tbody>
-            {: each $customers as $customer :}
+            @foreach($customers as $customer)
                 <tr>
                     <td>
                         <a href="<?= url('/customers/' . $customer['id']) ?>" class="fw-medium">{{ $customer['name'] }}</a>
@@ -26,12 +26,12 @@
                     <td class="num">{{ money($customer['total_spent']) }}</td>
                     <td class="small text-secondary"><?= $customer['last_order_at'] ? e(date('M j, Y', strtotime($customer['last_order_at']))) : '—' ?></td>
                 </tr>
-            {: end :}
-            {: if !$customers :}
+            @endforeach
+            @if(!$customers)
                 <tr><td colspan="5" class="text-center text-secondary py-4">No customers found.</td></tr>
-            {: end :}
+            @endif
             </tbody>
         </table>
     </div>
 </div>
-{: end :}
+@endsection

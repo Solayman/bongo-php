@@ -1,16 +1,16 @@
-{: layout 'layouts.admin' :}
+@extends('layouts.admin')
 
-{: block 'title', __('Products') :}
+@set('title', __('Products'))
 
-{: block 'content' :}
+@section('content')
 <div class="d-flex flex-wrap gap-2 justify-content-between mb-3">
     <form method="GET" action="<?= url('/products') ?>" class="d-flex flex-wrap gap-2">
         <input type="search" name="q" value="{{ $filters['q'] ?? '' }}" class="form-control" placeholder="Search name or SKU" style="width: 220px;">
         <select name="category" class="form-select" style="width: 180px;">
             <option value="">All categories</option>
-            {: each $categories as $category :}
+            @foreach($categories as $category)
                 <option value="{{ $category->id }}" <?= (string) $filters['category'] === (string) $category->id ? 'selected' : '' ?>>{{ $category->name }}</option>
-            {: end :}
+            @endforeach
         </select>
         <select name="status" class="form-select" style="width: 140px;">
             <option value="">Any status</option>
@@ -29,14 +29,14 @@
                 <tr><th style="width: 56px;"></th><th>Product</th><th>SKU</th><th>Category</th><th class="num">Price</th><th class="num">Stock</th><th>Status</th><th></th></tr>
             </thead>
             <tbody>
-            {: each $products['data'] as $product :}
+            @foreach($products['data'] as $product)
                 <tr>
                     <td>
-                        {: if $product->image :}
+                        @if($product->image)
                             <img src="{{ asset('storage/' . $product->image) }}" alt="" class="rounded" style="width: 40px; height: 40px; object-fit: cover;">
-                        {: else :}
+                        @else
                             <div class="rounded bg-light border d-flex align-items-center justify-content-center text-secondary" style="width: 40px; height: 40px;"><i class="bi bi-image"></i></div>
-                        {: end :}
+                        @endif
                     </td>
                     <td class="fw-medium">{{ $product->name }}</td>
                     <td class="text-secondary small">{{ $product->sku }}</td>
@@ -50,21 +50,21 @@
                         <a href="<?= url('/products/' . $product->id . '/edit') ?>" class="btn btn-sm btn-outline-secondary">Edit</a>
                         <form method="POST" action="<?= route('products.destroy', ['product' => $product->id]) ?>" class="d-inline"
                               onsubmit="return confirm('Delete this product?');">
-                            {: csrf :}
-                            {: method 'DELETE' :}
+                            @csrf
+                            @method('DELETE')
                             <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
                         </form>
                     </td>
                 </tr>
-            {: end :}
-            {: if !$products['data'] :}
+            @endforeach
+            @if(!$products['data'])
                 <tr><td colspan="8" class="text-center text-secondary py-4">No products found.</td></tr>
-            {: end :}
+            @endif
             </tbody>
         </table>
     </div>
 </div>
 
 <?php $page = $products; ?>
-{: insert 'partials.pagination' :}
-{: end :}
+@include('partials.pagination')
+@endsection

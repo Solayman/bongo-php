@@ -1,17 +1,17 @@
-{: if $message = flash('success') :}
+@if($message = flash('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         <i class="bi bi-check-circle me-1"></i>{{ $message }}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
-{: end :}
-{: if $message = flash('error') :}
+@endif
+@if($message = flash('error'))
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
         <i class="bi bi-exclamation-triangle me-1"></i>{{ $message }}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
-{: end :}
-{: if errors() :}
+@endif
+@if(errors())
     <div class="alert alert-danger" role="alert">
         <i class="bi bi-exclamation-triangle me-1"></i>{{ __('Please fix the highlighted fields.') }}
     </div>
-{: end :}
+@endif
