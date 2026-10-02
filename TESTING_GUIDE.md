@@ -36,6 +36,23 @@ Login: **admin@example.com / password**
 
 > To unlock after 1.9, wait 15 minutes, or run `php bongo migrate:fresh --seed` on a development database.
 
+## 1a. Forgot password
+
+Mail goes to the log by default (`MAIL_DRIVER=log`).
+
+| # | Do this | You should see |
+| --- | --- | --- |
+| 1a.1 | Login page → **Forgot your password?** → enter `admin@example.com` | "If that email has an account, we have sent a link…" |
+| 1a.2 | **System status → Recent log entries** (or `storage/logs/bongo-<today>.log`) | `Mail "Reset your password" sent to admin@example.com`, and the email with the link in the DEBUG entry |
+| 1a.3 | Open the link | "Choose a new password." form |
+| 1a.4 | Set a new password (8+ characters, confirmed) | Back on login with "Your password has been reset." The new password works and the old one doesn't. |
+| 1a.5 | Open the same link again | "This reset link is invalid or has expired." (single use) |
+| 1a.6 | Ask for a link for `nobody@example.com` | The **same** success message, but no email in the log |
+| 1a.7 | Ask four times in a row for the same email | "Too many reset requests. Please wait a few minutes." |
+| 1a.8 | (Real email) Set `MAIL_DRIVER=smtp` and the `MAIL_*` settings (e.g. Mailtrap), then repeat 1a.1 | The email arrives in the inbox |
+
+Change the password back to `password` afterwards if other checks rely on it.
+
 ## 1b. API authentication (JWT)
 
 Use any HTTP client (curl, Postman, Insomnia):
