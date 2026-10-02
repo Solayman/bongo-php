@@ -88,6 +88,13 @@ foreach (glob(__DIR__ . '/*.php') as $configFile) {
 }
 
 // ---------------------------
+// Timezone (PHP and, on connect, MySQL use the same one)
+// ---------------------------
+if (!@date_default_timezone_set((string) config('app.timezone', 'UTC'))) {
+    date_default_timezone_set('UTC');
+}
+
+// ---------------------------
 // Errors
 // ---------------------------
 error_reporting(E_ALL);

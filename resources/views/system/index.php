@@ -70,4 +70,109 @@
         </div>
     </div>
 </div>
+<div class="row g-3 mt-1">
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header bg-white fw-semibold">Security (live check)</div>
+            <ul class="list-group list-group-flush">
+                <?php foreach ($security as $name => [$ok, $detail]): ?>
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <span>{{ $name }}</span>
+                            <?php if ($ok): ?>
+                                <span class="badge text-bg-success">OK</span>
+                            <?php elseif ($name === 'HTTPS'): ?>
+                                <span class="badge text-bg-secondary">Not in use</span>
+                            <?php else: ?>
+                                <span class="badge text-bg-danger">FAIL</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="small text-secondary">{{ $detail }}</div>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header bg-white d-flex justify-content-between">
+                <span class="fw-semibold">Migrations</span>
+                <span class="small text-secondary">same as <code>php bongo migrate:status</code></span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light"><tr><th>Migration</th><th>Status</th><th class="num">Batch</th><th>Ran at</th></tr></thead>
+                    <tbody>
+                    <?php foreach ($migrations as $m): ?>
+                        <tr>
+                            <td class="small">{{ $m['migration'] }}</td>
+                            <td>
+                                <?php if ($m['ran']): ?>
+                                    <span class="badge text-bg-success">Ran</span>
+                                <?php else: ?>
+                                    <span class="badge text-bg-warning">Pending</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="num">{{ $m['batch'] ?? '' }}</td>
+                            <td class="small text-secondary">{{ $m['ran_at'] ?? '' }}</td>
+                        </tr>
+                    <?php endforeach; ?>
+                    <?php if (!$migrations): ?>
+                        <tr><td colspan="4" class="text-secondary text-center py-3">No migrations found.</td></tr>
+                    <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-3" id="logs">
+    <div class="card-header bg-white d-flex flex-wrap gap-2 justify-content-between align-items-center">
+        <div>
+            <span class="fw-semibold">Recent log entries</span>
+            <span class="small text-secondary ms-2">{{ $logFile }} · newest first</span>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+            <form method="GET" action="<?= url('/system') ?>#logs" class="d-flex gap-2">
+                <select name="level" class="form-select form-select-sm" aria-label="Minimum level" onchange="this.form.submit()">
+                    <option value="">All levels</option>
+                    <?php foreach (['info', 'warning', 'error'] as $level): ?>
+                        <option value="{{ $level }}" <?= $logLevel === $level ? 'selected' : '' ?>>{{ ucfirst($level) }} and above</option>
+                    <?php endforeach; ?>
+                </select>
+            </form>
+            <form method="POST" action="<?= url('/system/log-test') ?>" class="m-0">
+                <?= csrf_field() ?>
+                <button class="btn btn-sm btn-outline-dark text-nowrap" type="submit">Write test entry</button>
+            </form>
+        </div>
+    </div>
+    <div class="table-responsive" style="max-height: 480px;">
+        <table class="table table-sm mb-0">
+            <thead class="table-light sticky-top"><tr><th style="width: 160px;">Time</th><th style="width: 100px;">Level</th><th>Message</th></tr></thead>
+            <tbody>
+            <?php foreach ($logs as $entry): ?>
+                <?php $badge = match ($entry['level']) {
+                    'debug' => 'text-bg-light border', 'info' => 'text-bg-info', 'notice' => 'text-bg-primary',
+                    'warning' => 'text-bg-warning', default => 'text-bg-danger',
+                }; ?>
+                <tr>
+                    <td class="small text-secondary text-nowrap">{{ $entry['time'] }}</td>
+                    <td><span class="badge <?= $badge ?>">{{ strtoupper($entry['level']) }}</span></td>
+                    <td class="small">
+                        <code class="text-body text-wrap" style="word-break: break-word;">{{ $entry['message'] }}</code>
+                        <?php if ($entry['details'] !== ''): ?>
+                            <details class="mt-1"><summary class="small text-secondary">Details</summary><pre class="small mb-0">{{ $entry['details'] }}</pre></details>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            <?php if (!$logs): ?>
+                <tr><td colspan="3" class="text-secondary text-center py-3">No log entries yet today. Click "Write test entry" or try a wrong password on the login page.</td></tr>
+            <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
 @endsection

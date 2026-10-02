@@ -46,7 +46,8 @@ return [
     'POST /profile/password' => ['ProfileController', 'updatePassword', $admin],
 
     // System status (framework self-check)
-    'GET /system' => ['SystemController', 'index', $admin],
+    'GET /system'           => ['SystemController', 'index', $admin],
+    'POST /system/log-test' => ['SystemController', 'logTest', $admin],
 
     // Sample cleanup tool (JSON endpoints, no CSRF token in its JS)
     'GET /cleanup'       => ['CleanupController', 'dashboard', ['auth']],

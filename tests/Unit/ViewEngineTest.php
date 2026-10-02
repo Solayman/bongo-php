@@ -57,6 +57,21 @@ class ViewEngineTest extends TestCase
         $this->assertSame(1, $GLOBALS['view_runs']);
     }
 
+    public function testNullPrintsAsEmptyWithoutDeprecation(): void
+    {
+        file_put_contents("$this->dir/nullable.php", "[{{ \$missing ?? null }}][{{ null }}]");
+        $notices = [];
+        set_error_handler(function ($no, $msg) use (&$notices) { $notices[] = $msg; return true; });
+        try {
+            $html = $this->engine->render('nullable');
+        } finally {
+            restore_error_handler();
+            @unlink("$this->dir/nullable.php");
+        }
+        $this->assertSame('[][]', $html);
+        $this->assertSame([], $notices, 'Rendering null must not raise notices');
+    }
+
     public function testMissingViewThrows(): void
     {
         $this->assertThrows(\Exception::class, fn() => $this->engine->render('nope'));

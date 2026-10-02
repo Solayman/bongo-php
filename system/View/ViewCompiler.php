@@ -34,7 +34,8 @@ class ViewCompiler
 
         // --- {{ variable }} ---
         $content = preg_replace_callback('/\{\{\s*(.+?)\s*\}\}/', function ($m) {
-            return "<?php echo htmlspecialchars({$m[1]}, ENT_QUOTES, 'UTF-8'); ?>";
+            // null prints as an empty string (PHP 8.1+ deprecates passing null to htmlspecialchars)
+            return "<?php echo htmlspecialchars((string) (({$m[1]}) ?? ''), ENT_QUOTES, 'UTF-8'); ?>";
         }, $content);
 
         // --- {!! raw !!} ---

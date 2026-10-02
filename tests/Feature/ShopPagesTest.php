@@ -20,6 +20,11 @@ class ShopPagesTest extends HttpTestCase
             $this->assertNotContains('Warning:', $response->body, "PHP warning on $path");
             $this->assertNotContains('Deprecated:', $response->body, "PHP deprecation on $path");
         }
+
+        // The framework logs PHP notices/warnings; none may come from rendering these pages
+        $log = (string) @file_get_contents(BASE_PATH . '/storage/logs/testing/bongo-' . date('Y-m-d') . '.log');
+        $this->assertNotContains('NOTICE: PHP', $log, 'A page raised a PHP notice (see storage/logs/testing)');
+        $this->assertNotContains('WARNING: PHP', $log, 'A page raised a PHP warning (see storage/logs/testing)');
     }
 
     public function testDashboardShowsStoreTotals(): void
@@ -98,5 +103,23 @@ class ShopPagesTest extends HttpTestCase
         $this->submit('/login', '/login', ['email' => 'admin@example.com', 'password' => 'newpassword1'])->assertRedirect('/');
         $this->submit('/profile', '/profile/password', ['current_password' => 'newpassword1', 'password' => 'password', 'password_confirmation' => 'password']);
         $this->db('users')->where('id', 1)->update(['name' => 'Admin', 'phone' => null]);
+    }
+
+    public function testSystemPageShowsLiveChecksMigrationsAndLogs(): void
+    {
+        $this->get('/system')
+            ->assertSee('Security (live check)')
+            ->assertSee('Encryption round trip')
+            ->assertDontSee('badge text-bg-danger">FAIL')
+            ->assertSee('2026_10_01_000001_create_users_table')
+            ->assertSee('Recent log entries');
+
+        // A person clicks "Write test entry" and sees it appear in the log panel
+        $this->submit('/system', '/system/log-test')->assertRedirect('/system');
+        $this->get('/system')
+            ->assertSee('A test entry was written to the log.')
+            ->assertSee('Test log entry written from the System status page by user 1');
+
+        $this->get('/system?level=error')->assertDontSee('Test log entry written from the System status page');
     }
 }

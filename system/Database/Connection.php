@@ -24,6 +24,8 @@ class Connection
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             ]);
+            // Same clock as PHP, so CURRENT_TIMESTAMP matches date() and log times
+            self::$pdo->exec("SET time_zone = '" . date('P') . "'");
         } catch (PDOException $e) {
             \System\Log\Log::critical('Database connection failed: ' . $e->getMessage(), ['host' => $db['host'], 'database' => $db['database']]);
             // Throw instead of die() so callers can catch it and show a friendly error

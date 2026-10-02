@@ -115,4 +115,21 @@ class LoggerTest extends TestCase
         $this->logger()->info('new');
         $this->assertFalse(file_exists($old), 'Files older than the retention period are deleted');
     }
+
+    public function testRecentReturnsNewestEntriesWithDetailsAndLevelFilter(): void
+    {
+        $logger = $this->logger();
+        $logger->debug('first');
+        $logger->warning('second');
+        $logger->error('third', ['exception' => new \RuntimeException('Boom')]);
+
+        $all = $logger->recent();
+        $this->assertSame(['third', 'second', 'first'], array_column($all, 'message'));
+        $this->assertSame('error', $all[0]['level']);
+        $this->assertContains('RuntimeException: Boom', $all[0]['details']);
+
+        $this->assertSame(['third', 'second'], array_column($logger->recent(10, 'warning'), 'message'));
+        $this->assertCount(1, $logger->recent(1));
+        $this->assertSame([], $this->logger('debug', 'single')->recent(), 'No file yet means no entries');
+    }
 }
