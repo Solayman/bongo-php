@@ -1063,6 +1063,50 @@ $broker->sendResetLink($email);                       // RESET_LINK_SENT or THRO
 $broker->reset($email, $token, $newPassword);         // PASSWORD_RESET or INVALID_TOKEN
 ```
 
+### Authorization (who may do what)
+
+Authentication answers "who is this?". Authorization answers "may they do this?".
+
+**Abilities**, defined in `app/bootstrap.php`:
+
+```php
+use System\Auth\Gate;
+
+Gate::define('manage-system', fn($user) => $user->role === 'admin');
+Gate::define('edit-comment', fn($user, $comment) => $user->id === $comment->user_id);
+Gate::define('read-blog', fn(?object $user) => true);      // ?type: guests are asked too
+Gate::before(fn($user, $ability) => $user->role === 'owner' ? true : null);   // null = no opinion
+```
+
+**Policies** hold the rules for one model. `app/Policies/ProductPolicy.php` is used for `App\Models\Product` automatically; register others with `Gate::policy(Model::class, Policy::class)`. Each ability is a method, and `force-delete` calls `forceDelete()`:
+
+```php
+class ProductPolicy
+{
+    public function update(object $user, Product $product): bool { return $user->role === 'admin'; }
+
+    // Ordered products stay, so order history keeps them
+    public function delete(object $user, Product $product): bool
+    {
+        return $user->role === 'admin' && !DB::table('order_items')->where('product_id', $product->id)->exists();
+    }
+}
+```
+
+**Checking:**
+
+| Where | |
+| --- | --- |
+| Controller | `$this->authorize('delete', $product);`: 403 when denied (logged as a warning) |
+| Anywhere | `can('delete', $product)` · `Gate::allows(...)` · `Gate::denies(...)` · `Gate::forUser($user)->allows(...)` |
+| Route | `->middleware('can:manage-system')` (extra parameters name route parameters: `can:update,product`) |
+| Template | `@can('delete', $product) … @elsecan('update', $product) … @else … @endcan` · `@cannot(...) … @endcannot` |
+| Form request | `public function authorize(): bool { return can('update', ...); }` |
+
+Unknown abilities are denied, and so are guests, unless the callback's user parameter accepts `null`.
+
+**In the shop app:** the System status page and its link need `manage-system`. A product that has been ordered shows a disabled **Delete** button, and a hand-made delete request for it gets a 403.
+
 ---
 
 ## 9a. Mail and events

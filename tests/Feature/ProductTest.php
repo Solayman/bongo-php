@@ -173,4 +173,20 @@ class ProductTest extends HttpTestCase
         $this->get('/system')->assertSee('Choose at least one image.');
         @unlink($evil);
     }
+
+    public function testOrderedProductsCannotBeDeleted(): void
+    {
+        // The seeded orders reference products: ProductPolicy::delete refuses those
+        $ordered = $this->db('order_items')->whereNotNull('product_id')->first();
+        $this->assertTrue($ordered !== null, 'the test data has orders');
+        $product = $this->db('products')->where('id', $ordered->product_id)->first();
+
+        $this->get('/products?q=' . urlencode($product->sku))
+            ->assertSee('disabled title="Ordered')
+            ->assertSee('set it to Draft instead');
+
+        // Even a hand-made request is refused with 403, and the product stays
+        $this->submit('/products', "/products/{$product->id}", ['_method' => 'DELETE'])->assertStatus(403);
+        $this->assertTrue($this->db('products')->where('id', $product->id)->first() !== null, 'the product is still there');
+    }
 }

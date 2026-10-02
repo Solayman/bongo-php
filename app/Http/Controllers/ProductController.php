@@ -18,7 +18,7 @@ class ProductController extends Controller
         $status = Request::query('status');
 
         $query = DB::table('products')
-            ->select('products.*', 'categories.name AS category_name')
+            ->select('products.*', 'categories.name AS category_name', '(SELECT COUNT(*) FROM order_items oi WHERE oi.product_id = products.id) AS order_count')
             ->leftJoin('categories', 'categories.id', '=', 'products.category_id')
             ->orderBy('products.id', 'DESC');
 
@@ -92,6 +92,8 @@ class ProductController extends Controller
 
     public function destroy(Product $product)
     {
+        $this->authorize('delete', $product);   // App\Policies\ProductPolicy: ordered products can't be deleted
+
         Storage::delete($product->image);
         $product->delete();
 

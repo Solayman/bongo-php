@@ -12,5 +12,7 @@
 
     <div class="nav-section mt-3">{{ __('Account') }}</div>
     <a class="nav-link <?= is_active('/profile') ?>" href="<?= url('/profile') ?>"><i class="bi bi-person-gear"></i><span>{{ __('Profile') }}</span></a>
+    @can('manage-system')
     <a class="nav-link <?= is_active('/system') ?>" href="<?= url('/system') ?>"><i class="bi bi-cpu"></i><span>{{ __('System status') }}</span></a>
+    @endcan
 </nav>
