@@ -63,17 +63,17 @@ class ProductController extends Controller
         redirect(url('/products'));
     }
 
-    public function edit($id)
+    // Route model binding: /products/{product}/edit gives a Product (or a 404)
+    public function edit(Product $product)
     {
         echo $this->view('products.form', [
-            'product'    => $this->findOrFail($id),
+            'product'    => $product,
             'categories' => Category::query()->orderBy('name')->get(),
         ]);
     }
 
-    public function update($id)
+    public function update(Product $product)
     {
-        $product = $this->findOrFail($id);
         $data = $this->validate($this->rules((int) $product->id) + ['remove_image' => 'nullable|boolean']);
         $data['category_id'] = ($data['category_id'] ?? null) ?: null;
 
@@ -92,9 +92,8 @@ class ProductController extends Controller
         redirect(url('/products'));
     }
 
-    public function destroy($id)
+    public function destroy(Product $product)
     {
-        $product = $this->findOrFail($id);
         Storage::delete($product->image);
         $product->delete();
 
@@ -116,8 +115,4 @@ class ProductController extends Controller
         ];
     }
 
-    protected function findOrFail($id): Product
-    {
-        return Product::findOrFail((int) $id);
-    }
 }

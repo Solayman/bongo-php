@@ -32,9 +32,8 @@ class ProductController extends Controller
     }
 
     /** GET /api/products/{id} */
-    public function show($id)
+    public function show(Product $product)
     {
-        $product = Product::find((int) $id) ?? abort(404, 'Product not found');
         return ['data' => $product];
     }
 }

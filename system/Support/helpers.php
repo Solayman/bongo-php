@@ -7,6 +7,14 @@ use System\Http\Request;
 use System\Http\Session;
 use System\Log\Logger;
 
+if (!function_exists('app')) {
+    /** The service container, or app(SomeClass::class) to resolve one */
+    function app(?string $abstract = null, array $parameters = []) {
+        $container = \System\Container\Container::getInstance();
+        return $abstract === null ? $container : $container->make($abstract, $parameters);
+    }
+}
+
 if (!function_exists('config')) {
     function config($key, $default = null) {
         $value = $GLOBALS['config'] ?? [];

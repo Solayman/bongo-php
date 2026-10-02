@@ -70,6 +70,7 @@ Use any HTTP client (curl, Postman, Insomnia):
 | 3.2 | Open `/products/999999/edit` | 404 with "Product not found" |
 | 3.3 | Type `/products/1` in the address bar (a GET request to a PUT/DELETE-only URL) | **405 · Method Not Allowed**, and nothing changes |
 | 3.4 | Open `/orders/1` | Order detail. The `{id}` route parameter works. |
+| 3.5 | Open `/products/999999/edit` | 404 "Product not found". The `{product}` parameter is bound to the `Product` model automatically. |
 
 ## 3b. Routes, API, CORS, headers
 

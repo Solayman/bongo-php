@@ -27,5 +27,5 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
 
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
-    Route::get('/products/{id}', [ProductController::class, 'show'])->name('products.show')->where('id', '\d+');
+    Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show')->where('product', '\d+');
 });
