@@ -1,6 +1,6 @@
 #!/usr/bin/env php
 <?php
-// BongoMvc command line tool: php artisan <command>
+// BongoMVC command line tool: php bongo <command>
 
 require __DIR__ . '/config/bootstrap.php';
 
@@ -57,7 +57,7 @@ try {
 
         case 'make:migration':
             if (empty($options[0])) {
-                echo "Usage: php artisan make:migration create_posts_table\n";
+                echo "Usage: php bongo make:migration create_posts_table\n";
                 exit(1);
             }
             $file = (new Migrator(base_path('database/migrations')))->make($options[0]);
@@ -111,12 +111,22 @@ try {
             echo "Application key set in .env\n";
             break;
 
+        case 'log:clear':
+            $dir = config('logging.path');
+            $removed = 0;
+            foreach (glob($dir . '/*.log') ?: [] as $file) {
+                $removed += (int) @unlink($file);
+            }
+            echo "Removed $removed log file(s) from " . str_replace(BASE_PATH . DIRECTORY_SEPARATOR, '', $dir) . "
+";
+            break;
+
         case 'test':
             exit(System\Testing\Runner::run(base_path('tests'), $options[0] ?? null));
 
         case 'help':
         default:
-            echo "BongoMvc commands:\n";
+            echo "BongoMVC commands:\n";
             echo "  serve [--port=8000] [--host=127.0.0.1]  Start the development server\n";
             echo "  migrate                                  Run pending database/migrations/*.php\n";
             echo "  migrate:status                           Show which migrations have run (and their batch)\n";
@@ -125,6 +135,8 @@ try {
             echo "  migrate:fresh [--force] [--seed]         Drop all tables, migrate (and seed)\n";
             echo "  db:seed                                  Run database/seeders/DatabaseSeeder.php\n";
             echo "  key:generate [--show] [--force]          Create APP_KEY in .env (password pepper + encryption)\n";
+            echo "  log:clear                                Delete the log files in storage/logs
+";
             echo "  test [filter]                            Run the tests in tests/\n";
             echo "  help                                     Show this help\n";
             break;

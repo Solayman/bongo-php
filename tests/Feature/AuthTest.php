@@ -90,4 +90,24 @@ class AuthTest extends HttpTestCase
         $this->loginAsAdmin();
         $this->assertNotSame($before, $this->cookies['PHPSESSID'] ?? null, 'Session id must be regenerated on login');
     }
+
+    public function testAuthEventsAreLoggedWithoutPasswords(): void
+    {
+        $this->submit('/login', '/login', ['email' => 'admin@example.com', 'password' => 'wrong-secret-123']);
+        $this->loginAsAdmin();
+
+        $log = file_get_contents(BASE_PATH . '/storage/logs/testing/bongo-' . date('Y-m-d') . '.log');
+        $this->assertContains('WARNING: Failed login for admin@example.com', $log);
+        $this->assertContains('INFO: User 1 logged in', $log);
+        $this->assertNotContains('wrong-secret-123', $log);
+    }
+
+    public function testCsrfFailureIsLoggedAsWarning(): void
+    {
+        $this->get('/login');
+        $this->post('/login', ['email' => 'x@example.com', 'password' => 'x'])->assertStatus(419);
+
+        $log = file_get_contents(BASE_PATH . '/storage/logs/testing/bongo-' . date('Y-m-d') . '.log');
+        $this->assertContains('WARNING: HTTP 419 on POST /login', $log);
+    }
 }

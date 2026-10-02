@@ -55,7 +55,8 @@ class ValidatorTest extends TestCase
         $this->assertSame([], Validator::make(['email' => 'new@example.com'], ['email' => 'unique:users,email']));
         // ignore id = the admin's own row
         $this->assertSame([], Validator::make(['email' => 'admin@example.com'], ['email' => 'unique:users,email,1']));
-        $this->assertArrayHasKey('category_id', Validator::make(['category_id' => 999999], ['category_id' => 'exists:categories,id']));
+        $this->assertArrayHasKey('user_id', Validator::make(['user_id' => 999999], ['user_id' => 'exists:users,id']));
+        $this->assertSame([], Validator::make(['user_id' => 1], ['user_id' => 'exists:users,id']));
     }
 
     public function testUnknownRuleThrows(): void

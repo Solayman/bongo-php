@@ -2,6 +2,7 @@
 namespace System\Auth;
 
 use System\Database\DB;
+use System\Log\Log;
 
 /**
  * Brute-force protection: too many failed logins for one email + IP
@@ -26,14 +27,20 @@ class LoginThrottle
 
     public function tooManyAttempts(string $email, string $ip): bool
     {
-        return DB::table('login_attempts')
+        $locked = DB::table('login_attempts')
             ->where('throttle_key', $this->key($email, $ip))
             ->where('attempted_at', '>=', $this->since())
             ->count() >= $this->maxAttempts;
+
+        if ($locked) {
+            Log::warning('Login locked out for {email} (too many attempts)', ['email' => $email, 'ip' => $ip]);
+        }
+        return $locked;
     }
 
     public function hit(string $email, string $ip): void
     {
+        Log::warning('Failed login for {email}', ['email' => $email, 'ip' => $ip]);
         DB::table('login_attempts')->insert([
             'throttle_key' => $this->key($email, $ip),
             'attempted_at' => date('Y-m-d H:i:s'),

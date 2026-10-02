@@ -2,6 +2,7 @@
 namespace System\Database;
 
 use PDO;
+use System\Log\Log;
 use RuntimeException;
 
 /**
@@ -90,6 +91,7 @@ class Migrator
             $stmt->execute([$name, $batch]);
 
             $done[] = $name;
+            Log::info('Migrated {migration} (batch {batch})', ['migration' => $name, 'batch' => $batch]);
             if ($log) $log($name);
         }
 
@@ -123,6 +125,7 @@ class Migrator
 
             $this->resolve($files[$name])->down();
             $this->pdo->prepare('DELETE FROM ' . self::TABLE . ' WHERE migration = ?')->execute([$name]);
+            Log::info('Rolled back {migration}', ['migration' => $name]);
 
             $done[] = $name;
             if ($log) $log($name);
@@ -144,6 +147,7 @@ class Migrator
         }
         $this->pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
 
+        Log::warning('Dropped all tables', ['tables' => $tables]);
         return $tables;
     }
 

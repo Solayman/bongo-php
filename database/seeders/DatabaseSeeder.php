@@ -5,7 +5,7 @@ use System\Database\DB;
 use System\Security\Hash;
 
 /**
- * Demo data for the shop admin: run with `php artisan db:seed`.
+ * Demo data for the shop admin: run with `php bongo db:seed`.
  * Uses a fixed random seed so every run produces the same data.
  */
 class DatabaseSeeder
