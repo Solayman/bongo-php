@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
-use App\Http\Controllers\CleanupController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrderController;
@@ -81,9 +80,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/system/error-test', [SystemController::class, 'errorTest'])->name('system.error-test');
     Route::get('/system/dump-test', [SystemController::class, 'dumpTest'])->name('system.dump-test');
 
-    // Sample cleanup tool (its JS sends the CSRF token as an X-CSRF-TOKEN header)
-    Route::get('/cleanup', [CleanupController::class, 'dashboard'])->name('cleanup');
-    Route::post('/cleanup/ajax', [CleanupController::class, 'ajaxHandler']);
 });
 
 // Storefront for customers (the "customer" guard; separate from the admin login)
