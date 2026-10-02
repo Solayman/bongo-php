@@ -677,6 +677,32 @@ For items that cannot be counted (a generator), `count`, `remaining` and `last` 
 
 Each page starts with fresh sections and stacks. Rendering two views in one request never mixes their content.
 
+### More helpers
+
+| Directive | |
+| --- | --- |
+| `@switch($status)` `@case('paid')` … `@break` `@default` … `@endswitch` | Several cases can share one body |
+| `@checked($on)` · `@selected($id === 2)` · `@disabled(!$ok)` · `@readonly(...)` · `@required(...)` | Prints the attribute when the condition is true |
+| `@class(['btn', 'btn-primary' => $active, 'd-none' => !$show])` | `class="btn btn-primary"`: number keys always, named keys when true; escaped |
+| `@includeIf('partials.promo')` · `@includeWhen($cond, 'view', [...])` · `@includeUnless(...)` | Conditional partials |
+| `@includeFirst(['shop.custom-banner', 'partials.banner'])` | The first view that exists |
+| `@each('partials.card', $items, 'item', 'partials.empty')` | One view per item; the last argument (optional) is shown when there are none, or `'raw|No items'` |
+| `@hasSection('aside')` … `@endif` · `@sectionMissing('aside')` … `@endif` | In layouts: was a section filled? |
+| `@once` … `@endonce` | Printed once per page, even from a partial that is included many times |
+| `@env('local')` / `@env(['local', 'testing'])` … `@endenv` · `@production` … `@endproduction` | By `APP_ENV` |
+| `@dump($order)` | Like `dump()` |
+
+**Shared data:** give every view a variable, in `app/bootstrap.php`:
+
+```php
+use System\View\ViewEngine;
+
+ViewEngine::share('siteName', 'Bongo Shop');
+ViewEngine::share('cartCount', fn() => app(App\Services\Cart::class)->count());   // runs once per page
+```
+
+Data passed to `$this->view()` wins over shared values.
+
 ### Custom directives
 
 ```php
