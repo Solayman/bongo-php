@@ -83,9 +83,15 @@ class HttpLayerTest extends HttpTestCase
     public function testNamedRoutesInRenderedPages(): void
     {
         $this->loginAsAdmin();
-        $this->get('/products')
-            ->assertSee('action="' . \System\Testing\Runner::$baseUrl . '/products/20"')
-            ->assertSee('name="_method" value="DELETE"');
+        // A new product is first in the list and never ordered, so it has a Delete form
+        $free = $this->db('products')->insertGetId(['name' => 'Route Probe', 'sku' => 'ROUTE-PROBE', 'price' => 1, 'stock' => 1, 'status' => 'draft']);
+        try {
+            $this->get('/products')
+                ->assertSee('action="' . \System\Testing\Runner::$baseUrl . "/products/$free\"")
+                ->assertSee('name="_method" value="DELETE"');
+        } finally {
+            $this->db('products')->where('id', $free)->delete();
+        }
     }
 
     public function testApiIsRateLimited(): void

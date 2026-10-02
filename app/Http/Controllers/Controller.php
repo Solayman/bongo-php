@@ -36,6 +36,12 @@ class Controller
         return array_intersect_key($data, array_flip($keys));
     }
 
+    /** Stop with 403 unless the signed-in user may do this: $this->authorize('delete', $product) */
+    protected function authorize(string $ability, mixed ...$arguments): void
+    {
+        \System\Auth\Gate::authorize($ability, ...$arguments);
+    }
+
     protected function respondSuccess(string $message, array|string|null $data = null)
     {
         return json_encode([

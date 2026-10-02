@@ -21,12 +21,12 @@ namespace System\View;
 class ViewCompiler
 {
     /** Bump when the compiled output changes, so cached views are rebuilt */
-    public const VERSION = '2.1';
+    public const VERSION = '2.2';
 
     protected const DIRECTIVE = '/@(\w+)(?:[ \t]*(\((?:[^()\'"]++|\'(?:[^\'\\\\]|\\\\.)*\'|"(?:[^"\\\\]|\\\\.)*"|(?2))*\)))?/';
 
     /** Directives that may follow text directly ("Home@endsection"); others need a non-word char before @ */
-    protected const CLOSING = ['else', 'stop', 'show', 'break', 'continue', 'empty'];
+    protected const CLOSING = ['else', 'elseif', 'elsecan', 'stop', 'show', 'break', 'continue', 'empty'];
 
     protected static array $custom = [];
     protected array $verbatim = [];
@@ -109,6 +109,13 @@ class ViewCompiler
     protected function compileEndauth()    { return '<?php endif; ?>'; }
     protected function compileGuest($a)    { return '<?php if (!auth(' . ($a ?? '') . ')): ?>'; }
     protected function compileEndguest()   { return '<?php endif; ?>'; }
+
+    /** @can('delete', $product) ... @elsecan('update', $product) ... @else ... @endcan · @cannot(...) ... @endcannot */
+    protected function compileCan($a)      { return "<?php if (can($a)): ?>"; }
+    protected function compileElsecan($a)  { return "<?php elseif (can($a)): ?>"; }
+    protected function compileEndcan()     { return '<?php endif; ?>'; }
+    protected function compileCannot($a)   { return "<?php if (!can($a)): ?>"; }
+    protected function compileEndcannot()  { return '<?php endif; ?>'; }
 
     /** @empty($x) is a condition; a bare @empty inside @forelse starts the "no items" part */
     protected function compileEmpty($a)
