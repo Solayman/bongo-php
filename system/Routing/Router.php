@@ -192,14 +192,15 @@ class Router
                 continue;
             }
 
+            foreach ($this->resolveMiddleware($route) as [$class, $args]) {
+                $this->call($class, $args);
+            }
+
             // Remember the last page shown, so back() works without a Referer header
+            // (after middleware, because the session middleware starts the session)
             if ($method === 'GET' && PHP_SAPI !== 'cli' && session_status() === PHP_SESSION_ACTIVE) {
                 $query = $_SERVER['QUERY_STRING'] ?? '';
                 Session::put('_previous_url', $path . ($query !== '' ? "?$query" : ''));
-            }
-
-            foreach ($this->resolveMiddleware($route) as [$class, $args]) {
-                $this->call($class, $args);
             }
 
             $this->callAction($route->action, array_values($params));

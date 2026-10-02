@@ -1,78 +1,105 @@
 <?php
 namespace System\Auth;
 
-use System\Database\DB;
-use System\Http\Session;
-use System\Log\Log;
-use System\Security\Hash;
-
+/**
+ * Entry point to authentication.
+ *
+ *   Auth::guard('api')->user();      // a specific guard
+ *   Auth::user(); Auth::check();     // the default guard (config/auth.php → default)
+ *   Auth::attempt($email, $pass);    // default guard, session login
+ *
+ * Guards are configured in config/auth.php. Drivers: "session" and "jwt";
+ * register more with Auth::extend('name', fn($name, $provider, $config) => new MyGuard(...)).
+ */
 class Auth
 {
-    protected static ?object $user = null;
+    /** @var Guard[] */
+    protected static array $guards = [];
+    protected static ?string $default = null;
+    protected static array $drivers = [];
 
-    /**
-     * Check credentials against the users table and log in on success
-     */
-    public static function attempt(string $email, string $password): bool
+    public static function guard(?string $name = null): Guard
     {
-        $user = DB::table('users')->where('email', $email)->first();
+        $name ??= self::defaultGuard();
 
-        // Hash::check() runs even for unknown emails, so timing does not reveal which exist
-        if (!Hash::check($password, $user->password ?? null)) {
-            return false;
+        if (!isset(self::$guards[$name])) {
+            $config = config("auth.guards.$name");
+            if (!is_array($config)) {
+                throw new \InvalidArgumentException("Auth guard [$name] is not defined in config/auth.php");
+            }
+            $provider = UserProvider::fromConfig($config['provider'] ?? 'users');
+            $driver = $config['driver'] ?? 'session';
+
+            self::$guards[$name] = match (true) {
+                isset(self::$drivers[$driver]) => (self::$drivers[$driver])($name, $provider, $config),
+                $driver === 'session' => new SessionGuard($name, $provider, $config),
+                $driver === 'jwt' => new JwtGuard($name, $provider, $config),
+                default => throw new \InvalidArgumentException("Auth driver [$driver] is not supported"),
+            };
         }
 
-        if (Hash::needsRehash($user->password)) {
-            DB::table('users')->where('id', $user->id)->update(['password' => Hash::make($password)]);
-        }
-
-        self::login($user);
-        return true;
+        return self::$guards[$name];
     }
 
-    public static function login(object $user): void
+    /** Make $name the default guard for the rest of the request (used by the auth middleware) */
+    public static function shouldUse(string $name): void
     {
-        Session::regenerate();
-        Session::regenerateToken();
-        Session::put('auth_id', (int) $user->id);
-        self::$user = $user;
-        Log::info('User {user_id} logged in', ['user_id' => (int) $user->id, 'ip' => $_SERVER['REMOTE_ADDR'] ?? null]);
+        self::$default = $name;
     }
 
-    public static function logout(): void
+    public static function defaultGuard(): string
     {
-        if (self::id()) {
-            Log::info('User {user_id} logged out', ['user_id' => self::id()]);
-        }
-        Session::forget('auth_id');
-        Session::regenerate();
-        Session::regenerateToken();
-        self::$user = null;
+        return self::$default ?? (string) config('auth.default', 'web');
     }
 
-    public static function id(): ?int
+    /** Register a custom guard driver */
+    public static function extend(string $driver, callable $factory): void
     {
-        return Session::get('auth_id');
+        self::$drivers[$driver] = $factory;
+    }
+
+    /** Drop resolved guards (used by tests) */
+    public static function reset(): void
+    {
+        self::$guards = [];
+        self::$default = null;
+    }
+
+    // --- Shortcuts to the default guard (backward compatible API) ------
+
+    public static function user(): ?object
+    {
+        return self::guard()->user();
     }
 
     public static function check(): bool
     {
-        return self::user() !== null;
+        return self::guard()->check();
     }
 
-    public static function user(): ?object
+    public static function id(): ?int
     {
-        if (self::$user === null && self::id()) {
-            self::$user = DB::table('users')->where('id', self::id())->first();
-        }
-        return self::$user;
+        return self::guard()->id();
     }
 
-    /**
-     * Forget the cached user so the next user() call reloads it
-     */
+    public static function attempt(string $identifier, string $password): bool
+    {
+        $guard = self::guard();
+        return (bool) $guard->attempt($identifier, $password);
+    }
+
+    public static function login(object $user): void
+    {
+        self::guard()->login($user);
+    }
+
+    public static function logout(): void
+    {
+        self::guard()->logout();
+    }
+
     public static function refresh(): void
     {
-        self::$user = null;
+        self::guard()->refreshUser();
     }
 }

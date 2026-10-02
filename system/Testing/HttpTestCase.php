@@ -35,7 +35,14 @@ abstract class HttpTestCase extends TestCase
         return $this->post($action, $data + ['_token' => $page->csrfToken()]);
     }
 
-    protected function request(string $method, string $path, array $data = [], array $headers = []): TestResponse
+    /** Send a JSON body (API tests): $this->jsonRequest('POST', '/api/x', ['a' => 1], ['Authorization' => 'Bearer …']) */
+    protected function jsonRequest(string $method, string $path, array $data = [], array $headers = []): TestResponse
+    {
+        $headers += ['Accept' => 'application/json', 'Content-Type' => 'application/json'];
+        return $this->request($method, $path, $method === 'GET' ? [] : json_encode($data), $headers);
+    }
+
+    protected function request(string $method, string $path, array|string $data = [], array $headers = []): TestResponse
     {
         $ch = curl_init(Runner::$baseUrl . $path);
 
@@ -57,8 +64,8 @@ abstract class HttpTestCase extends TestCase
             CURLOPT_CUSTOMREQUEST  => $method,
             CURLOPT_HTTPHEADER     => $headerLines,
         ]);
-        if ($method === 'POST') {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+        if ($method !== 'GET' && $method !== 'HEAD' && ($data !== [] || $method !== 'OPTIONS')) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, is_string($data) ? $data : http_build_query($data));
         }
 
         $raw = curl_exec($ch);

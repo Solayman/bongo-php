@@ -19,12 +19,13 @@ return [
         'auth'  => App\Http\Middleware\Authenticate::class,
         'guest' => App\Http\Middleware\RedirectIfAuthenticated::class,
         'csrf'  => App\Http\Middleware\VerifyCsrfToken::class,
-        'cors'  => System\Http\Middleware\Cors::class,
+        'cors'    => System\Http\Middleware\Cors::class,
+        'session' => System\Http\Middleware\StartSession::class,
     ],
 
     // Named sets of middleware
     'middleware_groups' => [
-        'web' => ['csrf'],
+        'web' => ['session', 'csrf'],
         'api' => ['cors'],
     ],
 
