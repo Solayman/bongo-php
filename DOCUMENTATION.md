@@ -426,7 +426,8 @@ Outside controllers: `System\Validation\Validator::make($data, $rules, $messages
 
 | Rules | |
 | --- | --- |
-| Presence | `required`, `nullable`, `sometimes` (validate only if the field was sent) |
+| Presence | `required`, `nullable`, `sometimes` (validate only if the field was sent), `accepted` (a checkbox that must be ticked: `1`, `on`, `yes`, `true`) |
+| Required when… | `required_if:field,a,b` · `required_unless:field,a,b` · `required_with:a,b` (any of them is filled) · `required_with_all:a,b` · `required_without:a,b` (any of them is empty) · `required_without_all:a,b` |
 | Types | `string`, `numeric`, `integer`, `boolean`, `array`, `email`, `url`, `date` |
 | Size | `min:n`, `max:n`, `between:a,b`. These compare the value (with `numeric`/`integer`), the item count (arrays), kilobytes (files), or otherwise the length. |
 | Format | `digits:n`, `alpha`, `alpha_num`, `alpha_dash`, `regex:pattern`, `starts_with:a,b`, `ends_with:a,b` |
@@ -434,6 +435,32 @@ Outside controllers: `System\Validation\Validator::make($data, $rules, $messages
 | Comparisons | `same:field`, `different:field`, `confirmed` (needs `<field>_confirmation`), `before:date|field`, `after:date|field` |
 | Database | `unique:table,column[,ignoreId]`, `exists:table,column` |
 | Files | `file`, `image`, `mimes:jpg,png,pdf` |
+
+**Conditional rules:**
+
+```php
+'company'               => 'required_if:type,business,ngo',          // only for businesses and NGOs
+'phone'                 => 'required_without:email',                 // phone or email, at least one
+'password_confirmation' => 'required_with:password',
+'items.*.qty'           => 'required_with:items.*.name|nullable|integer|min:1',   // "*" = the same row
+'terms'                 => 'accepted',
+```
+
+**Custom rules:** a closure, or a class for rules you reuse. Like every rule except `required*` and `accepted`, a custom rule only runs when the field has a value:
+
+```php
+'seats' => ['required', 'integer', function (string $attribute, $value, callable $fail, array $data) {
+    if ($value % 2 !== 0) $fail('The :attribute must be even.');
+}],
+
+// app/Rules/Uppercase.php
+class Uppercase implements System\Validation\Rule
+{
+    public function passes(string $attribute, mixed $value, array $data): bool { return strtoupper($value) === $value; }
+    public function message(): string { return 'The :attribute must be uppercase.'; }
+}
+'code' => ['required', new Uppercase()],
+```
 
 **Custom messages and names:**
 

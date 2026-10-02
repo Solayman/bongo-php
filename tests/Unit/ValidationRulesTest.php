@@ -77,6 +77,82 @@ class ValidationRulesTest extends TestCase
         $this->assertArrayHasKey('nickname', Validator::make(['nickname' => 'ab'], ['nickname' => 'sometimes|required|min:3']));
     }
 
+    public function testRequiredIfAndUnless(): void
+    {
+        $rules = ['company' => 'required_if:type,business,ngo', 'reason' => 'required_unless:status,active'];
+
+        $errors = Validator::make(['type' => 'business', 'status' => 'closed'], $rules);
+        $this->assertSame('The company field is required when type is business, ngo.', $errors['company']);
+        $this->assertSame('The reason field is required unless status is in active.', $errors['reason']);
+
+        $this->assertSame([], Validator::make(['type' => 'person', 'status' => 'active'], $rules), 'conditions not met: may stay empty');
+        $this->assertSame([], Validator::make(['type' => 'ngo', 'company' => 'Bongo Trust', 'status' => 'active'], $rules));
+
+        // Booleans compare as "true"/"false"
+        $this->assertArrayHasKey('vat', Validator::make(['invoice' => true], ['vat' => 'required_if:invoice,true']));
+    }
+
+    public function testRequiredWithAndWithout(): void
+    {
+        $this->assertSame(
+            'The password confirmation field is required when password is present.',
+            Validator::make(['password' => 'secret'], ['password_confirmation' => 'required_with:password'])['password_confirmation']
+        );
+        $this->assertSame([], Validator::make([], ['password_confirmation' => 'required_with:password']));
+
+        $all = ['zip' => 'required_with_all:street,city'];
+        $this->assertSame([], Validator::make(['street' => 'Main road'], $all), 'only one of them is present');
+        $this->assertArrayHasKey('zip', Validator::make(['street' => 'Main road', 'city' => 'Dhaka'], $all));
+
+        $contact = ['phone' => 'required_without:email', 'email' => 'nullable|email'];
+        $this->assertSame('The phone field is required when email is not present.', Validator::make([], $contact)['phone']);
+        $this->assertSame([], Validator::make(['email' => 'a@b.co'], $contact));
+
+        $none = ['note' => 'required_without_all:phone,email'];
+        $this->assertSame('The note field is required when none of phone / email are present.', Validator::make([], $none)['note']);
+        $this->assertSame([], Validator::make(['phone' => '017'], $none));
+    }
+
+    public function testConditionalRulesFollowTheSameRowInArrays(): void
+    {
+        $data = ['items' => [['name' => 'Mug', 'qty' => ''], ['name' => '', 'qty' => '']]];
+        $errors = Validator::make($data, ['items.*.qty' => 'required_with:items.*.name|nullable|integer|min:1']);
+        $this->assertSame(['items.0.qty'], array_keys($errors), 'row 0 has a name, row 1 does not');
+    }
+
+    public function testAccepted(): void
+    {
+        $this->assertSame('The terms must be accepted.', Validator::make([], ['terms' => 'accepted'])['terms']);
+        $this->assertSame('The terms must be accepted.', Validator::make(['terms' => 'no'], ['terms' => 'accepted'])['terms']);
+        foreach (['1', 'on', 'yes', 'true', true] as $ok) {
+            $this->assertSame([], Validator::make(['terms' => $ok], ['terms' => 'accepted']));
+        }
+    }
+
+    public function testCustomRulesAsClosuresAndClasses(): void
+    {
+        $even = function (string $attribute, $value, callable $fail) {
+            if ((int) $value % 2 !== 0) $fail('The :attribute must be even.');
+        };
+        $upper = new class implements \System\Validation\Rule {
+            public function passes(string $attribute, mixed $value, array $data): bool { return strtoupper($value) === $value; }
+            public function message(): string { return 'The :attribute must be uppercase.'; }
+        };
+        $rules = ['seats' => ['required', 'integer', $even], 'code' => ['nullable', $upper]];
+
+        $errors = Validator::make(['seats' => 3, 'code' => 'bd-1'], $rules, [], ['seats' => 'number of seats']);
+        $this->assertSame('The number of seats must be even.', $errors['seats'], 'custom messages use :attribute names');
+        $this->assertSame('The code must be uppercase.', $errors['code']);
+
+        $this->assertSame([], Validator::make(['seats' => 4, 'code' => 'BD-1'], $rules));
+        $this->assertSame([], Validator::make(['seats' => 2], $rules), 'custom rules skip empty optional fields');
+        $this->assertSame('The seats must be a whole number.', Validator::make(['seats' => 'x'], $rules)['seats'], 'built-in rules run first, in order');
+
+        // A closure can read the other fields
+        $later = fn($a, $v, $fail, $data) => $v <= ($data['start'] ?? 0) ? $fail('The :attribute must be after the start.') : null;
+        $this->assertArrayHasKey('end', Validator::make(['start' => 5, 'end' => 3], ['end' => [$later]]));
+    }
+
     public function testCustomMessagesAndAttributeNames(): void
     {
         $errors = Validator::make(['email' => '', 'qty' => 0], ['email' => 'required', 'qty' => 'integer|min:1'],
