@@ -122,6 +122,10 @@ class Request
         if (!is_array($file) || !isset($file['error']) || is_array($file['error'])) {
             return null;
         }
+        // Browsers send an empty file field when nothing was chosen: that is "no upload", not an upload
+        if ((int) $file['error'] === UPLOAD_ERR_NO_FILE) {
+            return null;
+        }
         return UploadedFile::fromArray($file);
     }
 
