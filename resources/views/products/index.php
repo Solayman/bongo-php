@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@set('title', 'Products')
+@set('title', __('Products'))
 
 @section('content')
 <div class="d-flex flex-wrap gap-2 justify-content-between mb-3">

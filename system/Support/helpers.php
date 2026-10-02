@@ -15,6 +15,27 @@ if (!function_exists('app')) {
     }
 }
 
+if (!function_exists('__')) {
+    /** Translate: __('Sign in'), __('messages.welcome', ['name' => 'Rahim']) */
+    function __(string $key, array $replace = [], ?string $locale = null): string {
+        return \System\Translation\Lang::translator()->get($key, $replace, $locale);
+    }
+}
+
+if (!function_exists('trans_choice')) {
+    /** Plural: trans_choice('{0} No orders|{1} One order|[2,*] :count orders', $n) */
+    function trans_choice(string $key, int|float $count, array $replace = []): string {
+        return \System\Translation\Lang::translator()->choice($key, $count, $replace);
+    }
+}
+
+if (!function_exists('locale')) {
+    /** Current language code ("en", "bn") */
+    function locale(): string {
+        return \System\Translation\Lang::locale();
+    }
+}
+
 if (!function_exists('config')) {
     function config($key, $default = null) {
         $value = $GLOBALS['config'] ?? [];

@@ -26,6 +26,8 @@ use System\Http\UploadedFile;
 class Validator
 {
     protected array $errors = [];
+    /** Extra placeholders for the current message (:min, :max, :values, :reason) */
+    protected array $replace = [];
 
     public function __construct(
         protected array $data,
@@ -100,6 +102,7 @@ class Validator
 
         foreach ($rules as $rule) {
             [$name, $param] = array_pad(explode(':', (string) $rule, 2), 2, null);
+            $this->replace = [];
             $message = $this->check($name, $param, $value, $field, $kind);
             if ($message !== null) {
                 $this->fail($field, $pattern, $name, $param, $message);
@@ -126,10 +129,13 @@ class Validator
 
         $message = $this->messages["$field.$rule"] ?? $this->messages["$pattern.$rule"] ?? $this->messages[$rule] ?? $default;
 
-        $this->errors[$field] = strtr($message, [
-            ':attribute' => $attribute,
+        // Messages are templates ("The :attribute must be at least :param characters."),
+        // so they can be translated in lang/{locale}.json before the values are filled in
+        $translate = function_exists('__') ? '__' : fn($s) => $s;
+        $this->errors[$field] = strtr($translate($message), [
+            ':attribute' => $translate($attribute),
             ':param' => (string) $param,
-        ]);
+        ] + $this->replace);
     }
 
     protected function check(string $rule, ?string $param, $value, string $field, string $kind): ?string
@@ -172,11 +178,16 @@ class Validator
 
             case 'between':
                 $size = $this->measure($value, $kind);
-                return $size >= (float) ($params[0] ?? 0) && $size <= (float) ($params[1] ?? 0)
-                    ? null : "The :attribute must be between {$params[0]} and {$params[1]}" . $this->unit($kind) . '.';
+                $this->replace = [':min' => $params[0] ?? '', ':max' => $params[1] ?? ''];
+                return $size >= (float) ($params[0] ?? 0) && $size <= (float) ($params[1] ?? 0) ? null : match ($kind) {
+                    'numeric' => 'The :attribute must be between :min and :max.',
+                    'file' => 'The :attribute must be between :min and :max kilobytes.',
+                    'array' => 'The :attribute must have between :min and :max items.',
+                    default => 'The :attribute must be between :min and :max characters.',
+                };
 
             case 'digits':
-                return is_scalar($value) && preg_match('/^\d{' . (int) $param . '}$/', (string) $value) ? null : "The :attribute must be $param digits.";
+                return is_scalar($value) && preg_match('/^\d{' . (int) $param . '}$/', (string) $value) ? null : 'The :attribute must be :param digits.';
 
             case 'in':
                 return is_scalar($value) && in_array((string) $value, $params, true) ? null : 'The selected :attribute is invalid.';
@@ -198,11 +209,13 @@ class Validator
 
             case 'starts_with':
                 foreach ($params as $p) if (is_string($value) && str_starts_with($value, $p)) return null;
-                return 'The :attribute must start with one of: ' . implode(', ', $params) . '.';
+                $this->replace = [':values' => implode(', ', $params)];
+                return 'The :attribute must start with one of: :values.';
 
             case 'ends_with':
                 foreach ($params as $p) if (is_string($value) && str_ends_with($value, $p)) return null;
-                return 'The :attribute must end with one of: ' . implode(', ', $params) . '.';
+                $this->replace = [':values' => implode(', ', $params)];
+                return 'The :attribute must end with one of: :values.';
 
             case 'date':
                 return is_string($value) && strtotime($value) !== false ? null : 'The :attribute is not a valid date.';
@@ -213,7 +226,10 @@ class Validator
                 $other = self::get($this->data, (string) $param);
                 $limit = strtotime(is_string($other) ? $other : (string) $param);
                 if ($mine === false || $limit === false) return 'The :attribute is not a valid date.';
-                return ($rule === 'before' ? $mine < $limit : $mine > $limit) ? null : "The :attribute must be a date $rule :param.";
+                if ($rule === 'before') {
+                    return $mine < $limit ? null : 'The :attribute must be a date before :param.';
+                }
+                return $mine > $limit ? null : 'The :attribute must be a date after :param.';
 
             case 'same':
                 return self::get($this->data, (string) $param) === $value ? null : 'The :attribute and :param must match.';
@@ -237,14 +253,18 @@ class Validator
                 return DB::table($table)->where($column ?: 'id', $value)->count() > 0 ? null : 'The selected :attribute is invalid.';
 
             case 'file':
-                return $value instanceof UploadedFile && $value->isValid() ? null : ($value instanceof UploadedFile ? 'The :attribute failed to upload: ' . $value->errorMessage() : 'The :attribute must be a file.');
+                if ($value instanceof UploadedFile && $value->isValid()) return null;
+                if (!$value instanceof UploadedFile) return 'The :attribute must be a file.';
+                $this->replace = [':reason' => $value->errorMessage()];
+                return 'The :attribute failed to upload: :reason';
 
             case 'image':
                 return $value instanceof UploadedFile && $value->isValid() && $value->isImage() ? null : 'The :attribute must be an image (jpg, png, gif or webp).';
 
             case 'mimes':
+                $this->replace = [':values' => implode(', ', $params)];
                 return $value instanceof UploadedFile && $value->isValid() && in_array($value->extension(), $params, true)
-                    ? null : 'The :attribute must be a file of type: ' . implode(', ', $params) . '.';
+                    ? null : 'The :attribute must be a file of type: :values.';
         }
 
         throw new \InvalidArgumentException("Unknown validation rule [$rule]");
@@ -260,26 +280,22 @@ class Validator
         };
     }
 
-    protected function unit(string $kind): string
-    {
-        return match ($kind) {
-            'file' => ' kilobytes',
-            'array' => ' items',
-            'string' => ' characters',
-            default => '',
-        };
-    }
-
-    /** Keeps the original wording: "must be at least 3 characters." / "may not be longer than 5 characters." */
+    /** Fixed wording per kind, so each message is one translatable template */
     protected function sizeMessage(string $type, ?string $param, string $kind): string
     {
         if ($type === 'at least') {
-            return "The :attribute must be at least $param" . $this->unit($kind) . '.';
+            return match ($kind) {
+                'numeric' => 'The :attribute must be at least :param.',
+                'file' => 'The :attribute must be at least :param kilobytes.',
+                'array' => 'The :attribute must have at least :param items.',
+                default => 'The :attribute must be at least :param characters.',
+            };
         }
         return match ($kind) {
-            'numeric' => "The :attribute may not be greater than $param.",
-            'string' => "The :attribute may not be longer than $param characters.",
-            default => "The :attribute may not have more than $param" . $this->unit($kind) . '.',
+            'numeric' => 'The :attribute may not be greater than :param.',
+            'file' => 'The :attribute may not have more than :param kilobytes.',
+            'array' => 'The :attribute may not have more than :param items.',
+            default => 'The :attribute may not be longer than :param characters.',
         };
     }
 

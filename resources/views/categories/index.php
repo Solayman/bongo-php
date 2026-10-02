@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@set('title', 'Categories')
+@set('title', __('Categories'))
 
 @section('content')
 <div class="row g-3">

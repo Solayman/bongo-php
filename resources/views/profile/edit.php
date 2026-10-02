@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@set('title', 'Profile')
+@set('title', __('Profile'))
 
 @section('content')
 <?php $invalid = fn(string $field) => error($field) ? 'is-invalid' : ''; ?>

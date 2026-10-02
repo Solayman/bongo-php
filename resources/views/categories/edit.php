@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@set('title', 'Edit category')
+@set('title', __('Edit category'))
 
 @section('content')
 <a href="<?= url('/categories') ?>" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> Back to categories</a>

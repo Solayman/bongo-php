@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ locale() }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -17,13 +17,23 @@
         <header class="topbar d-flex align-items-center justify-content-between px-4">
             <h1 class="h5 mb-0">@yield('title')</h1>
             <div class="d-flex align-items-center gap-3">
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-translate me-1"></i>{{ System\Translation\Lang::locales()[locale()] ?? locale() }}
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        @foreach(System\Translation\Lang::locales() as $code => $label)
+                            <li><a class="dropdown-item @if($code === locale()) active @endif" href="?lang={{ $code }}" lang="{{ $code }}">{{ $label }}</a></li>
+                        @endforeach
+                    </ul>
+                </div>
                 <a href="<?= url('/profile') ?>" class="text-body text-decoration-none small">
                     <i class="bi bi-person-circle me-1"></i>{{ auth()->name }}
                 </a>
                 <form method="POST" action="<?= url('/logout') ?>" class="m-0">
                     @csrf
                     <button class="btn btn-sm btn-outline-secondary" type="submit">
-                        <i class="bi bi-box-arrow-right me-1"></i>Sign out
+                        <i class="bi bi-box-arrow-right me-1"></i>{{ __('Sign out') }}
                     </button>
                 </form>
             </div>

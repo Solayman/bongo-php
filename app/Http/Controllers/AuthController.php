@@ -25,13 +25,13 @@ class AuthController extends Controller
 
         if ($throttle->tooManyAttempts($email, $ip)) {
             $minutes = (int) ceil($throttle->availableIn($email, $ip) / 60);
-            $this->failLogin("Too many login attempts. Try again in $minutes minute(s).", $email);
+            $this->failLogin(__('Too many login attempts. Try again in :minutes minute(s).', ['minutes' => $minutes]), $email);
         }
 
         if (!Auth::attempt($email, $data['password'])) {
             $throttle->hit($email, $ip);
             // Same message for unknown email and wrong password
-            $this->failLogin('These credentials do not match our records.', $email);
+            $this->failLogin(__('These credentials do not match our records.'), $email);
         }
 
         $throttle->clear($email, $ip);
@@ -39,20 +39,20 @@ class AuthController extends Controller
         // The panel is for administrators only
         if (Auth::user()->role !== 'admin') {
             Auth::logout();
-            $this->failLogin('Only administrators can sign in to the dashboard.', $email);
+            $this->failLogin(__('Only administrators can sign in to the dashboard.'), $email);
         }
 
         $intended = Session::get('url.intended', '/');
         Session::forget('url.intended');
 
-        flash('success', 'Welcome back, ' . Auth::user()->name . '!');
+        flash('success', __('Welcome back, :name!', ['name' => Auth::user()->name]));
         redirect(url($intended));
     }
 
     public function logout()
     {
         Auth::logout();
-        flash('success', 'You have been signed out.');
+        flash('success', __('You have been signed out.'));
         redirect(url('/login'));
     }
 

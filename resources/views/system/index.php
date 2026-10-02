@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@set('title', 'System status')
+@set('title', __('System status'))
 
 @section('content')
 <div class="row g-3 mb-4">

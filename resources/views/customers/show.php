@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@set('title', 'Customer')
+@set('title', __('Customer'))
 
 @section('content')
 <a href="<?= url('/customers') ?>" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> Back to customers</a>

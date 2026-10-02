@@ -37,7 +37,7 @@ class Authenticate
             Session::put('url.intended', Request::path());
         }
 
-        flash('error', 'Please sign in to continue.');
+        flash('error', __('Please sign in to continue.'));
         redirect(url((string) $first->config('login_url', '/login')));
     }
 }

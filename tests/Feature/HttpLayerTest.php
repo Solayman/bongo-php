@@ -108,4 +108,33 @@ class HttpLayerTest extends HttpTestCase
         // Other routes have their own counter
         $this->jsonRequest('POST', '/api/auth/login', ['email' => 'nobody@example.com', 'password' => 'x'])->assertStatus(401);
     }
+
+    public function testLanguageSwitchIsRememberedAndTranslatesPagesAndErrors(): void
+    {
+        $this->get('/login')->assertSee('Sign in to the admin dashboard')->assertSee('lang="en"');
+
+        // ?lang=bn switches and is remembered in the session
+        $this->get('/login?lang=bn')->assertSee('অ্যাডমিন ড্যাশবোর্ডে সাইন ইন করুন')->assertSee('<html lang="bn">');
+        $this->get('/login')->assertSee('সাইন ইন');
+
+        // Validation and auth messages in Bangla
+        $this->submit('/login', '/login', ['email' => '', 'password' => '']);
+        $this->get('/login')->assertSee('ইমেইল দেওয়া আবশ্যক।');
+        $this->submit('/login', '/login', ['email' => 'admin@example.com', 'password' => 'wrong']);
+        $this->get('/login')->assertSee('এই ইমেইল বা পাসওয়ার্ড আমাদের রেকর্ডের সাথে মেলে না।');
+
+        $this->submit('/login', '/login', ['email' => 'admin@example.com', 'password' => 'password']);
+        $this->get('/')->assertSee('আবার স্বাগতম, Admin!')->assertSee('সাম্প্রতিক অর্ডার')->assertSee('ড্যাশবোর্ড');
+
+        $this->get('/?lang=en')->assertSee('Recent orders');
+    }
+
+    public function testBrowserLanguageIsUsedWhenNothingWasChosen(): void
+    {
+        $this->get('/login', ['Accept-Language' => 'bn-BD,bn;q=0.9,en;q=0.8'])->assertSee('<html lang="bn">');
+        $this->cookies = [];
+        $this->get('/login', ['Accept-Language' => 'fr-FR,fr;q=0.9'])->assertSee('<html lang="en">');
+        $this->cookies = [];
+        $this->get('/login?lang=xx')->assertSee('<html lang="en">', 'unsupported codes are ignored');
+    }
 }
