@@ -12,7 +12,7 @@ class CartController extends Controller
     /** GET /shop/cart */
     public function show()
     {
-        echo $this->view('shop.cart', ['lines' => $this->cart->lines(), 'total' => $this->cart->total()]);
+        return $this->view('shop.cart', ['lines' => $this->cart->lines(), 'total' => $this->cart->total()]);
     }
 
     /** POST /shop/cart  {product_id, quantity} */

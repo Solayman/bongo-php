@@ -23,7 +23,7 @@ class CatalogController extends Controller
             $query->where('category_id', $category->id ?? 0);
         }
 
-        echo $this->view('shop.index', [
+        return $this->view('shop.index', [
             'products'   => $query->paginate(12),
             'categories' => Category::query()->orderBy('name')->get(),
             'category'   => $category,
@@ -37,7 +37,7 @@ class CatalogController extends Controller
         if ($product->status !== 'active') {
             throw new HttpException(404, 'Product not found');
         }
-        echo $this->view('shop.product', [
+        return $this->view('shop.product', [
             'product' => $product,
             'related' => Product::where('category_id', $product->category_id)->where('id', '!=', $product->id)
                 ->where('status', 'active')->limit(4)->get(),

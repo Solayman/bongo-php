@@ -9,7 +9,7 @@ class AuthController extends Controller
 {
     public function showLogin()
     {
-        echo $this->view('auth.login');
+        return $this->view('auth.login');
     }
 
     public function login()

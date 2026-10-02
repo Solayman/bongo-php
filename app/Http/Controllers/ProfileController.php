@@ -10,7 +10,7 @@ class ProfileController extends Controller
 {
     public function edit()
     {
-        echo $this->view('profile.edit', ['user' => Auth::user()]);
+        return $this->view('profile.edit', ['user' => Auth::user()]);
     }
 
     public function update()

@@ -31,7 +31,7 @@ class ProductController extends Controller
             $query->where('products.status', $status);
         }
 
-        echo $this->view('products.index', [
+        return $this->view('products.index', [
             'products'   => $query->paginate(10),
             'categories' => Category::query()->orderBy('name')->get(),
             'filters'    => ['q' => $search, 'category' => $categoryId, 'status' => $status],
@@ -40,7 +40,7 @@ class ProductController extends Controller
 
     public function create()
     {
-        echo $this->view('products.form', [
+        return $this->view('products.form', [
             'product'    => null,
             'categories' => Category::query()->orderBy('name')->get(),
         ]);
@@ -66,7 +66,7 @@ class ProductController extends Controller
     // Route model binding: /products/{product}/edit gives a Product (or a 404)
     public function edit(Product $product)
     {
-        echo $this->view('products.form', [
+        return $this->view('products.form', [
             'product'    => $product,
             'categories' => Category::query()->orderBy('name')->get(),
         ]);

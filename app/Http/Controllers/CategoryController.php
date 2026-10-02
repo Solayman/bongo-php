@@ -16,7 +16,7 @@ class CategoryController extends Controller
              ORDER BY c.name'
         );
 
-        echo $this->view('categories.index', ['categories' => $categories]);
+        return $this->view('categories.index', ['categories' => $categories]);
     }
 
     public function store()
@@ -32,7 +32,7 @@ class CategoryController extends Controller
 
     public function edit($id)
     {
-        echo $this->view('categories.edit', ['category' => $this->findOrFail($id)]);
+        return $this->view('categories.edit', ['category' => $this->findOrFail($id)]);
     }
 
     public function update($id)

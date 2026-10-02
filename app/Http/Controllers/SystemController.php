@@ -35,7 +35,7 @@ class SystemController extends Controller
             $logLevel = null;
         }
 
-        echo $this->view('system.index', [
+        return $this->view('system.index', [
             'connection' => $connection,
             'db'         => $db,
             'checks'     => [

@@ -18,7 +18,7 @@ class AccountController extends Controller
 {
     public function showLogin()
     {
-        echo $this->view('shop.auth.login');
+        return $this->view('shop.auth.login');
     }
 
     public function login()
@@ -44,7 +44,7 @@ class AccountController extends Controller
 
     public function showRegister()
     {
-        echo $this->view('shop.auth.register');
+        return $this->view('shop.auth.register');
     }
 
     public function register()
@@ -77,7 +77,7 @@ class AccountController extends Controller
     /** GET /shop/orders */
     public function orders()
     {
-        echo $this->view('shop.orders', [
+        return $this->view('shop.orders', [
             'orders' => Order::where('user_id', Auth::guard('customer')->id())->latest()->get(),
         ]);
     }
@@ -88,7 +88,7 @@ class AccountController extends Controller
         if ((int) $order->user_id !== Auth::guard('customer')->id()) {
             throw new HttpException(404, 'Order not found'); // 404, not 403: do not reveal other people's orders exist
         }
-        echo $this->view('shop.order', ['order' => $order, 'items' => $order->items]);
+        return $this->view('shop.order', ['order' => $order, 'items' => $order->items]);
     }
 
     protected function fail(string $message, string $email): void

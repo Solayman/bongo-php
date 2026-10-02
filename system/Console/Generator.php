@@ -40,7 +40,7 @@ PHP
             : <<<PHP
     public function index()
     {
-        echo \$this->view('{$this->viewName($class)}.index', []);
+        return \$this->view('{$this->viewName($class)}.index', []);
     }
 PHP;
 
