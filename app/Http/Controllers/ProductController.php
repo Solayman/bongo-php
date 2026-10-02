@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ProductRequest;
 use App\Models\Category;
 use App\Models\Product;
 use System\Database\DB;
@@ -46,15 +47,14 @@ class ProductController extends Controller
         ]);
     }
 
-    public function store()
+    // ProductRequest validates the form before this runs (see app/Http/Requests)
+    public function store(ProductRequest $request)
     {
-        $data = $this->validate($this->rules());
-        $data['category_id'] = ($data['category_id'] ?? null) ?: null;
+        $data = $request->validated();
+        unset($data['image'], $data['remove_image']);
 
-        if (($data['image'] ?? null) instanceof UploadedFile) {
-            $data['image'] = $data['image']->store('products');
-        } else {
-            unset($data['image']);
+        if ($upload = $request->file('image')) {
+            $data['image'] = $upload->store('products');
         }
 
         Product::create($data);
@@ -72,18 +72,16 @@ class ProductController extends Controller
         ]);
     }
 
-    public function update(Product $product)
+    public function update(Product $product, ProductRequest $request)
     {
-        $data = $this->validate($this->rules((int) $product->id) + ['remove_image' => 'nullable|boolean']);
-        $data['category_id'] = ($data['category_id'] ?? null) ?: null;
-
-        $upload = $data['image'] ?? null;
+        $data = $request->validated();
+        $upload = $request->file('image');
         $remove = filter_var($data['remove_image'] ?? false, FILTER_VALIDATE_BOOLEAN);
         unset($data['image'], $data['remove_image']);
 
-        if ($upload instanceof UploadedFile || $remove) {
+        if ($upload || $remove) {
             Storage::delete($product->image);   // the old file
-            $data['image'] = $upload instanceof UploadedFile ? $upload->store('products') : null;
+            $data['image'] = $upload ? $upload->store('products') : null;
         }
 
         $product->update($data);
@@ -99,20 +97,6 @@ class ProductController extends Controller
 
         flash('success', "Product \"{$product->name}\" deleted.");
         redirect(url('/products'));
-    }
-
-    protected function rules(?int $ignoreId = null): array
-    {
-        return [
-            'name'        => 'required|string|max:150',
-            'sku'         => 'required|string|max:50|unique:products,sku' . ($ignoreId ? ",$ignoreId" : ''),
-            'category_id' => 'nullable|integer|exists:categories,id',
-            'price'       => 'required|numeric|min:0|max:99999999',
-            'stock'       => 'required|integer|min:0|max:1000000',
-            'status'      => 'required|in:active,draft',
-            'description' => 'nullable|string|max:5000',
-            'image'       => 'nullable|image|max:2048',   // KB
-        ];
     }
 
 }

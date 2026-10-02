@@ -41,6 +41,25 @@ class Validator
         return (new self($data, $rules, $messages, $attributes))->validate();
     }
 
+    /**
+     * Answer a failed validation and stop: API clients get 422 JSON; browsers go back
+     * with the errors and the old input flashed (never passwords, the CSRF token or files).
+     */
+    public static function respondWithErrors(array $errors, array $data): never
+    {
+        if (\System\Http\Request::wantsJson()) {
+            response(['message' => 'The given data was invalid.', 'errors' => $errors], 'json', 422);
+        }
+        \System\Http\Session::flash('_errors', $errors);
+        \System\Http\Session::flash('_old', array_filter(
+            $data,
+            fn($value, $key) => !str_contains((string) $key, 'password') && $key !== '_token' && !$value instanceof UploadedFile,
+            ARRAY_FILTER_USE_BOTH
+        ));
+        back();
+        exit;
+    }
+
     public function validate(): array
     {
         $this->errors = [];

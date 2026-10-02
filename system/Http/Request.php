@@ -3,6 +3,21 @@ namespace System\Http;
 
 class Request
 {
+    /** Parameters of the matched route, e.g. ['product' => '20'] for /products/{product} */
+    protected static array $routeParameters = [];
+
+    /** Set by the router before the action runs */
+    public static function setRouteParameters(array $parameters): void
+    {
+        self::$routeParameters = $parameters;
+    }
+
+    /** A route parameter: Request::route('product') on /products/20 → "20" (all of them without a key) */
+    public static function route(?string $key = null, $default = null)
+    {
+        return $key === null ? self::$routeParameters : (self::$routeParameters[$key] ?? $default);
+    }
+
     /**
      * HTTP method. HTML forms can only send GET/POST, so a POST may carry
      * _method=PUT|PATCH|DELETE (or the X-HTTP-Method-Override header).

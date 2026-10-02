@@ -171,6 +171,7 @@ try {
         case 'make:controller':
         case 'make:model':
         case 'make:middleware':
+        case 'make:request':
         case 'make:test':
             $name = $options[0] ?? '';
             if ($name === '' || str_starts_with($name, '--')) {
@@ -183,6 +184,7 @@ try {
                 'make:controller' => $generator->controller($name, $hasOption('api')),
                 'make:model'      => $generator->model($name),
                 'make:middleware' => $generator->middleware($name),
+                'make:request'    => $generator->request($name),
                 'make:test'       => $generator->test($name, $hasOption('unit')),
             };
             echo "Created: $created" . PHP_EOL;
@@ -327,6 +329,7 @@ try {
 ";
             echo "  make:middleware <Name>                   Create a middleware class
 ";
+            echo "  make:request <Name>                      Create a form request (rules + authorize) in app/Http/Requests" . PHP_EOL;
             echo "  make:test <Name> [--unit]                Create a feature (or unit) test
 ";
             echo "  security:check                           Deployment security checklist (exit 1 on failures)
