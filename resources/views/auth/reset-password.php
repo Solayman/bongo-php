@@ -1,14 +1,14 @@
-@extends('layouts.auth')
-@set('title', __('Reset password'))
-@section('subtitle'){{ __('Choose a new password.') }}@endsection
+{: layout 'layouts.auth' :}
+{: block 'title', __('Reset password') :}
+{: block 'subtitle' :}{{ __('Choose a new password.') }}{: end :}
 
-@section('content')
-@if(!$valid)
+{: block 'content' :}
+{: if !$valid :}
     <div class="alert alert-warning small">{{ __('This reset link is invalid or has expired.') }}</div>
     <a href="{{ route('password.request') }}" class="btn btn-dark w-100">{{ __('Request a new link') }}</a>
-@else
+{: else :}
 <form method="POST" action="{{ route('password.update') }}" novalidate>
-    @csrf
+    {: csrf :}
     <input type="hidden" name="token" value="{{ $token }}">
     <input type="hidden" name="email" value="{{ $email }}">
     <div class="mb-3">
@@ -18,8 +18,8 @@
     <div class="mb-3">
         <label for="password" class="form-label">{{ __('New password') }}</label>
         <input type="password" id="password" name="password" autocomplete="new-password" autofocus
-               class="form-control @error('password') is-invalid @enderror">
-        @error('password') <div class="invalid-feedback">{{ $message }}</div> @enderror
+               class="form-control {: error 'password' :} is-invalid {: end :}">
+        {: error 'password' :} <div class="invalid-feedback">{{ $message }}</div> {: end :}
         <div class="form-text">{{ __('At least 8 characters.') }}</div>
     </div>
     <div class="mb-3">
@@ -28,5 +28,5 @@
     </div>
     <button type="submit" class="btn btn-dark w-100">{{ __('Reset password') }}</button>
 </form>
-@endif
-@endsection
+{: end :}
+{: end :}

@@ -14,10 +14,10 @@ class ViewEngineTest extends TestCase
         $this->dir = sys_get_temp_dir() . '/bongo_views_' . bin2hex(random_bytes(4));
         mkdir($this->dir . '/partials', 0777, true);
 
-        file_put_contents("$this->dir/layout.php", "<title>@yield('title')</title><main>@yield('content')</main>");
-        file_put_contents("$this->dir/page.php", "@extends('layout')\n@set('title', 'Home')\n@section('content')<p>{{ \$name }}</p>@include('partials.note')@endsection");
+        file_put_contents("$this->dir/layout.php", "<title>{: show 'title' :}</title><main>{: show 'content' :}</main>");
+        file_put_contents("$this->dir/page.php", "{: layout 'layout' :}\n{: block 'title', 'Home' :}\n{: block 'content' :}<p>{{ \$name }}</p>{: insert 'partials.note' :}{: end :}");
         file_put_contents("$this->dir/partials/note.php", "<small>note for {{ \$name }}</small>");
-        file_put_contents("$this->dir/plain.php", "<?php \$GLOBALS['view_runs'] = (\$GLOBALS['view_runs'] ?? 0) + 1; ?>Raw: {!! \$html !!}");
+        file_put_contents("$this->dir/plain.php", "<?php \$GLOBALS['view_runs'] = (\$GLOBALS['view_runs'] ?? 0) + 1; ?>Raw: {{! \$html }}");
 
         $this->engine = new ViewEngine($this->dir, $this->dir . '/cache');
     }
@@ -81,7 +81,7 @@ class ViewEngineTest extends TestCase
 
     public function testIncludeInALoopAndEditedTemplatesBetweenRenders(): void
     {
-        file_put_contents("$this->dir/loop.php", "@foreach(\$items as \$name)@include('partials.note')@endforeach");
+        file_put_contents("$this->dir/loop.php", "{: each \$items as \$name :}{: insert 'partials.note' :}{: end :}");
         $html = $this->engine->render('loop', ['items' => ['a', 'b', 'c']]);
         $this->assertSame('<small>note for a</small><small>note for b</small><small>note for c</small>', $html);
 

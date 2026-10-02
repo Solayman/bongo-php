@@ -1,8 +1,8 @@
-@extends('layouts.admin')
+{: layout 'layouts.admin' :}
 
-@set('title', __('Profile'))
+{: block 'title', __('Profile') :}
 
-@section('content')
+{: block 'content' :}
 <?php $invalid = fn(string $field) => error($field) ? 'is-invalid' : ''; ?>
 <div class="row g-3">
     <div class="col-lg-6">
@@ -10,8 +10,8 @@
             <div class="card-header bg-white fw-semibold">Account details</div>
             <div class="card-body">
                 <form method="POST" action="<?= route('profile.update') ?>" novalidate>
-                    @csrf
-                    @method('PUT')
+                    {: csrf :}
+                    {: method 'PUT' :}
                     <div class="mb-3">
                         <label class="form-label" for="name">Name</label>
                         <input class="form-control <?= $invalid('name') ?>" id="name" name="name" value="{{ old('name', $user->name) }}">
@@ -37,8 +37,8 @@
             <div class="card-header bg-white fw-semibold">Change password</div>
             <div class="card-body">
                 <form method="POST" action="<?= route('profile.password') ?>" novalidate>
-                    @csrf
-                    @method('PUT')
+                    {: csrf :}
+                    {: method 'PUT' :}
                     <div class="mb-3">
                         <label class="form-label" for="current_password">Current password</label>
                         <input class="form-control <?= $invalid('current_password') ?>" id="current_password" name="current_password" type="password" autocomplete="current-password">
@@ -60,4 +60,4 @@
         </div>
     </div>
 </div>
-@endsection
+{: end :}

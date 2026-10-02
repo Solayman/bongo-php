@@ -12,9 +12,9 @@
 
     <?php include base_path('resources/views/admin/include/select_panel.php'); ?>
 
-    <h2 class="mb-4 text-center text-white">🧹@yield('dashboard_menu_title') </h2>
+    <h2 class="mb-4 text-center text-white">🧹{: show 'dashboard_menu_title' :} </h2>
 
-    @yield('content')
+    {: show 'content' :}
 
     <div class="card shadow-sm">
         <div class="card-body">
@@ -24,7 +24,7 @@
     </div>
 </div>
 
-@yield('scripts')
+{: show 'scripts' :}
 
 </body>
 </html>

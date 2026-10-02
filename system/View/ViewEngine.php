@@ -75,11 +75,22 @@ class ViewEngine
         $this->extends = $layout;
     }
 
-    /** Used by compiled @include: the caller's variables plus $data */
+    /** Used by compiled {: insert :}: the caller's variables (minus engine internals) plus $data */
     public function includeView(array $scope, string $view, array $data = []): string
     {
-        unset($scope['__file'], $scope['__data'], $scope['__compiled'], $scope['__e'], $scope['__view']);
+        $scope = array_filter($scope, fn($key) => !str_starts_with((string) $key, '__'), ARRAY_FILTER_USE_KEY);
         return $this->render($view, array_merge($scope, $data));
+    }
+
+    /** Compile one template file; errors name the file, e.g. "products/index.php: Unclosed {: if :} ..." */
+    protected function compileFile(string $source): string
+    {
+        try {
+            return $this->compiler->compile((string) file_get_contents($source));
+        } catch (ViewException $e) {
+            $name = ltrim(str_replace('\\', '/', substr($source, strlen($this->viewPath))), '/');
+            throw new ViewException("$name: " . $e->getMessage(), 0, $e);
+        }
     }
 
     /** Compile a template (for tests and tools) */
@@ -168,7 +179,7 @@ class ViewEngine
             if ($__compiled !== null) {
                 include $__compiled;
             } else {
-                eval('?>' . $this->compiler->compile(file_get_contents($__file)));
+                eval('?>' . $this->compileFile($__file));
             }
         } catch (\Throwable $__e) {
             ob_end_clean();
@@ -199,7 +210,7 @@ class ViewEngine
             return null;
         }
 
-        $code = "<?php /* compiled from " . str_replace('*/', '', basename($source)) . " */ ?>\n" . $this->compiler->compile(file_get_contents($source));
+        $code = "<?php /* compiled from " . str_replace('*/', '', basename($source)) . " */ ?>\n" . $this->compileFile($source);
 
         // Write to a temporary file then rename, so a half-written file is never included
         $tmp = $target . '.' . bin2hex(random_bytes(4)) . '.tmp';
