@@ -20,7 +20,10 @@ use System\Http\UploadedFile;
  *        min:n, max:n, between:a,b, digits:n, in:a,b, not_in:a,b, alpha, alpha_num, alpha_dash,
  *        regex:pattern, starts_with:a,b, ends_with:a,b, date, before:date|field, after:date|field,
  *        same:field, different:field, confirmed, unique:table,column[,ignoreId], exists:table,column,
- *        file, image, mimes:jpg,png
+ *        file, image, mimes:jpg,png, accepted,
+ *        required_if:field,a,b  required_unless:field,a,b  required_with:a,b  required_with_all:a,b
+ *        required_without:a,b  required_without_all:a,b   ("items.*.x" refers to the same row)
+ * Custom: a closure fn($attribute, $value, $fail) { if (...) $fail('The :attribute ...'); } or a Rule object.
  * min/max/between compare: the value (numeric/integer), the count (array), kilobytes (file), or the length (text).
  */
 class Validator
@@ -111,8 +114,10 @@ class Validator
             || ($value instanceof UploadedFile && $value->error() === UPLOAD_ERR_NO_FILE);
 
         if ($isEmpty) {
-            if (in_array('required', $rules, true)) {
-                $this->fail($field, $pattern, 'required', null, "The :attribute field is required.");
+            $this->replace = [];
+            if ($required = $this->requiredBy($rules, $field)) {
+                [$name, $param, $message] = $required;
+                $this->fail($field, $pattern, $name, $param, $message);
             }
             return;
         }
@@ -120,14 +125,122 @@ class Validator
         $kind = $this->kind($rules, $value);
 
         foreach ($rules as $rule) {
-            [$name, $param] = array_pad(explode(':', (string) $rule, 2), 2, null);
             $this->replace = [];
+
+            // Custom rules: a closure fn($attribute, $value, $fail) or a Rule object
+            if ($rule instanceof \Closure || $rule instanceof Rule) {
+                $message = $this->checkCustom($rule, $field, $value);
+                if ($message !== null) {
+                    $this->fail($field, $pattern, 'custom', null, $message);
+                    return;
+                }
+                continue;
+            }
+
+            [$name, $param] = array_pad(explode(':', (string) $rule, 2), 2, null);
             $message = $this->check($name, $param, $value, $field, $kind);
             if ($message !== null) {
                 $this->fail($field, $pattern, $name, $param, $message);
                 return;
             }
         }
+    }
+
+    /**
+     * Why an empty field is required: [rule, param, message], or null when it may stay empty.
+     * required, accepted, required_if, required_unless, required_with(_all), required_without(_all)
+     */
+    protected function requiredBy(array $rules, string $field): ?array
+    {
+        foreach ($rules as $rule) {
+            if (!is_string($rule)) continue;
+            [$name, $param] = array_pad(explode(':', $rule, 2), 2, null);
+            $params = $param === null ? [] : explode(',', $param);
+
+            if ($name === 'required') {
+                return [$name, null, 'The :attribute field is required.'];
+            }
+            if ($name === 'accepted') {
+                return [$name, null, 'The :attribute must be accepted.'];
+            }
+            if (!str_starts_with($name, 'required_') || !$params) {
+                continue;
+            }
+
+            if ($name === 'required_if' || $name === 'required_unless') {
+                $other = $this->related(array_shift($params), $field);
+                $actual = self::get($this->data, $other);
+                $matches = in_array(is_bool($actual) ? ($actual ? 'true' : 'false') : (string) $actual, $params, true);
+                $this->replace = [':other' => $this->displayName($other), ':value' => implode(', ', $params), ':values' => implode(', ', $params)];
+                if ($name === 'required_if' && $matches) {
+                    return [$name, $param, 'The :attribute field is required when :other is :value.'];
+                }
+                if ($name === 'required_unless' && !$matches) {
+                    return [$name, $param, 'The :attribute field is required unless :other is in :values.'];
+                }
+                continue;
+            }
+
+            $others = array_map(fn($o) => $this->related($o, $field), $params);
+            $filled = array_filter($others, fn($o) => !self::isEmptyValue(self::get($this->data, $o)));
+            $this->replace = [':values' => implode(' / ', array_map([$this, 'displayName'], $others))];
+            $needed = match ($name) {
+                'required_with'        => count($filled) > 0,
+                'required_with_all'    => count($filled) === count($others),
+                'required_without'     => count($filled) < count($others),
+                'required_without_all' => count($filled) === 0,
+                default => throw new \InvalidArgumentException("Unknown validation rule [$name]"),
+            };
+            if ($needed) {
+                return [$name, $param, match ($name) {
+                    'required_with'        => 'The :attribute field is required when :values is present.',
+                    'required_with_all'    => 'The :attribute field is required when :values are present.',
+                    'required_without'     => 'The :attribute field is required when :values is not present.',
+                    'required_without_all' => 'The :attribute field is required when none of :values are present.',
+                }];
+            }
+        }
+        return null;
+    }
+
+    /** "items.*.name" next to "items.3.qty" → "items.3.name" (the same row) */
+    protected function related(string $other, string $field): string
+    {
+        if (!str_contains($other, '*')) {
+            return $other;
+        }
+        $indexes = array_values(array_filter(explode('.', $field), 'is_numeric'));
+        $i = 0;
+        return implode('.', array_map(fn($s) => $s === '*' ? ($indexes[$i++] ?? '*') : $s, explode('.', $other)));
+    }
+
+    protected static function isEmptyValue($value): bool
+    {
+        return $value === null || $value === '' || $value === []
+            || ($value instanceof UploadedFile && $value->error() === UPLOAD_ERR_NO_FILE);
+    }
+
+    /** A closure fn(string $attribute, $value, callable $fail) or a Rule; returns the message or null */
+    protected function checkCustom(\Closure|Rule $rule, string $field, $value): ?string
+    {
+        if ($rule instanceof Rule) {
+            return $rule->passes($field, $value, $this->data) ? null : $rule->message();
+        }
+        $message = null;
+        $rule($field, $value, function (string $text) use (&$message) {
+            $message ??= $text;
+        }, $this->data);
+        return $message;
+    }
+
+    /** The name shown in messages: attributes['category_id'] or "category id" */
+    protected function displayName(string $field, ?string $pattern = null): string
+    {
+        $segments = explode('.', $field);
+        $last = (string) end($segments);
+        $name = $this->attributes[$field] ?? ($pattern !== null ? ($this->attributes[$pattern] ?? null) : null) ?? $this->attributes[$last]
+            ?? str_replace('_', ' ', is_numeric($last) && count($segments) > 1 ? $segments[count($segments) - 2] : $last);
+        return function_exists('__') ? __($name) : $name;
     }
 
     /** How min/max/between measure the value */
@@ -141,18 +254,13 @@ class Validator
 
     protected function fail(string $field, string $pattern, string $rule, ?string $param, string $default): void
     {
-        $segments = explode('.', $field);
-        $last = (string) end($segments);
-        $attribute = $this->attributes[$field] ?? $this->attributes[$pattern] ?? $this->attributes[$last]
-            ?? str_replace('_', ' ', is_numeric($last) && count($segments) > 1 ? $segments[count($segments) - 2] : $last);
-
         $message = $this->messages["$field.$rule"] ?? $this->messages["$pattern.$rule"] ?? $this->messages[$rule] ?? $default;
 
         // Messages are templates ("The :attribute must be at least :param characters."),
         // so they can be translated in lang/{locale}.json before the values are filled in
         $translate = function_exists('__') ? '__' : fn($s) => $s;
         $this->errors[$field] = strtr($translate($message), [
-            ':attribute' => $translate($attribute),
+            ':attribute' => $this->displayName($field, $pattern),
             ':param' => (string) $param,
         ] + $this->replace);
     }
@@ -166,7 +274,16 @@ class Validator
             case 'nullable':
             case 'sometimes':
             case 'bail':
-                return null;
+            case 'required_if':
+            case 'required_unless':
+            case 'required_with':
+            case 'required_with_all':
+            case 'required_without':
+            case 'required_without_all':
+                return null;   // only matter when the field is empty (see requiredBy)
+
+            case 'accepted':
+                return in_array($value, [true, 1, '1', 'yes', 'on', 'true'], true) ? null : 'The :attribute must be accepted.';
 
             case 'string':
                 return is_string($value) ? null : 'The :attribute must be text.';
