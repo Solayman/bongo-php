@@ -29,7 +29,7 @@ class CustomerController extends Controller
             $bindings
         );
 
-        echo $this->view('customers.index', ['customers' => $customers, 'search' => $search]);
+        return $this->view('customers.index', ['customers' => $customers, 'search' => $search]);
     }
 
     public function show($id)
@@ -39,7 +39,7 @@ class CustomerController extends Controller
 
         $orders = DB::table('orders')->where('user_id', $customer->id)->orderBy('created_at', 'DESC')->get();
 
-        echo $this->view('customers.show', [
+        return $this->view('customers.show', [
             'customer' => $customer,
             'orders'   => $orders,
             'spent'    => DB::table('orders')->where('user_id', $customer->id)->where('status', '!=', 'cancelled')->sum('total'),

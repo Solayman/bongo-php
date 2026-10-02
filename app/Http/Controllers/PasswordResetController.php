@@ -12,7 +12,7 @@ class PasswordResetController extends Controller
     /** GET /forgot-password */
     public function showForgot()
     {
-        echo $this->view('auth.forgot-password');
+        return $this->view('auth.forgot-password');
     }
 
     /** POST /forgot-password */
@@ -35,7 +35,7 @@ class PasswordResetController extends Controller
     public function showReset(string $token)
     {
         $email = (string) Request::query('email', '');
-        echo $this->view('auth.reset-password', [
+        return $this->view('auth.reset-password', [
             'token' => $token,
             'email' => $email,
             'valid' => $email !== '' && $this->broker->tokenIsValid($email, $token),

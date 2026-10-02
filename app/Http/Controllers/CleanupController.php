@@ -10,7 +10,7 @@ class CleanupController extends Controller
     public function dashboard()
     {
 
-        echo $this->view('admin.extends.dashboard', [
+        return $this->view('admin.extends.dashboard', [
             'title' => 'OC Cleanup Dashboard',
             'user' => 'Solayman'
         ]);

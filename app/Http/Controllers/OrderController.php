@@ -24,7 +24,7 @@ class OrderController extends Controller
             $query->whereRaw('orders.order_number LIKE ? OR users.name LIKE ?', ["%$search%", "%$search%"]);
         }
 
-        echo $this->view('orders.index', [
+        return $this->view('orders.index', [
             'orders'   => $query->paginate(15),
             'filters'  => ['status' => $status, 'q' => $search],
             'statuses' => Order::STATUSES,
@@ -39,7 +39,7 @@ class OrderController extends Controller
             ->where('orders.id', (int) $id)
             ->first() ?? abort(404, 'Order not found');
 
-        echo $this->view('orders.show', [
+        return $this->view('orders.show', [
             'order'    => $order,
             'items'    => DB::table('order_items')->where('order_id', $order->id)->get(),
             'statuses' => Order::STATUSES,

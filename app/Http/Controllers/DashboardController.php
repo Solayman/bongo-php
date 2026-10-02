@@ -47,6 +47,6 @@ class DashboardController extends Controller
 
         $lowStock = DB::table('products')->where('stock', '<', 10)->orderBy('stock')->limit(5)->get();
 
-        echo $this->view('dashboard.index', compact('stats', 'recentOrders', 'statusCounts', 'topProducts', 'lowStock'));
+        return $this->view('dashboard.index', compact('stats', 'recentOrders', 'statusCounts', 'topProducts', 'lowStock'));
     }
 }

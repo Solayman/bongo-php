@@ -325,7 +325,7 @@ class ProductController extends Controller
     public function index()
     {
         $products = Product::query()->where('status', 'active')->orderBy('id', 'DESC')->paginate(10);
-        echo $this->view('products.index', ['products' => $products, 'q' => Request::query('q')]);
+        return $this->view('products.index', ['products' => $products, 'q' => Request::query('q')]);
     }
 
     public function store()

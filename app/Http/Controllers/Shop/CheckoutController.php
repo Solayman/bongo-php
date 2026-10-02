@@ -18,7 +18,7 @@ class CheckoutController extends Controller
         if ($this->cart->isEmpty()) {
             redirect(route('shop.cart'));
         }
-        echo $this->view('shop.checkout', [
+        return $this->view('shop.checkout', [
             'lines'    => $this->cart->lines(),
             'total'    => $this->cart->total(),
             'customer' => Auth::guard('customer')->user(),
