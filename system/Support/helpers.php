@@ -150,9 +150,9 @@ if (!function_exists('method_field')) {
 }
 
 if (!function_exists('auth')) {
-    /** Currently logged in user (stdClass) or null */
-    function auth() {
-        return Auth::user();
+    /** The signed-in user of the default guard, or of a named one: auth('customer') */
+    function auth(?string $guard = null) {
+        return $guard === null ? Auth::user() : Auth::guard($guard)->user();
     }
 }
 

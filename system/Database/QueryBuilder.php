@@ -27,6 +27,7 @@ class QueryBuilder
     protected ?int $limit = null;
     protected ?int $offset = null;
     protected bool $asObject = true;
+    protected ?string $lock = null;
     /** Model class whose instances get() returns (set by Model::query()) */
     protected ?string $model = null;
     protected array $eager = [];
@@ -254,6 +255,23 @@ class QueryBuilder
         return $this->orderBy($column, 'ASC');
     }
 
+    /**
+     * Lock the selected rows until the transaction ends (SELECT ... FOR UPDATE).
+     * Use inside DB::transaction() to stop two requests from changing the same rows at once.
+     */
+    public function lockForUpdate(): self
+    {
+        $this->lock = ' FOR UPDATE';
+        return $this;
+    }
+
+    /** Shared lock: others can read but not change the rows until the transaction ends */
+    public function sharedLock(): self
+    {
+        $this->lock = ' LOCK IN SHARE MODE';
+        return $this;
+    }
+
     public function limit(int $limit): self
     {
         $this->limit = $limit;
@@ -324,7 +342,7 @@ class QueryBuilder
         if ($this->offset !== null) {
             $sql .= " OFFSET {$this->offset}";
         }
-        return $sql;
+        return $sql . ($this->lock ?? '');
     }
 
     /** All bindings in SQL order */

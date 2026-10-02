@@ -126,6 +126,13 @@ register_shutdown_function(function () {
     }
 });
 
+// ---------------------------
+// Application boot file: register event listeners, view directives, container bindings
+// ---------------------------
+if (is_file(BASE_PATH . '/app/bootstrap.php')) {
+    require BASE_PATH . '/app/bootstrap.php';
+}
+
 // Debug mode: record queries for the debug footer (see debug_stats())
 define('BONGO_START', $_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true));
 if (config('app.debug') && PHP_SAPI !== 'cli') {

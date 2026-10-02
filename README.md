@@ -8,7 +8,8 @@ cp .env.example .env            # set APP_URL and DB_* (Windows: copy .env.examp
 php bongo key:generate
 php bongo migrate
 php bongo db:seed               # demo data (e-commerce test app)
-php bongo serve                 # http://127.0.0.1:8000  ·  admin@example.com / password
+php bongo serve                 # admin: http://127.0.0.1:8000 (admin@example.com / password)
+                                # shop:  http://127.0.0.1:8000/shop (rahim1@example.com / password)
 ```
 
 Requires PHP 8.0+ with `pdo_mysql` and `openssl`, plus MySQL or MariaDB. Composer packages are optional: `vendor/autoload.php` is loaded if it exists.

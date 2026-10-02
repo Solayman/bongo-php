@@ -11,8 +11,9 @@ class RedirectIfAuthenticated
     public function handle(string ...$guards): void
     {
         foreach ($guards ?: [Auth::defaultGuard()] as $name) {
-            if (Auth::guard($name)->check()) {
-                redirect(url('/'));
+            $guard = Auth::guard($name);
+            if ($guard->check()) {
+                redirect(url((string) $guard->config('home', '/')));
             }
         }
     }

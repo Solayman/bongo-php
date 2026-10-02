@@ -5,10 +5,13 @@ return [
 
     'guards' => [
         // Browser sessions (cookie)
-        'web' => ['driver' => 'session', 'provider' => 'users', 'login_url' => '/login'],
+        'web' => ['driver' => 'session', 'provider' => 'users', 'login_url' => '/login', 'home' => '/'],
 
         // API clients: "Authorization: Bearer <JWT>"
         'api' => ['driver' => 'jwt', 'provider' => 'users'],
+
+        // Storefront shoppers: their own session key, so they never reach the admin panel
+        'customer' => ['driver' => 'session', 'provider' => 'customers', 'login_url' => '/shop/login', 'home' => '/shop'],
     ],
 
     // "Forgot password": which provider, and how long a reset link works (minutes)
@@ -17,6 +20,7 @@ return [
     // Where users come from: a table plus optional fixed conditions
     'providers' => [
         'users' => ['table' => 'users'],
+        'customers' => ['table' => 'users', 'where' => ['role' => 'customer']],
         // 'admins' => ['table' => 'users', 'where' => ['role' => 'admin']],
     ],
 ];
