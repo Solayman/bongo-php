@@ -8,7 +8,7 @@
     <select name="status" class="form-select" style="width: 160px;">
         <option value="">All statuses</option>
         @foreach($statuses as $status)
-            <option value="{{ $status }}" <?= $filters['status'] === $status ? 'selected' : '' ?>>{{ ucfirst($status) }}</option>
+            <option value="{{ $status }}" @selected($filters['status'] === $status)>{{ ucfirst($status) }}</option>
         @endforeach
     </select>
     <button class="btn btn-outline-secondary" type="submit">Filter</button>

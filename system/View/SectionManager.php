@@ -10,6 +10,7 @@ class SectionManager
     protected array $sectionStack = [];
     protected array $pushes = [];
     protected array $pushStack = [];
+    protected array $onceSeen = [];
 
     /** @section('name') starts capturing; @section('name', 'text') sets it directly */
     public function start(string $name, ?string $content = null): void
@@ -66,9 +67,18 @@ class SectionManager
         return implode('', $this->pushes[$stack] ?? []);
     }
 
+    /** @once: true the first time this id is seen on the current page */
+    public function once(string $id): bool
+    {
+        if (isset($this->onceSeen[$id])) {
+            return false;
+        }
+        return $this->onceSeen[$id] = true;
+    }
+
     /** Fresh state for a new page (called by ViewEngine for each top-level render) */
     public function reset(): void
     {
-        $this->sections = $this->sectionStack = $this->pushes = $this->pushStack = [];
+        $this->sections = $this->sectionStack = $this->pushes = $this->pushStack = $this->onceSeen = [];
     }
 }

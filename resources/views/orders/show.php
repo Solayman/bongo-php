@@ -15,7 +15,7 @@
         @method('PATCH')
         <select name="status" class="form-select" aria-label="Order status">
             @foreach($statuses as $status)
-                <option value="{{ $status }}" <?= $order->status === $status ? 'selected' : '' ?>>{{ ucfirst($status) }}</option>
+                <option value="{{ $status }}" @selected($order->status === $status)>{{ ucfirst($status) }}</option>
             @endforeach
         </select>
         <button class="btn btn-dark text-nowrap" type="submit">Update status</button>

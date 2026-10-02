@@ -16,6 +16,11 @@ class ProductTest extends HttpTestCase
         $this->get('/products')->assertStatus(200)->assertSee('BG-1019')->assertSee('Page 1 of 2');
         $this->get('/products?page=2')->assertStatus(200)->assertSee('BG-1000');
         $this->get('/products?q=Yoga')->assertSee('Yoga Mat')->assertDontSee('Cricket Bat');
+
+        // The filters keep the chosen values (@selected)
+        $this->get('/products?status=draft')
+            ->assertSee('<option value="draft" selected>Draft</option>')
+            ->assertSee('<option value="active" >Active</option>');
     }
 
     public function testCreateValidatesInput(): void
