@@ -1523,4 +1523,3 @@ The e-commerce app is how BongoMVC is tested the way a real project would use it
 
 The admin and customer logins are separate guards, so one browser can be signed in to both. Demo customer: `rahim1@example.com` / `password`.
 
-`/cleanup` is the older sample cleanup tool. It requires login.
