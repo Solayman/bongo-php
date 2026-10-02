@@ -169,6 +169,15 @@ class Runner
         $null = DIRECTORY_SEPARATOR === '\\' ? 'NUL' : '/dev/null';
         self::$server = proc_open($cmd, [0 => ['pipe', 'r'], 1 => ['file', $null, 'w'], 2 => ['file', $null, 'w']], $pipes, BASE_PATH, $env);
 
+        // A fatal error or exit() inside a test ends this process early: never leave the server running
+        register_shutdown_function(static function () {
+            if (self::$server) {
+                echo "\n\033[31mThe test run stopped early (a fatal error or exit() inside a test). The test server was stopped.\033[0m\n";
+                self::stopServer();
+                exit(1);   // an interrupted run never counts as passed
+            }
+        });
+
         for ($i = 0; $i < 50; $i++) {
             $conn = @fsockopen('127.0.0.1', $port, $errno, $errstr, 0.1);
             if ($conn) {
