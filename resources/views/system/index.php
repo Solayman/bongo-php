@@ -255,4 +255,24 @@
         </table>
     </div>
 </div>
+
+<div class="card mt-4" id="uploads">
+    <div class="card-header bg-white fw-medium">Upload test</div>
+    <div class="card-body">
+        <p class="text-secondary small mb-2">Choose up to 5 images to check multiple uploads and the file rules (<code>photos.*</code>: image, at most 2 MB, at most 6000 px wide or high). The real content is checked, so a renamed PHP file is rejected. Nothing is stored.</p>
+        <form method="POST" action="<?= url('/system/upload-test') ?>" enctype="multipart/form-data" class="d-flex flex-wrap gap-2 align-items-start">
+            @csrf
+            <div>
+                <input type="file" name="photos[]" multiple accept="image/*" class="form-control form-control-sm @error('photos') is-invalid @enderror">
+                @error('photos') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                @foreach(errors() as $field => $text)
+                    @if(str_starts_with($field, 'photos.'))
+                        <div class="text-danger small mt-1">File {{ (int) substr($field, 7) + 1 }}: {{ $text }}</div>
+                    @endif
+                @endforeach
+            </div>
+            <button class="btn btn-sm btn-outline-dark" type="submit">Check files</button>
+        </form>
+    </div>
+</div>
 @endsection

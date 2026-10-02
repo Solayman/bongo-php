@@ -102,6 +102,14 @@ abstract class FormRequest implements WhenResolved
         return $file instanceof UploadedFile ? $file : null;
     }
 
+    /** The validated uploads of a multi-file field (photos[]), as a list */
+    public function files(string $key): array
+    {
+        $files = $this->validated[$key] ?? [];
+        $files = $files instanceof UploadedFile ? [$files] : (is_array($files) ? $files : []);
+        return array_values(array_filter($files, fn($f) => $f instanceof UploadedFile));
+    }
+
     /** A route parameter: $this->route('product') on /products/{product} */
     public function route(string $key, $default = null)
     {

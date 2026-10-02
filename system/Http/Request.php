@@ -130,36 +130,65 @@ class Request
         return '/' . trim($uri, '/');
     }
 
-    /** One uploaded file, or null: Request::file('photo') */
+    /** One uploaded file, or null: Request::file('photo'). For <input name="photos[]" multiple> use files('photos'). */
     public static function file(string $key): ?UploadedFile
     {
-        $file = $_FILES[$key] ?? null;
-        if (!is_array($file) || !isset($file['error']) || is_array($file['error'])) {
-            return null;
-        }
-        // Browsers send an empty file field when nothing was chosen: that is "no upload", not an upload
-        if ((int) $file['error'] === UPLOAD_ERR_NO_FILE) {
-            return null;
-        }
-        return UploadedFile::fromArray($file);
+        $file = self::normalizeUpload($_FILES[$key] ?? null);
+        return $file instanceof UploadedFile ? $file : null;
     }
 
     public static function hasFile(string $key): bool
     {
-        $file = self::file($key);
-        return $file !== null && $file->error() !== UPLOAD_ERR_NO_FILE;
+        return self::files($key) !== [];
     }
 
-    /** Every single-file upload: [field => UploadedFile] */
-    public static function files(): array
+    /**
+     * Uploads. With a key: the files of that field as a list (photos[] → [UploadedFile, ...];
+     * a single-file field gives a list of one). Without: every field, [field => UploadedFile | list].
+     */
+    public static function files(?string $key = null): array
     {
-        $files = [];
-        foreach (array_keys($_FILES) as $key) {
-            if ($file = self::file((string) $key)) {
-                $files[$key] = $file;
+        if ($key !== null) {
+            $files = self::normalizeUpload($_FILES[$key] ?? null);
+            return $files instanceof UploadedFile ? [$files] : ($files ?? []);
+        }
+
+        $all = [];
+        foreach ($_FILES as $field => $spec) {
+            $files = self::normalizeUpload($spec);
+            if ($files !== null) {
+                $all[$field] = $files;
             }
         }
-        return $files;
+        return $all;
+    }
+
+    /**
+     * $_FILES keeps lists "inside out" (name[0], type[0] ...); turn them into UploadedFile objects.
+     * Fields left empty (UPLOAD_ERR_NO_FILE: nothing was chosen) are skipped.
+     */
+    protected static function normalizeUpload($spec): UploadedFile|array|null
+    {
+        if (!is_array($spec) || !array_key_exists('error', $spec)) {
+            return null;
+        }
+        if (!is_array($spec['error'])) {
+            return (int) $spec['error'] === UPLOAD_ERR_NO_FILE ? null : UploadedFile::fromArray($spec);
+        }
+
+        $list = [];
+        foreach (array_keys($spec['error']) as $index) {
+            $item = [];
+            foreach (['name', 'type', 'tmp_name', 'error', 'size', 'full_path'] as $part) {
+                if (isset($spec[$part]) && is_array($spec[$part]) && array_key_exists($index, $spec[$part])) {
+                    $item[$part] = $spec[$part][$index];
+                }
+            }
+            if (($file = self::normalizeUpload($item)) !== null) {
+                $list[$index] = $file;
+            }
+        }
+        return $list ?: null;
     }
 
     /** All input: query string, form fields and a JSON body; strings trimmed */

@@ -64,6 +64,26 @@ class SystemController extends Controller
     /**
      * Writes one entry so a person can see logging working end to end
      */
+    /**
+     * Try multiple uploads and the file rules by hand: validates photos[] and reports
+     * what it found. Nothing is stored.
+     */
+    public function uploadTest()
+    {
+        $this->validate([
+            'photos'   => 'required|array|max:5',
+            'photos.*' => 'image|max:2048|dimensions:max_width=6000,max_height=6000',
+        ], null, ['photos.required' => 'Choose at least one image.']);
+
+        $lines = array_map(function ($file) {
+            [$w, $h] = getimagesize($file->path()) ?: [0, 0];
+            return sprintf('%s (%s, %d KB, %dx%d px)', $file->clientName(), $file->mimeType(), (int) ceil($file->size() / 1024), $w, $h);
+        }, Request::files('photos'));
+
+        flash('success', count($lines) . ' image(s) passed validation: ' . implode('; ', $lines) . '. Nothing was stored.');
+        redirect(url('/system#uploads'));
+    }
+
     public function logTest()
     {
         Log::info('Test log entry written from the System status page by user {user_id}', ['user_id' => Auth::id()]);

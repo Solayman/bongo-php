@@ -223,6 +223,9 @@ Delete the generated test files afterwards.
 
 - [ ] **Framework self-check:** Routing, Environment, Config, View engine, Session and Database are all **OK**. "Composer (optional)" shows **Not installed**, which is expected because BongoMVC needs no Composer.
 - [ ] **Tables:** lists your database tables, with approximate row counts.
+- [ ] **Upload test:** choose 2–3 images and click **Check files**. A green message lists each file with its type, size in KB and pixel size.
+- [ ] Rename a text file to `fake.png` and include it. The page says **File N: The photos must be an image**, naming the position of the bad file.
+- [ ] Click **Check files** with nothing chosen. The page says **Choose at least one image.**
 
 ## 9b. Storefront (`/shop`)
 
