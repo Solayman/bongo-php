@@ -15,6 +15,14 @@ class SecurityCheck
             $results[] = compact('check', 'status', 'detail');
         };
 
+        // Database schema
+        $pending = \System\Database\MigrationHint::pending();
+        if ($pending) {
+            $add('Database migrations', 'fail', count($pending) . ' pending: ' . implode(', ', $pending) . '. Run: php bongo migrate');
+        } else {
+            $add('Database migrations', 'ok', 'All migrations have run.');
+        }
+
         // Debug mode
         if (config('app.debug')) {
             $add('Debug mode', $production ? 'fail' : 'warn', $production

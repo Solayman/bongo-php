@@ -80,6 +80,12 @@ class Message
         return ($this->mailer ?? Mail::mailer())->send($this);
     }
 
+    /** Send later through the queue (right away with the "sync" queue driver) */
+    public function queue(int $delaySeconds = 0): void
+    {
+        \System\Queue\Queue::push(new SendQueuedMail($this->toArray()), $delaySeconds);
+    }
+
     public function toArray(): array
     {
         return [

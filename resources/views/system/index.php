@@ -138,6 +138,51 @@
     </div>
 </div>
 
+<div class="row g-3 mt-1" id="queue">
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header bg-white d-flex justify-content-between">
+                <span class="fw-semibold">Queue</span>
+                <span class="badge text-bg-light border">{{ $queue['driver'] }}</span>
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between"><span>Waiting</span><span class="num">{{ $queue['pending'] }}</span></li>
+                <li class="list-group-item d-flex justify-content-between"><span>Delayed</span><span class="num">{{ $queue['delayed'] }}</span></li>
+                <li class="list-group-item d-flex justify-content-between"><span>Running</span><span class="num">{{ $queue['reserved'] }}</span></li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span>Failed</span>
+                    <span class="num @if($queue['failed']) text-danger fw-semibold @endif">{{ $queue['failed'] }}</span>
+                </li>
+            </ul>
+            <div class="card-footer bg-white small text-secondary">
+                @if($queue['driver'] === 'sync')
+                    Jobs run immediately. Set <code>QUEUE_DRIVER=database</code> and run <code>php bongo queue:work</code> for background jobs.
+                @else
+                    Worker: <code>php bongo queue:work</code> · failed: <code>php bongo queue:failed</code>
+                @endif
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card h-100">
+            <div class="card-header bg-white d-flex justify-content-between">
+                <span class="fw-semibold">Scheduled tasks</span>
+                <span class="small text-secondary">cron: <code>* * * * * php bongo schedule:run</code></span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light"><tr><th>Task</th><th>Cron</th><th>Next run</th></tr></thead>
+                    <tbody>
+                    @foreach($tasks as $task)
+                        <tr><td>{{ $task['name'] }}</td><td><code>{{ $task['cron'] }}</code></td><td class="small text-secondary">{{ $task['next'] ?? '' }}</td></tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="card mt-3" id="deployment">
     <div class="card-header bg-white d-flex justify-content-between">
         <span class="fw-semibold">Deployment checklist</span>

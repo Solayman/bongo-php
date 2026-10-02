@@ -19,6 +19,6 @@ class SendOrderConfirmation
         Mail::to($customer->email, $customer->name)
             ->subject(__('Order :number confirmed', ['number' => $order->order_number]))
             ->view('emails.order-confirmation', ['order' => $order, 'items' => $order->items, 'customer' => $customer])
-            ->send();
+            ->queue();   // the customer does not wait for the mail server
     }
 }

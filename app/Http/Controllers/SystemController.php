@@ -49,6 +49,11 @@ class SystemController extends Controller
             ],
             'security'   => $this->securityChecks(),
             'deployment' => \System\Security\SecurityCheck::run(),
+            'queue'      => \System\Queue\Queue::stats() + ['driver' => \System\Queue\Queue::driver()],
+            'tasks'      => array_map(fn($t) => [
+                'name' => $t->getName(), 'cron' => $t->expression(),
+                'next' => $t->nextRun(new \DateTimeImmutable())?->format('Y-m-d H:i'),
+            ], \System\Scheduling\Schedule::load()->tasks()),
             'migrations' => $this->migrationStatus(),
             'logFile'    => $this->relativePath(Logger::instance()->file()),
             'logLevel'   => $logLevel,

@@ -36,6 +36,8 @@ class ExceptionPage
                 . ' <span class="where">' . $h($this->relative($p->getFile())) . ':' . $p->getLine() . '</span></div>';
         }
 
+        $hint = \System\Database\MigrationHint::for($e);
+        $hintHtml = $hint ? '<div class="hint"><strong>How to fix:</strong> ' . $h($hint) . '</div>' : '';
         $title = $h(get_class($e));
         $message = $h($e->getMessage());
         $location = $h($this->relative($e->getFile())) . ':' . $e->getLine();
@@ -62,6 +64,7 @@ class ExceptionPage
 h1{margin:4px 0 6px;font-size:20px;word-break:break-word}.msg{font-size:17px;color:#d1242f;margin:0 0 8px;word-break:break-word}
 .where{color:#57606a;font-family:ui-monospace,Consolas,monospace;font-size:12px;margin-left:8px}
 .prev{margin-top:6px;color:#57606a}
+.hint{margin-top:14px;padding:10px 14px;background:#fff8c5;border:1px solid #d4a72c;border-radius:6px;font-size:14px}
 h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:#57606a;margin:28px 0 8px}
 .code{background:#1e1f2b;border-radius:8px;overflow:auto;font:12.5px/1.6 ui-monospace,Consolas,monospace;color:#cdd6f4;margin:8px 0}
 .code .ln{display:flex}.code .no{flex:0 0 52px;text-align:right;padding-right:12px;color:#6c7086;user-select:none}
@@ -75,7 +78,7 @@ td:first-child{width:220px;color:#57606a;font-family:system-ui,sans-serif}tr:fir
 .empty{color:#8c959f;font-style:italic}.note{color:#8c959f;font-size:12px;margin-top:24px}
 </style></head><body><div class="wrap">
 <div class="head"><div class="status">{$this->status} · Server error</div><h1>{$title}</h1><p class="msg">{$message}</p>
-<div class="where" style="margin-left:0">{$location}</div>{$previous}</div>
+<div class="where" style="margin-left:0">{$location}</div>{$previous}{$hintHtml}</div>
 <h2>Source</h2>{$main}
 <h2>Stack trace</h2>{$frameHtml}
 <h2>Request</h2>{$request}
