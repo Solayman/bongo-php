@@ -23,7 +23,7 @@ Built in:
 | Container & DI | Service container (`app()`, `bind/singleton/instance`, autowiring), controller method injection, route model binding (`edit(Product $product)` → 404 if missing) |
 | Generators | `make:controller [--api]`, `make:model [--migration]`, `make:middleware`, `make:test [--unit]`, `make:migration` |
 | Logging | Built-in daily log files in `storage/logs`, levels, secret masking; framework events logged automatically |
-| CLI | `php bongo serve / tinker / route:list / make:* / view:clear / cache:clear / migrate / migrate:status / migrate:rollback / make:migration / db:seed / key:generate / log:clear / test` |
+| CLI | `php bongo serve / tinker / route:list / make:* / view:cache / view:clear / cache:clear / migrate / migrate:status / migrate:rollback / make:migration / db:seed / key:generate / log:clear / test` |
 
 The repository currently includes an **e-commerce admin panel** (products, categories, orders, customers). It is the test application used to exercise the framework end to end, and it will be removed later so the framework ships fresh.
 
@@ -471,6 +471,14 @@ Uploads are safe by default:
 
 Templates are `.php` files in `resources/views`, named with dots: `products.index` → `resources/views/products/index.php`. Plain PHP always works; the directives below are shorter and safer.
 
+A controller action returns its view. If you leave out the name, the conventional view for the action is used:
+
+```php
+return $this->view('products.form', ['product' => $product]);  // explicit name
+return $this->view(data: ['products' => $products]);           // ProductController::index → products.index
+// Shop\CatalogController::show → shop.catalogs.show, OrderItemController::bulkEdit → order_items.bulk-edit
+```
+
 ```php
 @extends('layouts.admin')
 @section('title', 'Products')
@@ -551,6 +559,8 @@ System\View\ViewCompiler::directive('money', fn($args) => "<?php echo money($arg
 The first render compiles a template to plain PHP in `storage/cache/views`. Later renders `include` that file, so there is no parsing and PHP's opcache can keep it in memory.
 - A template is recompiled automatically when its modification time or size changes, and the old compiled copy is deleted.
 - `php bongo view:clear` empties the cache.
+- `php bongo view:cache` compiles every template ahead of time and checks each one with `php -l`. Run it when you deploy: no visitor pays the first compile, and a broken template fails the deploy (exit code 1, with the view name) instead of showing a 500.
+- Within one page, each template is located and checked once. An `@include` inside a `@foreach` over 100 rows costs one file lookup, not 100. Long-running processes such as `queue:work` still pick up edited templates on their next render.
 - `VIEW_CACHE=false` turns caching off (only useful when debugging the compiler).
 - User data is never compiled as template code: `{{ $name }}` with the value `{{ phpversion() }}` prints that text.
 
