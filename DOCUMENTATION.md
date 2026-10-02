@@ -12,7 +12,7 @@ Built in:
 | Database | Query builder (grouped `orWhere`, joins, `groupBy/having`, aggregates, `pluck/value/exists`, `increment`, `chunk`, pagination), transactions with savepoints, query log, models with relations and eager loading |
 | Schema & migrations | PHP migrations with a schema builder; each run is tracked in the database; rollback |
 | Sessions | Flash messages, old input, CSRF tokens |
-| Validation | `required`, `email`, `min`, `max`, `unique`, `exists`, `confirmed`, … |
+| Validation & uploads | 35+ rules (dates, regex, files, `unique`, …), `items.*.field` wildcards, custom messages; safe uploads (`$file->store()`, `Storage::url()`) |
 | Auth & security | Multiple guards (session, JWT) and providers, `auth:api` middleware, own HS256 JWT with refresh and revocation, peppered Argon2id passwords, AES-256-GCM encryption, login throttling |
 | Testing | `php bongo test`: unit + HTTP tests on a separate test database |
 | Debugging | `dump()`/`dd()` for browser, CLI and JSON; developer error page with source and stack trace; `php bongo tinker` |
@@ -107,11 +107,12 @@ system/                  Framework core (namespace System\)
   Cache/                 Cache, FileStore, RateLimiter
   Console/               Generator (make:*)
   Debug/                 Dumper (dump/dd), ExceptionPage (debug error page)
-  Http/                  Request, Session, HttpException, ErrorPage
+  Http/                  Request, Session, UploadedFile, HttpException, ErrorPage
   Http/Middleware/       Cors, SecurityHeaders, StartSession, ThrottleRequests
   Log/                   Logger, Log
   Routing/               Router, Route, RouteDefinition, PendingGroup
   Security/              Key, Hash, Crypt, Jwt
+  Storage/               Storage (public uploads)
   Support/helpers.php    Framework helpers
   Testing/               TestCase, HttpTestCase, TestResponse, Runner
   Validation/Validator.php
@@ -340,9 +341,70 @@ class ProductController extends Controller
 }
 ```
 
-**Request:** `Request::all()`, `Request::input('key', $default)`, `Request::only([...])`, `Request::query('key')`, `Request::method()`, `Request::path()`. String input is trimmed, and empty strings count as missing.
+**Request:** `Request::all()` (query, form and JSON body), `Request::input('key', $default)`, `Request::only([...])`, `Request::query('key')`, `Request::file('photo')`, `Request::method()`, `Request::path()`, `Request::header('X')`, `Request::wantsJson()`. String input is trimmed, and empty strings count as missing.
 
-**Validation rules:** `required`, `nullable`, `string`, `email`, `numeric`, `integer`, `min:n`, `max:n` (length for text, value for `numeric`/`integer`), `in:a,b`, `confirmed` (needs `<field>_confirmation`), `unique:table,column[,ignoreId]`, `exists:table,column`. `Validator::make($data, $rules)` returns `field => first error`.
+### Validation
+
+`$this->validate($rules)` in a controller checks the request (fields and uploaded files).
+- **On failure:** browsers are sent back with the errors and their old input; API clients get **422** JSON.
+- **On success:** it returns only the validated fields.
+
+```php
+$data = $this->validate([
+    'name'        => 'required|string|max:150',
+    'email'       => 'required|email|unique:users,email',
+    'website'     => 'nullable|url',
+    'starts_at'   => 'required|date|after:today',
+    'ends_at'     => 'required|date|after:starts_at',      // compare with another field
+    'code'        => ['required', 'regex:/^[A-Z]{2}-\d+$/'], // use an array when a rule contains "|"
+    'photo'       => 'nullable|image|max:2048',             // KB
+    'items'       => 'required|array|min:1',
+    'items.*.qty' => 'required|integer|between:1,99',       // every element of a list
+]);
+```
+
+Outside controllers: `System\Validation\Validator::make($data, $rules, $messages, $attributes)` returns `field => first error`.
+
+| Rules | |
+| --- | --- |
+| Presence | `required`, `nullable`, `sometimes` (validate only if the field was sent) |
+| Types | `string`, `numeric`, `integer`, `boolean`, `array`, `email`, `url`, `date` |
+| Size | `min:n`, `max:n`, `between:a,b`. These compare the value (with `numeric`/`integer`), the item count (arrays), kilobytes (files), or otherwise the length. |
+| Format | `digits:n`, `alpha`, `alpha_num`, `alpha_dash`, `regex:pattern`, `starts_with:a,b`, `ends_with:a,b` |
+| Choices | `in:a,b,c`, `not_in:a,b` |
+| Comparisons | `same:field`, `different:field`, `confirmed` (needs `<field>_confirmation`), `before:date|field`, `after:date|field` |
+| Database | `unique:table,column[,ignoreId]`, `exists:table,column` |
+| Files | `file`, `image`, `mimes:jpg,png,pdf` |
+
+**Custom messages and names:**
+
+```php
+Validator::make($data, $rules,
+    ['email.required' => 'We need your :attribute to send the receipt.', 'min' => ':attribute is too small'],
+    ['qty' => 'quantity']);   // "The quantity must be at least 1."
+```
+
+### File uploads
+
+```php
+use System\Http\Request;
+use System\Storage\Storage;
+
+$data = $this->validate(['photo' => 'required|image|max:2048']);
+$path = $data['photo']->store('products');   // "products/3f9c…e1.jpg" (in public/storage)
+$product->update(['image' => $path]);
+
+Storage::url($path);       // http://…/storage/products/3f9c…e1.jpg
+Storage::delete($old);     // when replacing
+Request::file('photo');    // UploadedFile or null; Request::hasFile('photo')
+```
+
+Uploads are safe by default:
+- **The real content type is checked** (with `fileinfo`), so a PHP script renamed to `cat.jpg` fails `image` and `mimes`.
+- **Stored names are random** (32 hex characters), and the extension comes from the content type, never from the browser's file name.
+- **Only known types are stored:** images, pdf, txt, csv, zip, json, docx and xlsx. Anything else is refused.
+- **Paths can't leave the storage folder,** and `public/storage/.htaccess` stops Apache from running scripts there.
+- Forms need `enctype="multipart/form-data"`.
 
 ---
 

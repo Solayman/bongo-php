@@ -4,3 +4,5 @@ public/files/*
 .idea/
 /vendor/
 /node_modules/
+/public/storage/*
+!/public/storage/.htaccess

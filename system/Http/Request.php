@@ -73,6 +73,34 @@ class Request
         return '/' . trim($uri, '/');
     }
 
+    /** One uploaded file, or null: Request::file('photo') */
+    public static function file(string $key): ?UploadedFile
+    {
+        $file = $_FILES[$key] ?? null;
+        if (!is_array($file) || !isset($file['error']) || is_array($file['error'])) {
+            return null;
+        }
+        return UploadedFile::fromArray($file);
+    }
+
+    public static function hasFile(string $key): bool
+    {
+        $file = self::file($key);
+        return $file !== null && $file->error() !== UPLOAD_ERR_NO_FILE;
+    }
+
+    /** Every single-file upload: [field => UploadedFile] */
+    public static function files(): array
+    {
+        $files = [];
+        foreach (array_keys($_FILES) as $key) {
+            if ($file = self::file((string) $key)) {
+                $files[$key] = $file;
+            }
+        }
+        return $files;
+    }
+
     /** All input: query string, form fields and a JSON body; strings trimmed */
     public static function all(): array
     {

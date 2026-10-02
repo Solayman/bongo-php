@@ -26,11 +26,18 @@
     <div class="table-responsive">
         <table class="table table-hover mb-0">
             <thead class="table-light">
-                <tr><th>Product</th><th>SKU</th><th>Category</th><th class="num">Price</th><th class="num">Stock</th><th>Status</th><th></th></tr>
+                <tr><th style="width: 56px;"></th><th>Product</th><th>SKU</th><th>Category</th><th class="num">Price</th><th class="num">Stock</th><th>Status</th><th></th></tr>
             </thead>
             <tbody>
             @foreach($products['data'] as $product)
                 <tr>
+                    <td>
+                        @if($product->image)
+                            <img src="{{ asset('storage/' . $product->image) }}" alt="" class="rounded" style="width: 40px; height: 40px; object-fit: cover;">
+                        @else
+                            <div class="rounded bg-light border d-flex align-items-center justify-content-center text-secondary" style="width: 40px; height: 40px;"><i class="bi bi-image"></i></div>
+                        @endif
+                    </td>
                     <td class="fw-medium">{{ $product->name }}</td>
                     <td class="text-secondary small">{{ $product->sku }}</td>
                     <td>{{ $product->category_name ?? '—' }}</td>
@@ -51,7 +58,7 @@
                 </tr>
             @endforeach
             @if(!$products['data'])
-                <tr><td colspan="7" class="text-center text-secondary py-4">No products found.</td></tr>
+                <tr><td colspan="8" class="text-center text-secondary py-4">No products found.</td></tr>
             @endif
             </tbody>
         </table>
