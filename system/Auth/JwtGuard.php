@@ -85,7 +85,7 @@ class JwtGuard extends Guard
         $token = Jwt::encode($claims + ['sub' => (int) $user->id, 'guard' => $this->name]);
         $this->setUser($user);
         $this->claims = Jwt::decode($token);
-        Log::info('API token issued for user {user_id}', ['user_id' => (int) $user->id, 'guard' => $this->name, 'ip' => $_SERVER['REMOTE_ADDR'] ?? null]);
+        Log::info('API token issued for user {user_id}', ['user_id' => (int) $user->id, 'guard' => $this->name, 'ip' => \System\Http\Request::ip()]);
         return $token;
     }
 

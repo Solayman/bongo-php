@@ -101,6 +101,7 @@ class Runner
             'CACHE_PATH'  => BASE_PATH . '/storage/cache/testing',
             'MAIL_DRIVER' => 'file',
             'MAIL_PATH'   => BASE_PATH . '/storage/mail/testing',
+            'SECURITY_CSP' => "default-src 'self'; frame-ancestors 'self'",
         ];
         foreach ($overrides as $name => $value) {
             $_ENV[$name] = $value;
@@ -157,7 +158,7 @@ class Runner
         self::$baseUrl = "http://127.0.0.1:$port";
 
         $env = getenv() + [];
-        foreach (['APP_ENV', 'APP_DEBUG', 'DB_DATABASE', 'APP_KEY', 'LOG_PATH', 'CACHE_PATH', 'MAIL_DRIVER', 'MAIL_PATH'] as $name) {
+        foreach (['APP_ENV', 'APP_DEBUG', 'DB_DATABASE', 'APP_KEY', 'LOG_PATH', 'CACHE_PATH', 'MAIL_DRIVER', 'MAIL_PATH', 'SECURITY_CSP'] as $name) {
             $env[$name] = getenv($name);
         }
         $env['APP_URL'] = self::$baseUrl;

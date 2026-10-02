@@ -138,6 +138,30 @@
     </div>
 </div>
 
+<div class="card mt-3" id="deployment">
+    <div class="card-header bg-white d-flex justify-content-between">
+        <span class="fw-semibold">Deployment checklist</span>
+        <span class="small text-secondary">same as <code>php bongo security:check</code></span>
+    </div>
+    <ul class="list-group list-group-flush">
+        @foreach($deployment as $item)
+            <li class="list-group-item d-flex gap-3 align-items-start">
+                @if($item['status'] === 'ok')
+                    <span class="badge text-bg-success" style="width: 52px;">OK</span>
+                @elseif($item['status'] === 'warn')
+                    <span class="badge text-bg-warning" style="width: 52px;">WARN</span>
+                @else
+                    <span class="badge text-bg-danger" style="width: 52px;">FAIL</span>
+                @endif
+                <div>
+                    <div class="fw-medium">{{ $item['check'] }}</div>
+                    <div class="small text-secondary">{{ $item['detail'] }}</div>
+                </div>
+            </li>
+        @endforeach
+    </ul>
+</div>
+
 <div class="card mt-3" id="logs">
     <div class="card-header bg-white d-flex flex-wrap gap-2 justify-content-between align-items-center">
         <div>

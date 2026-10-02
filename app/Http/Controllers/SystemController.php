@@ -48,6 +48,7 @@ class SystemController extends Controller
                 'Composer (optional)' => file_exists(base_path('vendor/autoload.php')),
             ],
             'security'   => $this->securityChecks(),
+            'deployment' => \System\Security\SecurityCheck::run(),
             'migrations' => $this->migrationStatus(),
             'logFile'    => $this->relativePath(Logger::instance()->file()),
             'logLevel'   => $logLevel,
@@ -113,7 +114,7 @@ class SystemController extends Controller
         ];
 
         $checks['HTTPS'] = [
-            !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+            Request::isSecure(),
             'Recommended in production (not required for local development)',
         ];
 

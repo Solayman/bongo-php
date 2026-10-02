@@ -10,7 +10,7 @@ use System\Routing\Router;
 try {
     Router::fromConfig()->dispatch(Request::method(), Request::path());
 } catch (HttpException $e) {
-    $context = ['status' => $e->status(), 'method' => Request::method(), 'path' => Request::path(), 'ip' => $_SERVER['REMOTE_ADDR'] ?? null];
+    $context = ['status' => $e->status(), 'method' => Request::method(), 'path' => Request::path(), 'ip' => \System\Http\Request::ip()];
     // 403 and 419 (bad CSRF token) can mean an attack; 404/405 are routine
     in_array($e->status(), [403, 419], true)
         ? Log::warning('HTTP {status} on {method} {path}', $context)

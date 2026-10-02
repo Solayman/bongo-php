@@ -9,16 +9,56 @@ class Session
     public static function start(): void
     {
         if (session_status() === PHP_SESSION_NONE) {
+            // Never accept a session id the server did not create (blocks session fixation),
+            // and never put the id in URLs
+            ini_set('session.use_strict_mode', '1');
+            ini_set('session.use_only_cookies', '1');
+            ini_set('session.use_trans_sid', '0');
+            ini_set('session.gc_maxlifetime', (string) (max(1, (int) config('session.idle_minutes', 120)) * 60));
+
+            session_name((string) config('session.cookie', 'bongo_session'));
             session_set_cookie_params([
+                'lifetime' => 0,
+                'path'     => '/',
                 'httponly' => true,
-                'samesite' => 'Lax',
-                'secure'   => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+                'samesite' => (string) config('session.same_site', 'Lax'),
+                'secure'   => Request::isSecure(),
             ]);
             session_start();
         }
 
+        self::enforceLifetime(time());
+
         $_SESSION['_flash_now'] = $_SESSION['_flash_next'] ?? [];
         $_SESSION['_flash_next'] = [];
+    }
+
+    /**
+     * End sessions that were idle too long or are older than the absolute limit.
+     * Returns true when the session was expired (and emptied).
+     */
+    public static function enforceLifetime(int $now): bool
+    {
+        $idle = max(1, (int) config('session.idle_minutes', 120)) * 60;
+        $absolute = max(1, (int) config('session.absolute_minutes', 720)) * 60;
+
+        $last = (int) ($_SESSION['_last_activity'] ?? $now);
+        $started = (int) ($_SESSION['_started_at'] ?? $now);
+        $expired = ($now - $last) > $idle || ($now - $started) > $absolute;
+
+        if ($expired) {
+            $hadUser = (bool) array_filter(array_keys($_SESSION), fn($k) => str_starts_with((string) $k, 'auth_'));
+            $_SESSION = [];
+            self::regenerate();
+            if ($hadUser && class_exists(\System\Log\Log::class)) {
+                \System\Log\Log::info('Session expired (idle or too old); user signed out');
+            }
+            $started = $now;
+        }
+
+        $_SESSION['_last_activity'] = $now;
+        $_SESSION['_started_at'] = $started;
+        return $expired;
     }
 
     public static function get(string $key, $default = null)

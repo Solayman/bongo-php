@@ -129,11 +129,11 @@ HTML;
 
     protected function requestInfo(): array
     {
-        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $scheme = \System\Http\Request::isSecure() ? 'https' : 'http';
         return [
             'Method' => $_SERVER['REQUEST_METHOD'] ?? 'CLI',
             'URL'    => isset($_SERVER['HTTP_HOST']) ? $scheme . '://' . $_SERVER['HTTP_HOST'] . ($_SERVER['REQUEST_URI'] ?? '') : '',
-            'IP'     => $_SERVER['REMOTE_ADDR'] ?? '',
+            'IP'     => \System\Http\Request::ip(),
             'User'   => function_exists('auth') && session_status() === PHP_SESSION_ACTIVE ? (auth()->email ?? 'guest') : '',
         ];
     }

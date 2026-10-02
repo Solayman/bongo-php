@@ -137,4 +137,35 @@ class HttpLayerTest extends HttpTestCase
         $this->cookies = [];
         $this->get('/login?lang=xx')->assertSee('<html lang="en">', 'unsupported codes are ignored');
     }
+
+    public function testSessionCookieIsHardened(): void
+    {
+        $response = $this->get('/login');
+        $cookie = (string) $response->header('Set-Cookie');
+        $this->assertContains('bongo_session=', $cookie, 'custom cookie name, not PHPSESSID');
+        $this->assertContains('HttpOnly', $cookie);
+        $this->assertContains('SameSite=Lax', $cookie);
+        $this->assertNotContains('PHPSESSID', implode(' ', $response->headers['set-cookie'] ?? []));
+    }
+
+    public function testMadeUpSessionIdsAreRejected(): void
+    {
+        // Session fixation: an attacker plants an id; strict mode refuses ids the server never created
+        $this->cookies = ['bongo_session' => 'attackerchosenid123456'];
+        $this->get('/login');
+        $this->assertNotSame('attackerchosenid123456', $this->cookies['bongo_session'] ?? null);
+    }
+
+    public function testCspAndCrossOriginHeaders(): void
+    {
+        $response = $this->get('/login');
+        $this->assertSame("default-src 'self'; frame-ancestors 'self'", $response->header('Content-Security-Policy'));
+        $this->assertSame('same-origin', $response->header('Cross-Origin-Opener-Policy'));
+    }
+
+    public function testSystemPageShowsDeploymentChecklist(): void
+    {
+        $this->loginAsAdmin();
+        $this->get('/system')->assertSee('Deployment checklist')->assertSee('APP_KEY')->assertSee('Demo admin login');
+    }
 }

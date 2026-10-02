@@ -21,6 +21,48 @@ class Request
         return $method;
     }
 
+    /**
+     * The client's IP address. X-Forwarded-For is only believed when the request
+     * comes from a trusted proxy (config security.trusted_proxies), so clients
+     * cannot fake their IP to dodge rate limits or login lockouts.
+     */
+    public static function ip(): string
+    {
+        $remote = (string) ($_SERVER['REMOTE_ADDR'] ?? '127.0.0.1');
+        if (!self::fromTrustedProxy($remote)) {
+            return $remote;
+        }
+
+        $forwarded = array_map('trim', explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? '')));
+        // Walk from the closest hop back; the first address that is not a trusted proxy is the client
+        for ($i = count($forwarded) - 1; $i >= 0; $i--) {
+            $candidate = $forwarded[$i];
+            if (filter_var($candidate, FILTER_VALIDATE_IP) && !self::fromTrustedProxy($candidate)) {
+                return $candidate;
+            }
+        }
+        return $remote;
+    }
+
+    /** HTTPS, directly or (from a trusted proxy) via X-Forwarded-Proto: https */
+    public static function isSecure(): bool
+    {
+        if (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off') {
+            return true;
+        }
+        if ((string) ($_SERVER['SERVER_PORT'] ?? '') === '443') {
+            return true;
+        }
+        return self::fromTrustedProxy((string) ($_SERVER['REMOTE_ADDR'] ?? ''))
+            && strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
+    }
+
+    protected static function fromTrustedProxy(string $ip): bool
+    {
+        $trusted = (array) config('security.trusted_proxies', []);
+        return $ip !== '' && (in_array('*', $trusted, true) || in_array($ip, $trusted, true));
+    }
+
     /** The method the client really sent, ignoring _method */
     public static function realMethod(): string
     {

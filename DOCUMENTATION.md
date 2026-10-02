@@ -13,6 +13,7 @@ Built in:
 | Schema & migrations | PHP migrations with a schema builder; each run is tracked in the database; rollback |
 | Sessions | Flash messages, old input, CSRF tokens |
 | Validation & uploads | 35+ rules (dates, regex, files, `unique`, …), `items.*.field` wildcards, custom messages; safe uploads (`$file->store()`, `Storage::url()`) |
+| Hardening | Strict sessions with idle/absolute timeouts, trusted-proxy aware `Request::ip()`/`isSecure()`, optional CSP, `php bongo security:check` deployment checklist |
 | Auth & security | Multiple guards (session, JWT) and providers, `auth:api` middleware, own HS256 JWT with refresh and revocation, peppered Argon2id passwords, AES-256-GCM encryption, login throttling |
 | Testing | `php bongo test`: unit + HTTP tests on a separate test database |
 | Debugging | `dump()`/`dd()` for browser, CLI and JSON; developer error page with source and stack trace; `php bongo tinker` |
@@ -831,6 +832,54 @@ $plain     = Crypt::decrypt($encrypted);           // needs the same APP_KEY; ta
 - **Account guessing:** the same error message for an unknown email and a wrong password, and the same password-check cost, so response time doesn't reveal which emails exist.
 - **Sessions:** the session ID and CSRF token are regenerated on login and logout, and the session ID again after a password change. Cookies are `HttpOnly` and `SameSite=Lax`, plus `Secure` on HTTPS.
 - **CSRF:** every state-changing form carries `csrf_field()`, and `csrf` middleware rejects missing or forged tokens with 419.
+
+### Sessions
+
+| `.env` | Default | |
+| --- | --- | --- |
+| `SESSION_COOKIE` | `bongo_session` | Cookie name (doesn't reveal the language) |
+| `SESSION_IDLE_MINUTES` | 120 | Signed-in users are logged out after this long without a request |
+| `SESSION_ABSOLUTE_MINUTES` | 720 | A session never lasts longer than this, even when active |
+| `SESSION_SAME_SITE` | `Lax` | The cookie isn't sent with cross-site POSTs |
+
+- **Strict mode:** the server refuses session IDs it didn't create, which blocks session fixation, and IDs are never put in URLs.
+- **Cookies:** `HttpOnly`, plus `Secure` on HTTPS (including behind a trusted proxy).
+
+### Behind a proxy or load balancer
+
+With Nginx, Cloudflare or a load balancer in front, every request appears to come from the proxy. List its addresses so the real client IP and HTTPS are detected:
+
+```env
+TRUSTED_PROXIES=127.0.0.1,10.0.0.5
+```
+
+- `Request::ip()` reads `X-Forwarded-For` **only** when the request comes from a trusted proxy. It takes the closest untrusted address, so a client can't fake its IP to dodge rate limits or login lockouts.
+- `Request::isSecure()` trusts `X-Forwarded-Proto: https` under the same rule.
+- Rate limits, login throttling, logs and secure cookies all use these two methods.
+
+### Content-Security-Policy
+
+Optional and off by default. Set `SECURITY_CSP` to control where scripts, styles and images may load from; it is the strongest defence against XSS. `config/security.php` has a ready-made policy for the admin panel (Bootstrap from jsDelivr). Every response also gets `Cross-Origin-Opener-Policy: same-origin`, besides the headers listed in Routing.
+
+### Deployment checklist
+
+```bash
+php bongo security:check     # exits with 1 if anything FAILs, so you can use it in a deploy script
+```
+
+| Checks | |
+| --- | --- |
+| Debug mode | Must be off in production |
+| `APP_KEY`, `JWT_SECRET` | Present and long enough |
+| HTTPS | `APP_URL` uses https |
+| Trusted proxies | `*` is warned about |
+| Session timeout, CSP | Settings shown; CSP warned if missing |
+| PHP | Version, `display_errors` in production, Argon2id availability |
+| Writable folders | `storage/logs`, `storage/cache`, `public/storage` |
+| Web root | `.env` must not be inside `public/` |
+| Demo login | `admin@example.com` still using `password` |
+
+The same list is on **System status → Deployment checklist**.
 
 In production, also serve the site over **HTTPS**, set `APP_ENV=production`, and keep `.env` outside version control (it's already git-ignored).
 
