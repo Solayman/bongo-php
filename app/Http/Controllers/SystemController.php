@@ -65,6 +65,28 @@ class SystemController extends Controller
         redirect(url('/system#logs'));
     }
 
+    /**
+     * Debug tools for a person to try (only while APP_DEBUG is on)
+     */
+    public function errorTest()
+    {
+        if (!config('app.debug')) {
+            abort(404);
+        }
+        $order = ['id' => 42, 'total' => 99.5];
+        throw new \RuntimeException('Test exception from the System status page (order ' . $order['id'] . ')');
+    }
+
+    public function dumpTest()
+    {
+        if (!config('app.debug')) {
+            abort(404);
+        }
+        $user = clone Auth::user();
+        unset($user->password);
+        dd($user, ['request' => Request::all(), 'config.app' => config('app')], new \ArrayObject([1, 2, 3]));
+    }
+
     /** Live checks a person can read: [label => [ok, detail]] */
     protected function securityChecks(): array
     {

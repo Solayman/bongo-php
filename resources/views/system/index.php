@@ -70,6 +70,17 @@
         </div>
     </div>
 </div>
+<?php if (config('app.debug')): ?>
+<div class="card mt-3">
+    <div class="card-body d-flex flex-wrap gap-2 align-items-center">
+        <span class="fw-semibold me-2">Debug tools</span>
+        <a class="btn btn-sm btn-outline-danger" href="<?= route('system.error-test') ?>" target="_blank">Trigger test error</a>
+        <a class="btn btn-sm btn-outline-dark" href="<?= route('system.dump-test') ?>" target="_blank">Try dd()</a>
+        <span class="small text-secondary">Opens in a new tab. Shown only while APP_DEBUG is on.</span>
+    </div>
+</div>
+<?php endif; ?>
+
 <div class="row g-3 mt-1">
     <div class="col-lg-5">
         <div class="card h-100">

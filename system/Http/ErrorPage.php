@@ -45,6 +45,16 @@ class ErrorPage
             }
         }
 
+        // Debug mode: the developer page with source, stack trace and request
+        if ($exception) {
+            try {
+                echo (new \System\Debug\ExceptionPage($exception, $status))->render();
+                return;
+            } catch (Throwable $pageError) {
+                // fall back to the simple page below
+            }
+        }
+
         $title = e("$status · $message");
         $details = '';
         if ($exception) {

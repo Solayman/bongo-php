@@ -122,4 +122,27 @@ class ShopPagesTest extends HttpTestCase
 
         $this->get('/system?level=error')->assertDontSee('Test log entry written from the System status page');
     }
+
+    public function testDebugPageShowsSourceAndTrace(): void
+    {
+        $response = $this->get('/system/error-test');
+        $response->assertStatus(500)
+            ->assertSee('RuntimeException')
+            ->assertSee('Test exception from the System status page (order 42)')
+            ->assertSee('app/Http/Controllers/SystemController.php')
+            ->assertSee('class="ln hit"')
+            ->assertSee('Stack trace');
+
+        $log = file_get_contents(BASE_PATH . '/storage/logs/testing/bongo-' . date('Y-m-d') . '.log');
+        $this->assertContains('ERROR: Uncaught RuntimeException: Test exception from the System status page', $log);
+    }
+
+    public function testDdInBrowserAndForJson(): void
+    {
+        $this->get('/system/dump-test')->assertStatus(500)->assertSee('dd() called at')->assertSee('admin@example.com')->assertSee('ArrayObject');
+
+        $json = json_decode($this->get('/system/dump-test', ['Accept' => 'application/json'])->body, true);
+        $this->assertSame('admin@example.com', $json['dd'][0]['email']);
+        $this->assertContains('SystemController.php', $json['at']);
+    }
 }
