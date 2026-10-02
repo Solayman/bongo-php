@@ -45,7 +45,7 @@ class Validator
      * Answer a failed validation and stop: API clients get 422 JSON; browsers go back
      * with the errors and the old input flashed (never passwords, the CSRF token or files).
      */
-    public static function respondWithErrors(array $errors, array $data): never
+    public static function respondWithErrors(array $errors, array $data): void
     {
         if (\System\Http\Request::wantsJson()) {
             response(['message' => 'The given data was invalid.', 'errors' => $errors], 'json', 422);
