@@ -131,6 +131,42 @@ class ViewEngine
         $this->extends = $layout;
     }
 
+    /** Open components: [name, attributes] */
+    protected array $components = [];
+
+    /** Used by compiled <x-name ...>: remember the attributes and capture the slot */
+    public function startComponent(string $name, array $attributes): void
+    {
+        $this->components[] = [$name, $attributes];
+        ob_start();
+    }
+
+    /**
+     * Used by compiled </x-name>: render components/name.php with each attribute as a variable
+     * (max-length → $maxLength), $attributes (all of them) and $slot (the inner HTML).
+     */
+    public function endComponent(): string
+    {
+        $slot = new HtmlString(ob_get_clean());
+        [$name, $attributes] = array_pop($this->components);
+
+        $data = [];
+        foreach ($attributes as $key => $value) {
+            $data[lcfirst(str_replace(' ', '', ucwords(str_replace(['-', '.'], ' ', $key))))] = $value;
+        }
+        $view = 'components.' . $name;
+        if (!$this->exists($view)) {
+            throw new ViewException("Component <x-$name> needs the file resources/views/components/" . str_replace('.', '/', $name) . '.php');
+        }
+        return $this->render($view, $data + ['attributes' => $attributes, 'slot' => $slot]);
+    }
+
+    /** {{ $value }}: escaped, except HTML the template itself produced (a component's $slot) */
+    public static function escape(mixed $value): string
+    {
+        return $value instanceof HtmlString ? (string) $value : htmlspecialchars((string) ($value ?? ''), ENT_QUOTES, 'UTF-8');
+    }
+
     /** Used by compiled @include: the caller's variables (minus engine internals) plus $data */
     public function includeView(array $scope, string $view, array $data = []): string
     {

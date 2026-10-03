@@ -21,7 +21,7 @@ namespace System\View;
 class ViewCompiler
 {
     /** Bump when the compiled output changes, so cached views are rebuilt */
-    public const VERSION = '2.3';
+    public const VERSION = '2.4';
 
     protected const DIRECTIVE = '/@(\w+)(?:[ \t]*(\((?:[^()\'"]++|\'(?:[^\'\\\\]|\\\\.)*\'|"(?:[^"\\\\]|\\\\.)*"|(?2))*\)))?/';
 
@@ -63,6 +63,8 @@ class ViewCompiler
         // @php ... @endphp blocks are kept as they are
         $content = preg_replace_callback('/\B@php(?![ \t]*\()(.*?)@endphp/s', fn($m) => $this->protect('<?php' . $m[1] . '?>'), $content);
 
+        $content = $this->compileComponents($content);
+
         $content = preg_replace_callback(self::DIRECTIVE, function ($m) use (&$content) {
             [$whole, $offset] = $m[0];
             $name = $m[1][0];
@@ -77,8 +79,8 @@ class ViewCompiler
         // {!! raw !!}
         $content = preg_replace_callback('/\{!!\s*(.+?)\s*!!\}/s', fn($m) => "<?php echo {$m[1]}; ?>", $content);
 
-        // {{ escaped }}: null prints as an empty string
-        $content = preg_replace_callback('/\{\{\s*(.+?)\s*\}\}/s', fn($m) => "<?php echo htmlspecialchars((string) (({$m[1]}) ?? ''), ENT_QUOTES, 'UTF-8'); ?>", $content);
+        // {{ escaped }}: null prints as an empty string; a component's $slot is already HTML
+        $content = preg_replace_callback('/\{\{\s*(.+?)\s*\}\}/s', fn($m) => "<?php echo \\System\\View\\ViewEngine::escape(({$m[1]}) ?? null); ?>", $content);
 
         return $this->restore($content);
     }
@@ -189,6 +191,44 @@ class ViewCompiler
     protected function compileJson($a)
     {
         return "<?php echo json_encode($a, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE); ?>";
+    }
+
+    // --- Components ---------------------------------------------------
+
+    /**
+     * <x-alert type="danger" :count="$n">Saved!</x-alert> → resources/views/components/alert.php
+     * with $type, $count and $slot (the inner HTML). <x-badge text="New" /> has no slot.
+     * <x-forms.input> → components/forms/input.php. Inner components are compiled first.
+     */
+    protected function compileComponents(string $content): string
+    {
+        $self = '/<x-([\w.-]+)((?:\s+:?[\w.-]+(?:="[^"]*")?)*)\s*\/>/';
+        $content = preg_replace_callback($self, fn($m) => $this->componentOpen($m[1], $m[2]) . '<?php echo $this->endComponent(); ?>', $content);
+
+        // Paired tags, innermost first (the body holds no further <x- tag of any name)
+        $pair = '/<x-([\w.-]+)((?:\s+:?[\w.-]+(?:="[^"]*")?)*)\s*>((?:(?!<x-[\w.-]).)*?)<\/x-\1\s*>/s';
+        do {
+            $content = preg_replace_callback($pair, fn($m) => $this->componentOpen($m[1], $m[2]) . $m[3] . '<?php echo $this->endComponent(); ?>', $content, -1, $count);
+        } while ($count > 0);
+
+        if (preg_match('/<\/?x-([\w.-]+)/', $content, $m)) {
+            throw new ViewException("<x-{$m[1]}> has no matching closing tag </x-{$m[1]}>");
+        }
+        return $content;
+    }
+
+    /** Attributes → PHP array: type="danger" is text, :count="$n" is PHP */
+    protected function componentOpen(string $name, string $attributes): string
+    {
+        $pairs = [];
+        preg_match_all('/(:?)([\w.-]+)(?:="([^"]*)")?/', $attributes, $matches, PREG_SET_ORDER | PREG_UNMATCHED_AS_NULL);
+        foreach ($matches as $m) {
+            [$isPhp, $key, $value] = [$m[1] === ':', $m[2], $m[3] ?? null];
+            // <x-input disabled /> → true · type="danger" → 'danger' · :count="$n" → $n
+            $code = $value === null ? 'true' : ($isPhp ? $value : var_export($value, true));
+            $pairs[] = var_export($key, true) . ' => ' . $code;
+        }
+        return "<?php \$this->startComponent(" . var_export($name, true) . ', [' . implode(', ', $pairs) . ']); ?>';
     }
 
     // --- @switch ------------------------------------------------------
