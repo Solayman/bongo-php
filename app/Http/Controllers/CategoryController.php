@@ -20,11 +20,10 @@ class CategoryController extends Controller
         return $this->view('categories.index', ['categories' => $categories]);
     }
 
-    // The request is passed in: $request->validate(), $request->input('name'), dd($request) ...
     public function store(Request $request)
     {
         $data = $request->validate(['name' => 'required|string|max:100']);
-        $data['slug'] = $this->uniqueSlug($data['name']);
+        $data['slug'] = Category::uniqueSlug($data['name']);
 
         Category::create($data);
 
@@ -34,50 +33,29 @@ class CategoryController extends Controller
 
     public function edit($id)
     {
-        return $this->view('categories.edit', ['category' => $this->findOrFail($id)]);
+        $category = Category::findOrFail($id);   // 404 page when it doesn't exist
+
+        return $this->view('categories.edit', ['category' => $category]);
     }
 
-    // Route parameters ({id}) and the request can come in any order
     public function update(Request $request, $id)
     {
-        $category = $this->findOrFail($id);
+        $category = Category::findOrFail($id);
         $data = $request->validate(['name' => 'required|string|max:100']);
-        $data['slug'] = $this->uniqueSlug($data['name'], (int) $category->id);
+        $data['slug'] = Category::uniqueSlug($data['name'], $category->id);
 
-        Category::query()->where('id', $category->id)->update($data);
+        $category->update($data);
 
-        flash('success', "Category \"{$data['name']}\" updated.");
+        flash('success', "Category \"{$category->name}\" updated.");
         redirect(url('/categories'));
     }
 
     public function destroy($id)
     {
-        $category = $this->findOrFail($id);
-        // products.category_id is ON DELETE SET NULL, so products are kept
-        Category::query()->where('id', $category->id)->delete();
+        $category = Category::findOrFail($id);
+        $category->delete();   // its products are kept, without a category
 
         flash('success', "Category \"{$category->name}\" deleted. Its products are now uncategorised.");
         redirect(url('/categories'));
-    }
-
-    protected function uniqueSlug(string $name, ?int $ignoreId = null): string
-    {
-        $base = trim(preg_replace('/[^a-z0-9]+/', '-', strtolower($name)), '-') ?: 'category';
-        $slug = $base;
-        for ($i = 2; ; $i++) {
-            $query = Category::where('slug', $slug);
-            if ($ignoreId) {
-                $query->where('id', '!=', $ignoreId);
-            }
-            if ($query->count() === 0) {
-                return $slug;
-            }
-            $slug = "$base-$i";
-        }
-    }
-
-    protected function findOrFail($id): object
-    {
-        return Category::find((int) $id) ?? abort(404, 'Category not found');
     }
 }

@@ -53,6 +53,9 @@ class ShopPagesTest extends HttpTestCase
 
         $this->submit('/categories', "/categories/{$category->id}", ['_method' => 'DELETE'])->assertRedirect('/categories');
         $this->assertNull($this->db('categories')->where('id', $category->id)->first());
+
+        // Category::findOrFail(): a missing category is a 404 page
+        $this->get("/categories/{$category->id}/edit")->assertStatus(404)->assertSee('Category not found');
     }
 
     public function testDeletingCategoryKeepsItsProducts(): void
