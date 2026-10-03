@@ -18,7 +18,7 @@ class BelongsTo extends Relation
 
     public function eagerLoad(array $models, string $name): void
     {
-        $keys = array_values(array_unique(array_filter(array_map(fn($m) => $m->getAttribute($this->foreignKey), $models), fn($k) => $k !== null)));
+        $keys = self::keysOf($models, $this->foreignKey);
         $owners = [];
         if ($keys) {
             foreach (($this->related)::query()->whereIn($this->otherKey, $keys)->get() as $owner) {
