@@ -45,6 +45,15 @@ class Model implements \JsonSerializable
         return static::query()->onlyTrashed();
     }
 
+    /**
+     * Scopes as static calls: Product::active() starts a query with scopeActive() applied.
+     *   public function scopeActive($query) { $query->where('status', 'active'); }
+     */
+    public static function __callStatic(string $method, array $args)
+    {
+        return static::query()->$method(...$args);
+    }
+
     /** Columns create()/fill() may set. Empty = every column not in $guarded */
     protected array $fillable = [];
     /** Columns create()/fill() must never set */
@@ -255,16 +264,31 @@ class Model implements \JsonSerializable
     // Persistence
     // ------------------------------------------------------------------
 
-    /** INSERT a new model, or UPDATE only the changed columns of an existing one */
+    /**
+     * INSERT a new model, or UPDATE only the changed columns of an existing one.
+     * Model events run around it: saving → creating/updating → (query) → created/updated → saved.
+     * A saving(), creating() or updating() method that returns false cancels the save.
+     */
     public function save(): bool
     {
+        if ($this->fireEvent('saving') === false) {
+            return false;
+        }
         if ($this->exists) {
+            if ($this->fireEvent('updating') === false) {
+                return false;
+            }
             $dirty = $this->getDirty();
             unset($dirty[static::$primaryKey]);
             if ($dirty) {
                 (new QueryBuilder(static::tableName()))->where(static::$primaryKey, $this->getKey())->update($dirty);
             }
+            $this->original = $this->attributes;
+            $this->fireEvent('updated');
         } else {
+            if ($this->fireEvent('creating') === false) {
+                return false;
+            }
             $id = (new QueryBuilder(static::tableName()))->insertGetId($this->attributes);
             if ($id && !isset($this->attributes[static::$primaryKey])) {
                 $this->attributes[static::$primaryKey] = $id;
@@ -272,10 +296,26 @@ class Model implements \JsonSerializable
             $this->exists = true;
             // Pick up database defaults (created_at, status, ...)
             $this->refresh();
+            $this->original = $this->attributes;
+            $this->fireEvent('created');
         }
 
-        $this->original = $this->attributes;
+        $this->fireEvent('saved');
         return true;
+    }
+
+    /**
+     * Model events: define the method on your model and it runs at that moment:
+     *   protected function creating() { $this->slug = slugify($this->name); }
+     * creating, created, updating, updated, saving, saved, deleting, deleted
+     */
+    protected function fireEvent(string $event): ?bool
+    {
+        if (!method_exists($this, $event)) {
+            return null;
+        }
+        $result = $this->$event();
+        return $result === false ? false : null;
     }
 
     /** fill() + save() */
@@ -287,17 +327,18 @@ class Model implements \JsonSerializable
     /** Delete the row (with $softDeletes: only mark it, see restore()) */
     public function delete(): bool
     {
-        if (!$this->exists) {
+        if (!$this->exists || $this->fireEvent('deleting') === false) {
             return false;
         }
         if (static::$softDeletes) {
             $now = date('Y-m-d H:i:s');
             (new QueryBuilder(static::tableName()))->where(static::$primaryKey, $this->getKey())->update(['deleted_at' => $now]);
             $this->attributes['deleted_at'] = $this->original['deleted_at'] = $now;
-            return true;
+        } else {
+            (new QueryBuilder(static::tableName()))->where(static::$primaryKey, $this->getKey())->delete();
+            $this->exists = false;
         }
-        (new QueryBuilder(static::tableName()))->where(static::$primaryKey, $this->getKey())->delete();
-        $this->exists = false;
+        $this->fireEvent('deleted');
         return true;
     }
 

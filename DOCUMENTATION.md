@@ -913,6 +913,27 @@ $order = Order::create(['user_id' => 3, 'status' => 'pending', 'total' => 0]);  
 Order::destroy([7, 8]);
 ```
 
+**Model events:** define the method on your model and it runs at that moment. Return `false` from a `…ing` method to cancel.
+
+```php
+class Post extends Model
+{
+    protected function creating() { $this->slug ??= slugify($this->title); }   // before INSERT
+    protected function deleting() { if ($this->status === 'locked') return false; }
+}
+```
+
+The order is `saving` → `creating` or `updating` → *query* → `created` or `updated` → `saved`, plus `deleting` → `deleted`.
+
+**Scopes:** reusable conditions.
+
+```php
+public function scopePublished($query) { $query->where('status', 'published'); }
+public function scopePopular($query, int $min = 100) { $query->where('views', '>=', $min); }
+
+Post::published()->popular(500)->latest()->get();
+```
+
 **Soft deletes:** keep deleted rows, hidden from queries, so they can be restored. Add a `deleted_at` column (`$table->softDeletes();` in the migration), then:
 
 ```php
