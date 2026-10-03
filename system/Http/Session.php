@@ -14,7 +14,7 @@ class Session
             ini_set('session.use_strict_mode', '1');
             ini_set('session.use_only_cookies', '1');
             ini_set('session.use_trans_sid', '0');
-            ini_set('session.gc_maxlifetime', (string) (max(1, (int) config('session.idle_minutes', 120)) * 60));
+            ini_set('session.gc_maxlifetime', (string) self::idleSeconds());
 
             session_name((string) config('session.cookie', 'bongo_session'));
             session_set_cookie_params([
@@ -25,7 +25,7 @@ class Session
                 'secure'   => Request::isSecure(),
             ]);
             if (config('session.driver', 'file') === 'redis') {
-                session_set_save_handler(new RedisSessionHandler(max(1, (int) config('session.idle_minutes', 120)) * 60), true);
+                session_set_save_handler(new RedisSessionHandler(self::idleSeconds()), true);
             }
             session_start();
         }
@@ -36,13 +36,19 @@ class Session
         $_SESSION['_flash_next'] = [];
     }
 
+    /** Signed-in users are logged out after this long without a request */
+    protected static function idleSeconds(): int
+    {
+        return max(1, (int) config('session.idle_minutes', 120)) * 60;
+    }
+
     /**
      * End sessions that were idle too long or are older than the absolute limit.
      * Returns true when the session was expired (and emptied).
      */
     public static function enforceLifetime(int $now): bool
     {
-        $idle = max(1, (int) config('session.idle_minutes', 120)) * 60;
+        $idle = self::idleSeconds();
         $absolute = max(1, (int) config('session.absolute_minutes', 720)) * 60;
 
         $last = (int) ($_SESSION['_last_activity'] ?? $now);

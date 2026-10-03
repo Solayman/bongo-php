@@ -18,9 +18,7 @@ class PendingGroup
 
     public function middleware(string|array ...$middleware): static
     {
-        foreach ($middleware as $item) {
-            foreach ((array) $item as $m) $this->attributes['middleware'][] = $m;
-        }
+        $this->attributes['middleware'] = array_merge($this->attributes['middleware'] ?? [], ...array_map(fn($m) => (array) $m, $middleware));
         return $this;
     }
 
