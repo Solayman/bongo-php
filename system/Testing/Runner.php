@@ -88,7 +88,8 @@ class Runner
     {
         $default = config('database.default');
         $mainDb = config("database.connections.$default.database");
-        $testDb = env('DB_TEST_DATABASE', $mainDb . '_test');
+        $sqlite = config("database.connections.$default.driver") === 'sqlite';
+        $testDb = env('DB_TEST_DATABASE', $sqlite ? BASE_PATH . '/storage/testing/database.sqlite' : $mainDb . '_test');
 
         if ($testDb === $mainDb) {
             throw new \RuntimeException("The test database must not be the main database [$mainDb]. Set DB_TEST_DATABASE.");
@@ -97,7 +98,7 @@ class Runner
         $overrides = [
             'APP_ENV'     => 'testing',
             'APP_DEBUG'   => 'true',
-            'DB_DATABASE' => $testDb,
+            ($sqlite ? 'DB_SQLITE_PATH' : 'DB_DATABASE') => $testDb,
             'APP_KEY'     => \System\Security\Key::generate(),
             'LOG_PATH'    => BASE_PATH . '/storage/logs/testing',
             'CACHE_PATH'  => BASE_PATH . '/storage/cache/testing',
@@ -133,12 +134,12 @@ class Runner
     protected static function prepareDatabase(): void
     {
         $db = config('database.connections.' . config('database.default'));
+        \System\Database\Connection::reset();
 
-        // Create the test database if needed
-        $pdo = new PDO("mysql:host={$db['host']};port={$db['port']};charset={$db['charset']}", $db['username'], $db['password'], [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        ]);
-        $pdo->exec('CREATE DATABASE IF NOT EXISTS `' . str_replace('`', '``', $db['database']) . '` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
+        // Create the test database if needed (a SQLite file is created on connect)
+        if ($db['driver'] !== 'sqlite') {
+            self::createMysqlDatabase($db);
+        }
 
         echo "Test database: {$db['database']}\n";
 
@@ -148,6 +149,14 @@ class Runner
 
         require_once base_path('database/seeders/DatabaseSeeder.php');
         (new \Database\Seeders\DatabaseSeeder())->run();
+    }
+
+    protected static function createMysqlDatabase(array $db): void
+    {
+        $pdo = new PDO("mysql:host={$db['host']};port={$db['port']};charset={$db['charset']}", $db['username'], $db['password'], [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        ]);
+        $pdo->exec('CREATE DATABASE IF NOT EXISTS `' . str_replace('`', '``', $db['database']) . '` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
     }
 
     protected static function startServer(): void
@@ -163,9 +172,16 @@ class Runner
         foreach (['APP_ENV', 'APP_DEBUG', 'DB_DATABASE', 'APP_KEY', 'LOG_PATH', 'CACHE_PATH', 'MAIL_DRIVER', 'MAIL_PATH', 'SECURITY_CSP'] as $name) {
             $env[$name] = getenv($name);
         }
+        foreach (['DB_CONNECTION', 'DB_SQLITE_PATH'] as $name) {
+            if (getenv($name) !== false) $env[$name] = getenv($name);
+        }
         $env['APP_URL'] = self::$baseUrl;
 
         $cmd = [PHP_BINARY, '-S', "127.0.0.1:$port", '-t', base_path('public')];
+        // The server needs the same database driver as this process (e.g. php -d extension=pdo_sqlite bongo test)
+        if (config('database.connections.' . config('database.default') . '.driver') === 'sqlite') {
+            array_splice($cmd, 1, 0, ['-d', 'extension=pdo_sqlite']);
+        }
         $null = DIRECTORY_SEPARATOR === '\\' ? 'NUL' : '/dev/null';
         self::$server = proc_open($cmd, [0 => ['pipe', 'r'], 1 => ['file', $null, 'w'], 2 => ['file', $null, 'w']], $pipes, BASE_PATH, $env);
 

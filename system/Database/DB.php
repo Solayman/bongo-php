@@ -29,7 +29,15 @@ class DB
     {
         $start = microtime(true);
         $stmt = Connection::getInstance()->prepare($sql);
-        $stmt->execute(array_values($bindings));
+        // Bind with real types: SQLite compares the text '4' and the number 4 as different values
+        foreach (array_values($bindings) as $i => $value) {
+            $stmt->bindValue($i + 1, is_bool($value) ? (int) $value : $value, match (true) {
+                is_int($value), is_bool($value) => \PDO::PARAM_INT,
+                $value === null                 => \PDO::PARAM_NULL,
+                default                         => \PDO::PARAM_STR,
+            });
+        }
+        $stmt->execute();
 
         if (self::$queryLog !== null && count(self::$queryLog) < 500) {
             self::$queryLog[] = ['sql' => $sql, 'bindings' => array_values($bindings), 'ms' => round((microtime(true) - $start) * 1000, 2)];

@@ -1,7 +1,8 @@
 <?php
 
 return [
-    'default' => 'mysql',
+    // mysql or sqlite (DB_CONNECTION=sqlite needs no database server)
+    'default' => env('DB_CONNECTION', 'mysql'),
 
     'connections' => [
         'mysql' => [
@@ -15,6 +16,12 @@ return [
             'unix_socket' => env('DB_SOCKET', ''),
             'charset' => 'utf8mb4',
             'collation' => 'utf8mb4_unicode_ci',
+        ],
+
+        'sqlite' => [
+            'driver' => 'sqlite',
+            // One file holds the whole database; it is created on first use
+            'database' => env('DB_SQLITE_PATH', BASE_PATH . '/database/database.sqlite'),
         ],
     ],
 ];

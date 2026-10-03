@@ -23,6 +23,15 @@ class Migrator
 
     public function ensureTable(): void
     {
+        if (Connection::isSqlite()) {
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS ' . self::TABLE . ' (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                migration TEXT NOT NULL UNIQUE,
+                batch INTEGER NOT NULL,
+                ran_at TEXT NOT NULL DEFAULT (' . Schema\Blueprint::sqliteNow() . ')
+            )');
+            return;
+        }
         $this->pdo->exec('CREATE TABLE IF NOT EXISTS ' . self::TABLE . ' (
             id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             migration VARCHAR(255) NOT NULL UNIQUE,
@@ -139,13 +148,13 @@ class Migrator
      */
     public function dropAllTables(): array
     {
-        $tables = $this->pdo->query('SHOW FULL TABLES WHERE Table_type = "BASE TABLE"')->fetchAll(PDO::FETCH_COLUMN);
+        $tables = Schema\Schema::tables();
 
-        $this->pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
-        foreach ($tables as $table) {
-            $this->pdo->exec('DROP TABLE `' . str_replace('`', '``', $table) . '`');
-        }
-        $this->pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+        Schema\Schema::withoutForeignKeyChecks(function () use ($tables) {
+            foreach ($tables as $table) {
+                Schema\Schema::drop($table);
+            }
+        });
 
         Log::warning('Dropped all tables', ['tables' => $tables]);
         return $tables;

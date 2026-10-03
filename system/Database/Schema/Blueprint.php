@@ -2,11 +2,13 @@
 namespace System\Database\Schema;
 
 /**
- * Describes a table's columns and indexes and compiles them to MySQL.
+ * Describes a table's columns and indexes and compiles them to MySQL or SQLite.
  * Used through Schema::create() and Schema::table().
  */
 class Blueprint
 {
+    use SqliteGrammar;
+
     /** @var ColumnDefinition[] */
     protected array $columns = [];
     protected array $indexes = [];     // [type, columns[], name]
@@ -17,7 +19,8 @@ class Blueprint
     public string $charset = 'utf8mb4';
     public string $collation = 'utf8mb4_unicode_ci';
 
-    public function __construct(public string $table) {}
+    /** $driver: "mysql" or "sqlite" (Schema passes the current connection's driver) */
+    public function __construct(public string $table, public string $driver = 'mysql') {}
 
     // ------------------------------------------------------------------
     // Column types
@@ -166,6 +169,22 @@ class Blueprint
     // ------------------------------------------------------------------
     // SQL
     // ------------------------------------------------------------------
+
+    /** Every statement Schema::create() runs, for the current driver */
+    public function toCreateStatements(): array
+    {
+        return $this->driver === 'sqlite' ? $this->sqliteCreate() : [$this->toCreateSql()];
+    }
+
+    /** Every statement Schema::table() runs, for the current driver */
+    public function toAlterStatements(): array
+    {
+        if ($this->driver === 'sqlite') {
+            return $this->sqliteAlter();
+        }
+        $sql = $this->toAlterSql();
+        return $sql === null ? [] : [$sql];
+    }
 
     public function toCreateSql(): string
     {

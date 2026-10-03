@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use System\Auth\Auth;
 use System\Database\DB;
 use System\Database\Migrator;
+use System\Database\Schema\Schema;
 use System\Http\Request;
 use System\Log\Log;
 use System\Log\Logger;
@@ -17,14 +18,30 @@ class SystemController extends Controller
     {
         $connection = config('database.connections.' . config('database.default'));
 
-        $db = ['connected' => false, 'error' => null, 'version' => null, 'tables' => []];
+        $sqlite = $connection['driver'] === 'sqlite';
+        $db = [
+            'connected' => false, 'error' => null, 'version' => null, 'tables' => [],
+            'product'   => $sqlite ? 'SQLite' : 'MySQL',
+            'server'    => $sqlite ? 'Local file' : "{$connection['username']}@{$connection['host']}:{$connection['port']}",
+            'name'      => $sqlite ? basename($connection['database']) : $connection['database'],
+        ];
 
         try {
-            $db['version'] = DB::raw('SELECT VERSION() AS version')[0]['version'];
-            $db['tables'] = DB::table('information_schema.TABLES')
-                ->where('TABLE_SCHEMA', $connection['database'])
-                ->orderBy('TABLE_NAME')
-                ->get();
+            if ($sqlite) {
+                $db['version'] = DB::raw('SELECT sqlite_version() AS version')[0]['version'];
+                foreach (Schema::tables() as $name) {
+                    $rows = DB::table($name)->count();
+                    $db['tables'][] = (object) ['name' => $name, 'rows' => $rows, 'kb' => null, 'engine' => 'SQLite'];
+                }
+            } else {
+                $db['version'] = DB::raw('SELECT VERSION() AS version')[0]['version'];
+                foreach (DB::table('information_schema.TABLES')->where('TABLE_SCHEMA', $connection['database'])->orderBy('TABLE_NAME')->get() as $t) {
+                    $db['tables'][] = (object) [
+                        'name' => $t->TABLE_NAME, 'rows' => (int) $t->TABLE_ROWS,
+                        'kb' => ((int) $t->DATA_LENGTH + (int) $t->INDEX_LENGTH) / 1024, 'engine' => $t->ENGINE ?? '',
+                    ];
+                }
+            }
             $db['connected'] = true;
         } catch (\Throwable $e) {
             $db['error'] = $e->getMessage();
