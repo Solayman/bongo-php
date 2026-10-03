@@ -260,4 +260,31 @@ class TemplateTest extends TestCase
         $this->assertSame('Mine 42', $this->render("{{ \$siteName }} {{ \$visits }}", ['siteName' => 'Mine']), 'passed data wins');
         \System\View\ViewEngine::share(['siteName' => null, 'visits' => null]);
     }
+
+    public function testComponents(): void
+    {
+        mkdir($this->dir . '/views/components/forms', 0777, true);
+        $this->view('components.alert', '<div class="alert alert-{{ $type ?? \'info\' }}">{{ $slot }}</div>');
+        $this->view('components.badge', '<span>{{ $text }}{{ $count ?? \'\' }}</span>');
+        $this->view('components.forms.input', '<input name="{{ $name }}" maxlength="{{ $maxLength }}" @disabled($disabled ?? false)>');
+
+        // Text attributes, a slot with HTML and {{ }} inside, PHP values with ":"
+        $this->assertSame('<div class="alert alert-danger">Saved <b>Mug</b>!</div>',
+            $this->render('<x-alert type="danger">Saved <b>{{ $name }}</b>!</x-alert>', ['name' => 'Mug']));
+        $this->assertSame('<span>New3</span>', $this->render('<x-badge text="New" :count="1 + 2" />'));
+
+        // Folders, dashed names become camelCase, bare attributes are true
+        $this->assertSame('<input name="email" maxlength="20" disabled>', $this->render('<x-forms.input name="email" max-length="20" disabled />'));
+
+        // Nested components, and the slot's own data is still escaped
+        $this->assertSame('<div class="alert alert-info">x <span>&lt;b&gt;</span></div>',
+            $this->render('<x-alert>x <x-badge :text="$evil" /></x-alert>', ['evil' => '<b>']));
+
+        // Directives work inside a slot
+        $this->assertSame('<div class="alert alert-info">1 2 </div>', $this->render('<x-alert>@foreach([1, 2] as $i){{ $i }} @endforeach</x-alert>'));
+
+        // Mistakes say what to do
+        $this->assertThrows(\System\View\ViewException::class, fn() => $this->render('<x-missing />'));
+        $this->assertThrows(\System\View\ViewException::class, fn() => $this->render('<x-alert>no end'));
+    }
 }

@@ -713,6 +713,33 @@ For items that cannot be counted (a generator), `count`, `remaining` and `last` 
 
 Each page starts with fresh sections and stacks. Rendering two views in one request never mixes their content.
 
+### Components
+
+A component is a reusable piece of UI that can wrap content. Create `resources/views/components/alert.php`:
+
+```php
+<div class="alert alert-{{ $type ?? 'info' }}">{{ $slot }}</div>
+```
+
+Use it in any view:
+
+```php
+<x-alert type="danger">Could not save <b>{{ $product->name }}</b>.</x-alert>
+<x-badge text="New" :count="$cart->count()" />      {{-- no content: close with /> --}}
+<x-forms.input name="email" max-length="50" disabled />   {{-- components/forms/input.php --}}
+```
+
+| In the tag | In the component |
+| --- | --- |
+| `type="danger"` | `$type` is the text `"danger"` |
+| `:count="$cart->count()"` | `$count` is the PHP value (a `:` before the name) |
+| `disabled` | `$disabled` is `true` |
+| `max-length="50"` | `$maxLength` (dashes become camelCase) |
+| the content between the tags | `{{ $slot }}`, printed as HTML. `$slot->isEmpty()` tells you if there was none. |
+| all attributes | `$attributes`, as an array |
+
+Components can contain other components and any directive. A component only sees its own attributes, not the page's variables, so it works the same everywhere. The shop's flash messages use `resources/views/components/alert.php`: `<x-alert type="success" dismissible>Saved!</x-alert>`.
+
 ### More helpers
 
 | Directive | |
