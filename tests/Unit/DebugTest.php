@@ -38,6 +38,26 @@ class DebugTest extends TestCase
         $this->assertContains('…', $long['in']);
     }
 
+    public function testLargeListsStayLightAndOpenOnlyTheFirstRecords(): void
+    {
+        $rows = [];
+        for ($i = 1; $i <= 5000; $i++) {
+            $rows[] = \App\Models\Category::hydrate(['id' => $i, 'name' => "Category $i", 'slug' => "category-$i"]);
+        }
+        $html = (new Dumper())->html($rows);
+
+        // The first 10 records are open, the 11th is one folded line with a preview
+        $this->assertSame(1 + 10, substr_count($html, '<details open>'), 'the list itself + its first 10 records');
+        $this->assertContains('{id: 11, name: &quot;Category 11&quot;, slug: &quot;category-11&quot;}', $html);
+        $this->assertContains('… 4,800 more (showing the first 200)', $html);
+        $this->assertTrue(strlen($html) < 400000, 'the page stays small: ' . strlen($html) . ' bytes');
+
+        // Copy as JSON / API dumps use the same limit
+        $plain = (new Dumper())->plain($rows);
+        $this->assertCount(201, $plain);
+        $this->assertSame('4,800 more items', $plain['…']);
+    }
+
     public function testModelsDumpTheirColumnsNotTheirSettings(): void
     {
         $category = \App\Models\Category::hydrate(['id' => 1, 'name' => 'Books', 'slug' => 'books']);

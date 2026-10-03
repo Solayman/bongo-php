@@ -92,10 +92,13 @@ class DdPage
 
     protected function typeLabel(mixed $value): string
     {
+        $limit = (new Dumper())->maxItems();
         return match (true) {
+            is_array($value) && count($value) > $limit
+                => 'array (' . number_format(count($value)) . ' items) · showing the first ' . $limit,
             is_array($value)  => 'array (' . count($value) . ' ' . (count($value) === 1 ? 'item' : 'items') . ')',
             is_object($value) => get_class($value),
-            is_string($value) => 'string (' . mb_strlen($value) . ' characters)',
+            is_string($value) => 'string (' . number_format(mb_strlen($value)) . ' characters)',
             default           => get_debug_type($value),
         };
     }
