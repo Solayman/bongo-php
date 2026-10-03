@@ -5,6 +5,9 @@ return [
     'debug' => env('APP_DEBUG', env('APP_ENV', 'local') !== 'production'),
     'url'   => env('APP_URL', 'http://127.0.0.1:8000'),
 
+    // "Open in editor" links on the dd() page: vscode, phpstorm, sublime or none
+    'editor' => env('APP_EDITOR', 'vscode'),
+
     // Used by PHP dates, log timestamps and the MySQL session (e.g. Asia/Dhaka)
     'timezone' => env('APP_TIMEZONE', 'UTC'),
 

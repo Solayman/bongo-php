@@ -1438,6 +1438,14 @@ app/Http/Controllers/CategoryController.php:41 · PUT /categories/4
 
 Parameters named like a secret (`$password`, `$token`, `$secret`, `$key`) are shown as `"***"`. Long strings are cut short, arrays show as `array(3)`, and objects show their class and id (`Product #20`). A form's `_method=PUT` shows as `PUT`.
 
+In the browser the `dd()` page also shows:
+- **Open in editor**, a link to the exact line. Set `APP_EDITOR=vscode` (the default), `phpstorm`, `sublime` or `none`.
+- A coloured request badge (`POST /categories`), plus the time and memory used so far.
+- **Source**: the lines around the `dd()` call, with that line highlighted.
+- One card per value, with its type, and **Expand all**, **Collapse all** and **Copy as JSON** buttons.
+
+The page follows your system's light or dark mode.
+
 Every dump says where it was called (`file:line`). Depth (8 levels), item count (200 per array) and string length (2000 characters) are limited, so huge values can't freeze the page.
 
 ### Debug error page

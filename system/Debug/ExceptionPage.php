@@ -115,6 +115,12 @@ HTML;
     /** Highlighted source lines around $line */
     public function snippet(string $file, int $line, int $radius): string
     {
+        return self::sourceLines($file, $line, $radius);
+    }
+
+    /** The same, for other debug pages (the dd() page) */
+    public static function sourceLines(string $file, int $line, int $radius): string
+    {
         if (!is_file($file) || !is_readable($file)) {
             return '';
         }
