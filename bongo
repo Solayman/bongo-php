@@ -91,6 +91,18 @@ try {
             echo "Next: cd $target, copy .env.example to .env, then php bongo key:generate, php bongo migrate, php bongo serve" . PHP_EOL;
             break;
 
+        case 'down':
+            $secret = $optionValue('secret');
+            System\Http\Maintenance::down((string) $optionValue('message', ''), (int) $optionValue('retry', 60), $secret);
+            echo "The site is in maintenance mode: visitors see \"We'll be back soon\" (HTTP 503)." . PHP_EOL;
+            if ($secret) echo 'Visit ' . url('/' . trim($secret, '/')) . ' once to keep using the site in your browser.' . PHP_EOL;
+            echo 'Turn it off with: php bongo up' . PHP_EOL;
+            break;
+
+        case 'up':
+            echo System\Http\Maintenance::up() ? 'The site is live again.' . PHP_EOL : 'The site was not in maintenance mode.' . PHP_EOL;
+            break;
+
         case 'about':
             $size = System\Framework::size();
             $rows = [
@@ -402,6 +414,8 @@ try {
         default:
             echo 'BongoMVC ' . System\Framework::version() . " commands:\n";
             echo "  about                                    Version, PHP, environment, drivers and framework size\n";
+            echo "  down [--message=] [--retry=60] [--secret=] Maintenance mode: visitors see \"back soon\" (503)\n";
+            echo "  up                                       Leave maintenance mode\n";
             echo "  release:build <folder>                   Build a fresh project (framework + starter files, no demo app)\n";
             echo "  release:branch                           Commit the clean framework (no demo, no tests) to the release branch\n";
             echo "  release:package [--out=dist]             Build the framework package for a GitHub release\n";

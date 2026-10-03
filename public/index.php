@@ -7,6 +7,9 @@ use System\Http\Request;
 use System\Log\Log;
 use System\Routing\Router;
 
+// php bongo down: everyone gets the "back soon" page (except a browser that used the secret URL)
+System\Http\Maintenance::handle();
+
 try {
     Router::fromConfig()->dispatch(Request::method(), Request::path());
 } catch (HttpException $e) {
