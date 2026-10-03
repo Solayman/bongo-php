@@ -43,4 +43,18 @@ abstract class Relation
     {
         return $this->query->first();
     }
+
+    /**
+     * For withCount(): "(SELECT COUNT(*) FROM related WHERE ...)" counting this relation's rows
+     * for each row of $parentTable (soft-deleted related rows are not counted).
+     */
+    public function countSubquery(string $parentTable): string
+    {
+        if (!$this instanceof HasMany && !$this instanceof HasOne) {
+            throw new \LogicException('withCount() works for hasMany, hasOne and belongsToMany relations');
+        }
+        $related = ($this->related)::tableName();
+        return "(SELECT COUNT(*) FROM $related WHERE $related.{$this->foreignKey} = $parentTable.{$this->otherKey}"
+            . ($this->related::usesSoftDeletes() ? " AND $related.deleted_at IS NULL" : '') . ')';
+    }
 }

@@ -26,12 +26,12 @@
                     <tbody>
                     @foreach($categories as $category)
                         <tr>
-                            <td class="fw-medium">{{ $category['name'] }}</td>
-                            <td class="text-secondary small">{{ $category['slug'] }}</td>
-                            <td class="num"><a href="<?= url('/products?category=' . $category['id']) ?>">{{ $category['product_count'] }}</a></td>
+                            <td class="fw-medium">{{ $category->name }}</td>
+                            <td class="text-secondary small">{{ $category->slug }}</td>
+                            <td class="num"><a href="<?= url('/products?category=' . $category->id) ?>">{{ $category->products_count }}</a></td>
                             <td class="text-end text-nowrap">
-                                <a href="<?= url('/categories/' . $category['id'] . '/edit') ?>" class="btn btn-sm btn-outline-secondary">Edit</a>
-                                <form method="POST" action="<?= route('categories.destroy', ['id' => $category['id']]) ?>" class="d-inline"
+                                <a href="<?= url('/categories/' . $category->id . '/edit') ?>" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                <form method="POST" action="<?= route('categories.destroy', ['id' => $category->id]) ?>" class="d-inline"
                                       onsubmit="return confirm('Delete this category? Its products will become uncategorised.');">
                                     @csrf
                                     @method('DELETE')

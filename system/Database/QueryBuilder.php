@@ -571,6 +571,55 @@ class QueryBuilder
     // Writing
     // ------------------------------------------------------------------
 
+    /**
+     * Insert rows, or update them when the unique key already exists (one query):
+     *   DB::table('products')->upsert([['sku' => 'A1', 'price' => 5], ...], ['price']);
+     * $update: the columns to change for existing rows (default: every column given).
+     * Returns how many rows MySQL reports as affected.
+     */
+    public function upsert(array $rows, ?array $update = null): int
+    {
+        if ($rows === []) {
+            return 0;
+        }
+        $rows = isset($rows[0]) && is_array($rows[0]) ? $rows : [$rows];
+        $columns = array_keys($rows[0]);
+        $placeholders = '(' . implode(',', array_fill(0, count($columns), '?')) . ')';
+        $bindings = [];
+        foreach ($rows as $row) {
+            if (array_keys($row) !== $columns) {
+                throw new \InvalidArgumentException('upsert(): every row needs the same columns in the same order');
+            }
+            array_push($bindings, ...array_values($row));
+        }
+        $set = implode(', ', array_map(fn($c) => "$c = VALUES($c)", $update ?? $columns));
+        $sql = "INSERT INTO {$this->table} (" . implode(',', $columns) . ') VALUES '
+            . implode(',', array_fill(0, count($rows), $placeholders)) . " ON DUPLICATE KEY UPDATE $set";
+        return $this->run($sql, $bindings)->rowCount();
+    }
+
+    /**
+     * Add "{relation}_count" columns: Category::withCount('products')->get() → $category->products_count.
+     * Works for hasMany, hasOne and belongsToMany relations of the model.
+     */
+    public function withCount(string ...$relations): self
+    {
+        if ($this->model === null) {
+            throw new \LogicException('withCount() needs a model query: Category::withCount(\'products\')');
+        }
+        if ($this->columns === ['*']) {
+            $this->columns = ["{$this->table}.*"];
+        }
+        $model = new $this->model();
+        foreach ($relations as $name) {
+            if (!method_exists($model, $name)) {
+                throw new \BadMethodCallException("withCount('$name'): {$this->model} has no $name() relation");
+            }
+            $this->columns[] = $model->$name()->countSubquery($this->table) . " AS {$name}_count";
+        }
+        return $this;
+    }
+
     public function insert(array $data): bool
     {
         $columns = implode(',', array_keys($data));
