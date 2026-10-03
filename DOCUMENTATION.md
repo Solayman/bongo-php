@@ -885,6 +885,23 @@ class Order extends Model
 }
 ```
 
+| Relation | Example | Table layout |
+| --- | --- | --- |
+| `hasMany` | `$order->items` → a list | `order_items.order_id` |
+| `belongsTo` | `$item->order` → one model or `null` | `order_items.order_id` |
+| `hasOne` | `$user->profile` → one model or `null` | `profiles.user_id` |
+| `belongsToMany` | `$product->tags` → a list | a pivot table `product_tag` (`product_id`, `tag_id`): the two singular names in alphabetical order |
+
+```php
+public function profile() { return $this->hasOne(Profile::class); }
+public function tags()    { return $this->belongsToMany(Tag::class); }            // or belongsToMany(Tag::class, 'my_pivot')
+
+$product->tags()->attach([1, 2]);      // link (already linked ids are skipped)
+$product->tags()->detach(2);           // unlink one; detach() unlinks all
+$product->tags()->sync([1, 3]);        // keep exactly these: ['attached' => [3], 'detached' => [2]]
+Product::with('tags', 'category')->get();   // every relation type can be eager loaded
+```
+
 ```php
 $order = Order::find(5);                 // or findOrFail(5): 404 page if missing
 $order->status = 'shipped';

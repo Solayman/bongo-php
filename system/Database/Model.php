@@ -299,6 +299,28 @@ class Model implements \JsonSerializable
         return new HasMany($this, $related, $foreignKey, $localKey ?? static::$primaryKey);
     }
 
+    /** One-to-one: a User hasOne Profile (profiles.user_id) */
+    protected function hasOne(string $related, ?string $foreignKey = null, ?string $localKey = null): HasOne
+    {
+        return new HasOne($this, $related, $foreignKey ?? $this->defaultForeignKey(), $localKey ?? static::$primaryKey);
+    }
+
+    /**
+     * Many-to-many: a Product belongsToMany Tag through product_tag (product_id, tag_id).
+     * The pivot table is the two singular names in alphabetical order, unless you name it.
+     */
+    protected function belongsToMany(string $related, ?string $pivot = null, ?string $parentKey = null, ?string $relatedKey = null): BelongsToMany
+    {
+        $mine = strtolower((new ReflectionClass(static::class))->getShortName());
+        $theirs = strtolower((new ReflectionClass($related))->getShortName());
+        if ($pivot === null) {
+            $names = [$mine, $theirs];
+            sort($names);
+            $pivot = implode('_', $names);
+        }
+        return new BelongsToMany($this, $related, $pivot, $parentKey ?? "{$mine}_id", $relatedKey ?? "{$theirs}_id");
+    }
+
     /** Inverse: an OrderItem belongsTo an Order (order_items.order_id → orders.id) */
     protected function belongsTo(string $related, ?string $foreignKey = null, ?string $ownerKey = null): BelongsTo
     {
