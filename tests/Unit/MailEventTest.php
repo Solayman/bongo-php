@@ -13,6 +13,32 @@ class MailEventTest extends TestCase
         Event::forget();
     }
 
+    public function testAttachments(): void
+    {
+        $mailer = new Mailer(['driver' => 'log', 'from' => ['address' => 'shop@example.com', 'name' => 'Bongo Shop']]);
+        $file = tempnam(sys_get_temp_dir(), 'inv');
+        file_put_contents($file, "%PDF-1.4\nfake invoice");
+
+        $message = (new \System\Mail\Message($mailer))->from('shop@example.com')->to('rahim@example.com')->subject('Invoice')->html('<p>Attached.</p>')
+            ->attach($file, 'Invoice 42.pdf')
+            ->attachData("id,total\n42,99.00\n", "orders\r\nBcc: evil@x.com.csv", 'text/csv');
+        $raw = $mailer->build($message);
+        @unlink($file);
+
+        $this->assertContains('Content-Type: multipart/mixed;', $raw);
+        $this->assertContains('Content-Type: multipart/alternative;', $raw, 'the text/HTML part is still there');
+        $this->assertContains('Content-Type: application/pdf; name="=?UTF-8?B?' . base64_encode('Invoice 42.pdf') . '?="', $raw, 'type detected from the content');
+        $this->assertContains(chunk_split(base64_encode("%PDF-1.4\nfake invoice")), $raw);
+        $this->assertNotContains("\r\nBcc: evil", $raw, 'no header injection through a file name');
+        $this->assertSame(2, count($message->attachments));
+
+        // Queued mail keeps its attachments
+        $rebuilt = new \System\Mail\SendQueuedMail($message->toArray());
+        $this->assertSame('Invoice 42.pdf', $rebuilt->message['attachments'][0]['name']);
+
+        $this->assertThrows(\InvalidArgumentException::class, fn() => (new \System\Mail\Message($mailer))->attach('/no/such/file.pdf'));
+    }
+
     public function testMessageBuildsMimeAndBlocksHeaderInjection(): void
     {
         $mailer = new Mailer(['driver' => 'log', 'from' => ['address' => 'shop@example.com', 'name' => 'Bongo Shop']]);
