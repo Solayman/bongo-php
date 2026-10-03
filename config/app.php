@@ -8,6 +8,10 @@ return [
     // "Open in editor" links on the dd() page: vscode, phpstorm, sublime or none
     'editor' => env('APP_EDITOR', 'vscode'),
 
+    // php bongo upgrade: where to find the latest release, and a token for a private repository
+    'upgrade_url'   => env('UPGRADE_URL', 'https://api.github.com/repos/Solayman/BongoMvc/releases/latest'),
+    'upgrade_token' => env('UPGRADE_TOKEN', ''),
+
     // Used by PHP dates, log timestamps and the MySQL session (e.g. Asia/Dhaka)
     'timezone' => env('APP_TIMEZONE', 'UTC'),
 
