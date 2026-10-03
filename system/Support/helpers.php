@@ -81,6 +81,15 @@ if (!function_exists('signed_route')) {
     }
 }
 
+if (!function_exists('relative_path')) {
+    /** "D:\project/database\x.php" → "database/x.php" (paths inside the project, for messages) */
+    function relative_path(string $file): string {
+        $file = str_replace('\\', '/', $file);
+        $base = str_replace('\\', '/', BASE_PATH) . '/';
+        return str_starts_with($file, $base) ? substr($file, strlen($base)) : $file;
+    }
+}
+
 if (!function_exists('asset')) {
     function asset($path) {
         return url($path);
