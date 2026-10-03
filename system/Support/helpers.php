@@ -263,25 +263,9 @@ if (!function_exists('dd')) {
             exit;
         }
 
-        // Header: the method that called dd() with its parameter values, the file and line, the request
-        $title = $context['in'] ?? $at;
-        $meta = array_filter([$context['in'] ? $at : null, $context['request']]);
+        // Where it was called (method, file, line, request), the source around it, each value in a card
         if (!headers_sent()) header('Content-Type: text/html; charset=UTF-8');
-        echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>dd() · ' . htmlspecialchars($title) . '</title>'
-            . \System\Debug\Dumper::styles()
-            . '<style>body{background:#11121a;margin:0;padding:24px;font-family:system-ui,sans-serif}h1{color:#cdd6f4;font-size:15px;font-weight:500;margin:0 0 4px}h1 code{color:#89b4fa}'
-            . '.dd-meta{color:#7f849c;font:12px ui-monospace,Consolas,monospace;margin:0 0 16px}.dd-meta b{color:#a6e3a1;font-weight:600}</style>'
-            . '</head><body><h1>dd() in <code' . ($context['class'] ? ' title="' . htmlspecialchars($context['class']) . '"' : '') . '>' . htmlspecialchars($title) . '</code></h1>';
-        if ($meta) {
-            $parts = array_map(fn($part) => htmlspecialchars($part), $meta);
-            if ($context['request']) {
-                // Bold the HTTP method: "<b>POST</b> /categories"
-                $parts[count($parts) - 1] = preg_replace('/^(\S+)/', '<b>$1</b>', $parts[count($parts) - 1]);
-            }
-            echo '<p class="dd-meta">' . implode(' · ', $parts) . '</p>';
-        }
-        foreach ($values as $value) echo $dumper->html($value);
-        echo '</body></html>';
+        echo (new \System\Debug\DdPage($values, $context))->render();
         exit;
     }
 }

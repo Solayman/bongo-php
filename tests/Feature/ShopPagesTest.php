@@ -143,7 +143,10 @@ class ShopPagesTest extends HttpTestCase
         $this->get('/system/dump-test')->assertStatus(500)
             ->assertSee('dd() in <code title="App\Http\Controllers\SystemController">SystemController::dumpTest()</code>')
             ->assertSee('app/Http/Controllers/SystemController.php:')
-            ->assertSee('<b>GET</b> /system/dump-test')
+            ->assertSee('<span class="method m-get">GET</span><span class="path">/system/dump-test</span>')
+            ->assertSee('Open in editor')->assertSee('vscode://file/')
+            ->assertSee('<h2>Source</h2>')->assertSee('dd($user')
+            ->assertSee('<h2>Values (3)</h2>')->assertSee('Copy as JSON')
             ->assertSee('admin@example.com')->assertSee('ArrayObject');
 
         $json = json_decode($this->get('/system/dump-test', ['Accept' => 'application/json'])->body, true);
