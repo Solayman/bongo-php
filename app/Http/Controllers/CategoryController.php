@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use System\Database\DB;
+use System\Http\Request;
 
 class CategoryController extends Controller
 {
@@ -19,9 +20,10 @@ class CategoryController extends Controller
         return $this->view('categories.index', ['categories' => $categories]);
     }
 
-    public function store()
+    // The request is passed in: $request->validate(), $request->input('name'), dd($request) ...
+    public function store(Request $request)
     {
-        $data = $this->validate(['name' => 'required|string|max:100']);
+        $data = $request->validate(['name' => 'required|string|max:100']);
         $data['slug'] = $this->uniqueSlug($data['name']);
 
         Category::create($data);
@@ -35,10 +37,11 @@ class CategoryController extends Controller
         return $this->view('categories.edit', ['category' => $this->findOrFail($id)]);
     }
 
-    public function update($id)
+    // Route parameters ({id}) and the request can come in any order
+    public function update(Request $request, $id)
     {
         $category = $this->findOrFail($id);
-        $data = $this->validate(['name' => 'required|string|max:100']);
+        $data = $request->validate(['name' => 'required|string|max:100']);
         $data['slug'] = $this->uniqueSlug($data['name'], (int) $category->id);
 
         Category::query()->where('id', $category->id)->update($data);

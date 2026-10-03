@@ -179,6 +179,14 @@ class Dumper
             return [['closure', 'public', '(closure)']];
         }
 
+        // An object can choose what a dump shows (e.g. Request: its method, URL and input)
+        if (method_exists($object, '__debugInfo')) {
+            $info = $object->__debugInfo();
+            if (is_array($info)) {
+                return array_map(fn($key, $value) => [(string) $key, 'public', $value], array_keys($info), $info);
+            }
+        }
+
         $props = [];
         foreach ((array) $object as $key => $value) {
             if (str_starts_with($key, "\0*\0")) {
