@@ -1402,6 +1402,38 @@ Unsupported codes are ignored. The admin top bar and the login page have a langu
 
 ---
 
+## 9b-2. Notifications (mail, SMS, Slack)
+
+One class says what to send and how:
+
+```php
+use System\Notifications\Notification;
+
+class OrderShipped extends Notification
+{
+    public function __construct(public object $order) {}
+
+    public function via(object $user): array { return ['mail', 'sms']; }   // also 'slack'
+
+    public function toMail(object $user): \System\Mail\Message
+    {
+        return Mail::message()->subject("Order {$this->order->order_number} shipped")->view('emails.shipped', ['order' => $this->order]);
+    }
+
+    public function toSms(object $user): string { return "Your order {$this->order->order_number} is on its way"; }
+}
+
+Notify::send($user, new OrderShipped($order));          // or a list of users
+```
+
+| Channel | Goes to | Set up in `config/notifications.php` / `.env` |
+| --- | --- | --- |
+| `mail` | `$user->email` | the mail settings |
+| `sms` | `$user->phone` | `SMS_URL` (your gateway's POST URL), `SMS_TOKEN`, and the gateway's field names and fixed fields |
+| `slack` | a channel | `SLACK_WEBHOOK_URL` |
+
+Without `SMS_URL` or `SLACK_WEBHOOK_URL`, messages are written to the log, which is handy while developing. SMS and Slack use the HTTP client, with 2 tries. In tests, `Notify::fake()` records instead of sending, and `Notify::sent()` returns the list.
+
 ## 9c. Calling other APIs (HTTP client)
 
 ```php
