@@ -1248,6 +1248,19 @@ Mail::to('rahim@example.com', 'Rahim')
 Mail::to($email)->subject('Hi')->text('Plain text only')->send();
 ```
 
+**Attachments:**
+
+```php
+Mail::to($customer->email)
+    ->subject('Your invoice')
+    ->view('emails.invoice', ['order' => $order])
+    ->attach(BASE_PATH . '/storage/invoices/42.pdf')              // a file (any name: ->attach($path, 'Invoice 42.pdf'))
+    ->attachData($csv, 'orders.csv', 'text/csv')                  // generated content
+    ->send();                                                     // or ->queue(): attachments go along
+```
+
+The file type is detected from the content when you don't give one. File names are cleaned, so they can't add mail headers.
+
 | `.env` | Default | |
 | --- | --- | --- |
 | `MAIL_DRIVER` | `log` | `log` writes emails to the log (development), `smtp` sends them for real, `file` writes JSON files to `storage/mail` |

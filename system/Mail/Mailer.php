@@ -160,7 +160,6 @@ class Mailer
 
         $text = $message->text ?? ($message->html ? Message::htmlToText($message->html) : '');
         $boundary = 'bongo_' . bin2hex(random_bytes(8));
-        $headers[] = "Content-Type: multipart/alternative; boundary=\"$boundary\"";
 
         $body = "--$boundary\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n"
             . chunk_split(base64_encode($text)) . "\r\n";
@@ -170,6 +169,22 @@ class Mailer
         }
         $body .= "--$boundary--";
 
-        return implode("\r\n", $headers) . "\r\n\r\n" . $body;
+        if (!$message->attachments) {
+            $headers[] = "Content-Type: multipart/alternative; boundary=\"$boundary\"";
+            return implode("\r\n", $headers) . "\r\n\r\n" . $body;
+        }
+
+        // With attachments: multipart/mixed = [the text/HTML part, file, file ...]
+        $mixed = 'bongo_mixed_' . bin2hex(random_bytes(8));
+        $headers[] = "Content-Type: multipart/mixed; boundary=\"$mixed\"";
+        $all = "--$mixed\r\nContent-Type: multipart/alternative; boundary=\"$boundary\"\r\n\r\n$body\r\n";
+        foreach ($message->attachments as $file) {
+            $name = '=?UTF-8?B?' . base64_encode($file['name']) . '?=';
+            $all .= "--$mixed\r\nContent-Type: {$file['mime']}; name=\"$name\"\r\nContent-Transfer-Encoding: base64\r\n"
+                . "Content-Disposition: attachment; filename=\"$name\"\r\n\r\n" . chunk_split($file['content']) . "\r\n";
+        }
+        $all .= "--$mixed--";
+
+        return implode("\r\n", $headers) . "\r\n\r\n" . $all;
     }
 }

@@ -25,6 +25,7 @@ class SendQueuedMail extends Job
         $m->subject($this->message['subject']);
         if ($this->message['html'] !== null) $m->html($this->message['html']);
         if ($this->message['text'] !== null) $m->text($this->message['text']);
+        foreach ($this->message['attachments'] ?? [] as $a) $m->attachData(base64_decode($a['content']), $a['name'], $a['mime']);
         $m->send();
     }
 

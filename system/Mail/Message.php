@@ -15,6 +15,8 @@ class Message
     public string $subject = '';
     public ?string $html = null;
     public ?string $text = null;
+    /** [name, mime, base64 content] */
+    public array $attachments = [];
 
     public function __construct(protected ?Mailer $mailer = null) {}
 
@@ -61,6 +63,28 @@ class Message
         return $this;
     }
 
+    /** Attach a file: ->attach($path) or ->attach($path, 'Invoice 42.pdf') */
+    public function attach(string $path, ?string $name = null, ?string $mime = null): static
+    {
+        if (!is_file($path) || !is_readable($path)) {
+            throw new \InvalidArgumentException("Cannot attach [$path]: the file does not exist or cannot be read");
+        }
+        return $this->attachData((string) file_get_contents($path), $name ?? basename($path), $mime);
+    }
+
+    /** Attach generated content: ->attachData($pdf, 'invoice.pdf') */
+    public function attachData(string $content, string $name, ?string $mime = null): static
+    {
+        // The name goes into a MIME header: no line breaks or quotes
+        $name = trim(str_replace(["\r", "\n", '"'], '', $name)) ?: 'attachment';
+        if ($mime === null) {
+            $finfo = function_exists('finfo_open') ? finfo_open(FILEINFO_MIME_TYPE) : false;
+            $mime = $finfo ? (string) finfo_buffer($finfo, $content) : 'application/octet-stream';
+        }
+        $this->attachments[] = ['name' => $name, 'mime' => $mime, 'content' => base64_encode($content)];
+        return $this;
+    }
+
     public function text(string $text): static
     {
         $this->text = $text;
@@ -91,6 +115,7 @@ class Message
         return [
             'to' => $this->to, 'cc' => $this->cc, 'bcc' => $this->bcc, 'from' => $this->from,
             'reply_to' => $this->replyTo, 'subject' => $this->subject, 'html' => $this->html, 'text' => $this->text,
+            'attachments' => $this->attachments,
         ];
     }
 
