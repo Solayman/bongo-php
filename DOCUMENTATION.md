@@ -1543,6 +1543,7 @@ $schedule->call(fn() => ...)->cron('30 2 * * 1-5');
 
 Run the scheduler once a minute:
 
+* While developing: `php bongo schedule:work` runs it every minute in a terminal, so no cron is needed. Each run is a fresh process, so code changes are picked up. Stop it with Ctrl+C.
 * Linux cron: `* * * * * cd /path/to/app && php bongo schedule:run`
 * Windows: a Task Scheduler entry that repeats every minute.
 

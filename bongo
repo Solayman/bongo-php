@@ -367,6 +367,18 @@ try {
             }
             exit($failed ? 1 : 0);
 
+        case 'schedule:work':
+            // For development: no cron needed. Each minute runs "schedule:run" in a fresh process,
+            // so code changes are picked up and a crashing task can't stop the loop.
+            echo 'Running the scheduler every minute. Press Ctrl+C to stop.' . PHP_EOL;
+            $minutes = (int) $optionValue('minutes', 0);   // --minutes=N: stop after N runs (0 = forever)
+            for ($run = 1; $minutes === 0 || $run <= $minutes; $run++) {
+                $wait = 60 - (int) date('s');
+                if ($run > 1 || $hasOption('wait')) sleep($wait);
+                passthru(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(__FILE__) . ' schedule:run');
+            }
+            break;
+
         case 'schedule:list':
             $tasks = System\Scheduling\Schedule::load()->tasks();
             $now = new DateTimeImmutable();
@@ -451,6 +463,7 @@ try {
 ";
             echo "  schedule:run                             Run due scheduled tasks (call it every minute)
 ";
+            echo "  schedule:work                            Run the scheduler every minute in this terminal (no cron needed)\n";
             echo "  schedule:list                            Show scheduled tasks and their next run
 ";
             echo "  cache:clear                              Delete everything in the file cache
