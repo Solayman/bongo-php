@@ -25,10 +25,14 @@ try {
             break;
 
         case 'release:package':
-            $path = (new System\Console\Upgrader(BASE_PATH))->package((string) $optionValue('out', BASE_PATH . '/dist'));
-            echo 'Package: ' . relativePath($path) . PHP_EOL . 'Checksum: ' . relativePath($path) . '.sha256' . PHP_EOL;
-            echo 'Attach both files to a GitHub release tagged v' . System\Framework::version() . ', e.g.:' . PHP_EOL;
-            echo '  gh release create v' . System\Framework::version() . ' ' . relativePath($path) . ' ' . relativePath($path) . '.sha256 --notes "What changed"' . PHP_EOL;
+        case 'release:branch':
+        case 'release:build':
+            // Maintainer tools: only in the framework repository, not in projects
+            if (!is_file(BASE_PATH . '/release/tools/commands.php')) {
+                throw new RuntimeException("$command is a maintainer tool of the Bongo repository; projects don't include it.");
+            }
+            require_once BASE_PATH . '/release/tools/commands.php';
+            runReleaseCommand($command, $options, $optionValue);
             break;
 
         case 'upgrade':
@@ -72,23 +76,6 @@ try {
                 echo "New settings in config/$file: " . implode(', ', $keys) . ' (copy them from the release, or keep the defaults)' . PHP_EOL;
             }
             echo 'Next: php bongo migrate, then php bongo test' . PHP_EOL;
-            break;
-
-        case 'release:branch':
-            $commit = (new System\Console\ReleaseBranch(BASE_PATH))->update();
-            echo 'The release branch now holds Bongo ' . System\Framework::version() . " (commit $commit): the framework only, no demo app, no tests." . PHP_EOL;
-            echo 'Nothing was tagged or published. Push it with: git push origin release' . PHP_EOL;
-            break;
-
-        case 'release:build':
-            $target = $options[0] ?? '';
-            if ($target === '' || str_starts_with($target, '--')) {
-                echo "Usage: php bongo release:build <folder>   e.g. php bongo release:build ../my-app\n";
-                exit(1);
-            }
-            $count = (new System\Console\ReleaseBuilder(BASE_PATH))->build($target);
-            echo "Built a fresh Bongo " . System\Framework::version() . " project in $target ($count files)." . PHP_EOL;
-            echo "Next: cd $target, copy .env.example to .env, then php bongo key:generate, php bongo migrate, php bongo serve" . PHP_EOL;
             break;
 
         case 'down':
@@ -452,9 +439,10 @@ try {
             echo "  about                                    Version, PHP, environment, drivers and framework size\n";
             echo "  down [--message=] [--retry=60] [--secret=] Maintenance mode: visitors see \"back soon\" (503)\n";
             echo "  up                                       Leave maintenance mode\n";
-            echo "  release:build <folder>                   Build a fresh project (framework + starter files, no demo app)\n";
-            echo "  release:branch                           Commit the clean framework (no demo, no tests) to the release branch\n";
-            echo "  release:package [--out=dist]             Build the framework package for a GitHub release\n";
+            if (is_file(BASE_PATH . '/release/tools/commands.php')) {
+                require_once BASE_PATH . '/release/tools/commands.php';
+                foreach (RELEASE_COMMANDS_HELP as $line) echo "  $line\n";
+            }
             echo "  upgrade [--check|--from=file|--rollback] Update the framework files only (backup first)\n";
             echo "  serve [--port=8000] [--host=127.0.0.1]  Start the development server\n";
             echo "  migrate                                  Run pending database/migrations/*.php\n";

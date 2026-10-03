@@ -1,6 +1,8 @@
 <?php
 namespace Tests\Unit;
 
+require_once BASE_PATH . "/release/tools/commands.php";
+
 use System\Console\ReleaseBuilder;
 use System\Testing\TestCase;
 
