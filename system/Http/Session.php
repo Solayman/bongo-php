@@ -24,6 +24,9 @@ class Session
                 'samesite' => (string) config('session.same_site', 'Lax'),
                 'secure'   => Request::isSecure(),
             ]);
+            if (config('session.driver', 'file') === 'redis') {
+                session_set_save_handler(new RedisSessionHandler(max(1, (int) config('session.idle_minutes', 120)) * 60), true);
+            }
             session_start();
         }
 

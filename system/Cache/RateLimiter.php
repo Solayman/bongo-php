@@ -10,7 +10,7 @@ namespace System\Cache;
  */
 class RateLimiter
 {
-    public function __construct(protected ?FileStore $store = null)
+    public function __construct(protected ?Store $store = null)
     {
         $this->store ??= Cache::store();
     }
