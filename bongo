@@ -74,6 +74,12 @@ try {
             echo 'Next: php bongo migrate, then php bongo test' . PHP_EOL;
             break;
 
+        case 'release:branch':
+            $commit = (new System\Console\ReleaseBranch(BASE_PATH))->update();
+            echo 'The release branch now holds BongoMVC ' . System\Framework::version() . " (commit $commit): the framework only, no demo app, no tests." . PHP_EOL;
+            echo 'Nothing was tagged or published. Push it with: git push origin release' . PHP_EOL;
+            break;
+
         case 'release:build':
             $target = $options[0] ?? '';
             if ($target === '' || str_starts_with($target, '--')) {
@@ -397,6 +403,7 @@ try {
             echo 'BongoMVC ' . System\Framework::version() . " commands:\n";
             echo "  about                                    Version, PHP, environment, drivers and framework size\n";
             echo "  release:build <folder>                   Build a fresh project (framework + starter files, no demo app)\n";
+            echo "  release:branch                           Commit the clean framework (no demo, no tests) to the release branch\n";
             echo "  release:package [--out=dist]             Build the framework package for a GitHub release\n";
             echo "  upgrade [--check|--from=file|--rollback] Update the framework files only (backup first)\n";
             echo "  serve [--port=8000] [--host=127.0.0.1]  Start the development server\n";

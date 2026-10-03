@@ -1729,7 +1729,16 @@ public function testOrderConfirmation(): void
 
 ---
 
-## 13a. Upgrading the framework
+## 13a. Branches and releases
+
+| Branch | Holds |
+| --- | --- |
+| `master` | Development: the framework plus the e-commerce test app and all tests. Every change is an MR into `master`. |
+| `release` | Only the clean framework: what `php bongo release:build` produces, without the demo app and without tests. One commit per version. |
+
+`php bongo release:branch` adds that commit ("BongoMVC X.Y.Z"), built from the current `master`, using a temporary worktree so your folder isn't touched. Nothing is tagged or published. Push it with `git push origin release`.
+
+## 13a-2. Upgrading the framework
 
 ```bash
 php bongo upgrade --check      # installed vs latest version, and the release notes
