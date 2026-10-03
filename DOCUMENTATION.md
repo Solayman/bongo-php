@@ -1669,6 +1669,26 @@ public function testOrderConfirmation(): void
 
 ---
 
+## 13a. Upgrading the framework
+
+```bash
+php bongo upgrade --check      # installed vs latest version, and the release notes
+php bongo upgrade              # download, check the SHA-256, back up, replace, list new settings
+php bongo upgrade --rollback   # put the previous version back
+php bongo upgrade --from=bongomvc-framework-1.0.0.json.gz   # offline, from a downloaded package
+```
+
+Only the framework's own files are replaced: `system/`, `bongo`, `public/index.php` and `config/bootstrap.php`. Your code and settings are never touched, and a backup goes to `storage/upgrade-backup/`. A package whose checksum doesn't match, or which tries to write outside the framework, is refused before anything changes. See `UPGRADE.md`.
+
+**Publishing a release** (for maintainers): set the new version in `system/VERSION`, then:
+
+```bash
+php bongo release:package                       # dist/bongomvc-framework-X.Y.Z.json.gz + .sha256
+gh release create vX.Y.Z dist/bongomvc-framework-X.Y.Z.json.gz dist/bongomvc-framework-X.Y.Z.json.gz.sha256 --notes "..."
+```
+
+`UPGRADE_URL` points to the releases API (GitHub by default). Set `UPGRADE_TOKEN` when the repository is private.
+
 ## 13b. Starting a new project
 
 This repository also holds an e-commerce demo app, which the framework's tests use. To start your own project without it:

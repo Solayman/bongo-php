@@ -24,6 +24,56 @@ try {
             echo 'BongoMVC ' . System\Framework::version() . PHP_EOL;
             break;
 
+        case 'release:package':
+            $path = (new System\Console\Upgrader(BASE_PATH))->package((string) $optionValue('out', BASE_PATH . '/dist'));
+            echo 'Package: ' . relativePath($path) . PHP_EOL . 'Checksum: ' . relativePath($path) . '.sha256' . PHP_EOL;
+            echo 'Attach both files to a GitHub release tagged v' . System\Framework::version() . ', e.g.:' . PHP_EOL;
+            echo '  gh release create v' . System\Framework::version() . ' ' . relativePath($path) . ' ' . relativePath($path) . '.sha256 --notes "What changed"' . PHP_EOL;
+            break;
+
+        case 'upgrade':
+            $upgrader = new System\Console\Upgrader(BASE_PATH);
+            if ($hasOption('rollback')) {
+                echo 'Restored BongoMVC ' . $upgrader->rollback() . ' from the backup.' . PHP_EOL;
+                break;
+            }
+            $sha = null;
+            if ($from = $optionValue('from')) {
+                $package = $from;
+                $shaFile = "$from.sha256";
+                $sha = is_file($shaFile) ? strtok((string) file_get_contents($shaFile), ' ') : null;
+            } else {
+                [$latest, $notes, $packageUrl, $shaUrl] = $upgrader->latest();
+                $current = System\Framework::version();
+                echo "Installed: $current    Latest: $latest" . PHP_EOL;
+                if (version_compare($latest, $current, '<=')) {
+                    echo 'You have the latest version.' . PHP_EOL;
+                    break;
+                }
+                if ($notes !== '') echo PHP_EOL . "What changed in $latest:" . PHP_EOL . $notes . PHP_EOL . PHP_EOL;
+                if ((int) explode('.', $latest)[0] > (int) explode('.', $current)[0]) {
+                    echo "\033[33m$latest is a major version: read UPGRADE.md before upgrading.\033[0m" . PHP_EOL;
+                }
+                if ($hasOption('check')) {
+                    echo 'Run php bongo upgrade to install it.' . PHP_EOL;
+                    break;
+                }
+                if (!$packageUrl || !$shaUrl) {
+                    throw new RuntimeException("The $latest release has no framework package (.json.gz and .sha256) attached.");
+                }
+                $package = BASE_PATH . '/storage/upgrade-' . $latest . '.json.gz';
+                file_put_contents($package, $upgrader->download($packageUrl));
+                $sha = strtok($upgrader->download($shaUrl), ' ');
+            }
+            $result = $upgrader->apply($package, $sha);
+            echo "Upgraded BongoMVC {$result['from']} → {$result['to']} ({$result['files']} framework files)." . PHP_EOL;
+            echo 'Backup: ' . relativePath($result['backup']) . '   (undo with: php bongo upgrade --rollback)' . PHP_EOL;
+            foreach ($result['newConfig'] as $file => $keys) {
+                echo "New settings in config/$file: " . implode(', ', $keys) . ' (copy them from the release, or keep the defaults)' . PHP_EOL;
+            }
+            echo 'Next: php bongo migrate, then php bongo test' . PHP_EOL;
+            break;
+
         case 'release:build':
             $target = $options[0] ?? '';
             if ($target === '' || str_starts_with($target, '--')) {
@@ -347,6 +397,8 @@ try {
             echo 'BongoMVC ' . System\Framework::version() . " commands:\n";
             echo "  about                                    Version, PHP, environment, drivers and framework size\n";
             echo "  release:build <folder>                   Build a fresh project (framework + starter files, no demo app)\n";
+            echo "  release:package [--out=dist]             Build the framework package for a GitHub release\n";
+            echo "  upgrade [--check|--from=file|--rollback] Update the framework files only (backup first)\n";
             echo "  serve [--port=8000] [--host=127.0.0.1]  Start the development server\n";
             echo "  migrate                                  Run pending database/migrations/*.php\n";
             echo "  migrate:status                           Show which migrations have run (and their batch)\n";
