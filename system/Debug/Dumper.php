@@ -200,13 +200,98 @@ class Dumper
     /** "app/Http/Controllers/X.php:12" for the first frame outside the dump helpers */
     public static function caller(): string
     {
-        foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS) as $frame) {
+        return self::context()['at'];
+    }
+
+    /**
+     * Where dump()/dd() was called, for the header:
+     *   at      "app/Http/Controllers/CategoryController.php:37"
+     *   in      'CategoryController::update($id = "4")' (null at the top level of a file)
+     *   class   "App\Http\Controllers\CategoryController" (null outside a class)
+     *   request "PUT /categories/4" (null on the command line)
+     */
+    public static function context(): array
+    {
+        $trace = debug_backtrace(0, 40);
+        $context = ['at' => 'unknown', 'in' => null, 'class' => null, 'request' => self::request()];
+
+        foreach ($trace as $i => $frame) {
             if (!isset($frame['file'])) continue;
             $file = str_replace('\\', '/', $frame['file']);
             if (str_ends_with($file, 'system/Debug/Dumper.php') || str_ends_with($file, 'system/Support/helpers.php')) continue;
+
             $base = defined('BASE_PATH') ? str_replace('\\', '/', BASE_PATH) . '/' : '';
-            return ($base && str_starts_with($file, $base) ? substr($file, strlen($base)) : $file) . ':' . $frame['line'];
+            $context['at'] = ($base && str_starts_with($file, $base) ? substr($file, strlen($base)) : $file) . ':' . $frame['line'];
+
+            // The next frame is the function or method that contains the dd() call
+            $outer = $trace[$i + 1] ?? null;
+            if ($outer && isset($outer['function']) && !in_array($outer['function'], ['require', 'require_once', 'include', 'include_once'], true)) {
+                $context['class'] = $outer['class'] ?? null;
+                $context['in'] = self::describeCall($outer);
+            }
+            break;
         }
-        return 'unknown';
+        return $context;
+    }
+
+    /** 'CategoryController::update($id = "4")' with the values it was called with */
+    protected static function describeCall(array $frame): string
+    {
+        $class = $frame['class'] ?? null;
+        $name = ($class ? substr(strrchr('\\' . $class, '\\'), 1) . '::' : '') . $frame['function'];
+        $args = $frame['args'] ?? [];
+
+        $names = [];
+        try {
+            $reflection = $class && method_exists($class, $frame['function'])
+                ? new \ReflectionMethod($class, $frame['function'])
+                : (function_exists($frame['function']) ? new \ReflectionFunction($frame['function']) : null);
+            foreach ($reflection?->getParameters() ?? [] as $param) {
+                $names[] = ($param->isVariadic() ? '...' : '') . '$' . $param->getName();
+            }
+        } catch (\ReflectionException) {
+            // a closure or a dynamic call: show the values without names
+        }
+
+        $parts = [];
+        foreach ($args as $index => $value) {
+            $label = $names[$index] ?? (str_starts_with((string) end($names), '...') ? end($names) : null);
+            $secret = $label !== null && preg_match('/pass|secret|token|key/i', $label);
+            $shown = $secret ? '"***"' : self::short($value);
+            $parts[] = $label !== null && !str_starts_with($label, '...') ? "$label = $shown" : $shown;
+        }
+        return $name . '(' . implode(', ', $parts) . ')';
+    }
+
+    /** A one-line preview of an argument */
+    protected static function short(mixed $value): string
+    {
+        return match (true) {
+            $value === null => 'null',
+            is_bool($value) => $value ? 'true' : 'false',
+            is_int($value), is_float($value) => (string) $value,
+            is_string($value) => json_encode(mb_strlen($value) > 40 ? mb_substr($value, 0, 40) . '…' : $value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            is_array($value) => 'array(' . count($value) . ')',
+            is_object($value) => substr(strrchr('\\' . get_class($value), '\\'), 1) . (isset($value->id) && is_scalar($value->id) ? ' #' . $value->id : ''),
+            default => get_debug_type($value),
+        };
+    }
+
+    /** "POST /categories" during a web request, null on the command line */
+    protected static function request(): ?string
+    {
+        if (PHP_SAPI === 'cli' || PHP_SAPI === 'phpdbg' || !isset($_SERVER['REQUEST_METHOD'])) {
+            return null;
+        }
+        $uri = (string) ($_SERVER['REQUEST_URI'] ?? '/');
+        // The method the route sees: a form's _method=PUT shows as PUT
+        $method = class_exists(\System\Http\Request::class) ? \System\Http\Request::method() : strtoupper((string) $_SERVER['REQUEST_METHOD']);
+        return $method . ' ' . (mb_strlen($uri) > 120 ? mb_substr($uri, 0, 120) . '…' : $uri);
+    }
+
+    /** The header line for text output: "CategoryController::store() · app/…:24 · POST /categories" */
+    public static function headline(array $context): string
+    {
+        return implode(' · ', array_filter([$context['in'], $context['at'], $context['request']]));
     }
 }
