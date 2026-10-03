@@ -72,7 +72,7 @@ class SystemController extends Controller
                 'next' => $t->nextRun(new \DateTimeImmutable())?->format('Y-m-d H:i'),
             ], \System\Scheduling\Schedule::load()->tasks()),
             'migrations' => $this->migrationStatus(),
-            'logFile'    => $this->relativePath(Logger::instance()->file()),
+            'logFile'    => relative_path(Logger::instance()->file()),
             'logLevel'   => $logLevel,
             'logs'       => Logger::instance()->recent(50, $logLevel),
             'mails'      => \System\Mail\Mailbox::latest(20),
@@ -171,12 +171,6 @@ class SystemController extends Controller
         return $checks;
     }
 
-    protected function relativePath(string $path): string
-    {
-        $path = str_replace('\\', '/', $path);
-        $base = str_replace('\\', '/', BASE_PATH) . '/';
-        return str_starts_with($path, $base) ? substr($path, strlen($base)) : $path;
-    }
 
     protected function migrationStatus(): array
     {

@@ -17,6 +17,8 @@ $optionValue = function (string $name, $default = null) use ($options) {
     return $default;
 };
 
+$migrator = fn() => new Migrator(base_path('database/migrations'));
+
 try {
     switch ($command) {
         case '--version':
@@ -71,7 +73,7 @@ try {
             }
             $result = $upgrader->apply($package, $sha);
             echo "Upgraded Bongo {$result['from']} → {$result['to']} ({$result['files']} framework files)." . PHP_EOL;
-            echo 'Backup: ' . relativePath($result['backup']) . '   (undo with: php bongo upgrade --rollback)' . PHP_EOL;
+            echo 'Backup: ' . relative_path($result['backup']) . '   (undo with: php bongo upgrade --rollback)' . PHP_EOL;
             foreach ($result['newConfig'] as $file => $keys) {
                 echo "New settings in config/$file: " . implode(', ', $keys) . ' (copy them from the release, or keep the defaults)' . PHP_EOL;
             }
@@ -126,12 +128,12 @@ try {
             break;
 
         case 'migrate':
-            $done = (new Migrator(base_path('database/migrations')))->migrate(fn($name) => print("Migrated: $name\n"));
+            $done = $migrator()->migrate(fn($name) => print("Migrated: $name\n"));
             echo $done ? "Done.\n" : "Nothing to migrate.\n";
             break;
 
         case 'migrate:status':
-            $rows = (new Migrator(base_path('database/migrations')))->status();
+            $rows = $migrator()->status();
             if (!$rows) {
                 echo "No migrations found.\n";
                 break;
@@ -149,7 +151,7 @@ try {
 
         case 'migrate:rollback':
             $steps = (int) $optionValue('step', 1);
-            $done = (new Migrator(base_path('database/migrations')))->rollback($steps, fn($name) => print("Rolled back: $name\n"));
+            $done = $migrator()->rollback($steps, fn($name) => print("Rolled back: $name\n"));
             echo $done ? "Done.\n" : "Nothing to roll back.\n";
             break;
 
@@ -158,8 +160,8 @@ try {
                 echo "Usage: php bongo make:migration create_posts_table\n";
                 exit(1);
             }
-            $file = (new Migrator(base_path('database/migrations')))->make($options[0]);
-            echo 'Created: ' . relativePath($file) . PHP_EOL;
+            $file = $migrator()->make($options[0]);
+            echo 'Created: ' . relative_path($file) . PHP_EOL;
             break;
 
         case 'migrate:fresh':
@@ -171,7 +173,7 @@ try {
                     exit(1);
                 }
             }
-            $migrator = new Migrator(base_path('database/migrations'));
+            $migrator = $migrator();
             foreach ($migrator->dropAllTables() as $table) echo "Dropped: $table\n";
             $migrator->migrate(fn($name) => print("Migrated: $name\n"));
             if ($hasOption('seed')) {
@@ -291,8 +293,8 @@ try {
             echo "Created: $created" . PHP_EOL;
             if ($command === 'make:model' && $hasOption('migration')) {
                 $table = $generator->tableName(basename(strtr($name, '\\', '/')));
-                $file = (new Migrator(base_path('database/migrations')))->make("create_{$table}_table");
-                echo 'Created: ' . relativePath($file) . PHP_EOL;
+                $file = $migrator()->make("create_{$table}_table");
+                echo 'Created: ' . relative_path($file) . PHP_EOL;
             }
             break;
 
@@ -435,78 +437,60 @@ try {
 
         case 'help':
         default:
-            echo 'Bongo ' . System\Framework::version() . " commands:\n";
-            echo "  about                                    Version, PHP, environment, drivers and framework size\n";
-            echo "  down [--message=] [--retry=60] [--secret=] Maintenance mode: visitors see \"back soon\" (503)\n";
-            echo "  up                                       Leave maintenance mode\n";
+            $help = [
+                'about' => 'Version, PHP, environment, drivers and framework size',
+                'serve [--port=8000] [--host=127.0.0.1]' => 'Start the development server',
+                'down [--message=] [--retry=60] [--secret=]' => 'Maintenance mode: visitors see "back soon" (503)',
+                'up' => 'Leave maintenance mode',
+                'upgrade [--check|--from=file|--rollback]' => 'Update the framework files only (backup first)',
+                'migrate' => 'Run pending database/migrations/*.php',
+                'migrate:status' => 'Show which migrations have run (and their batch)',
+                'migrate:rollback [--step=1]' => 'Undo the last batch(es) of migrations',
+                'migrate:fresh [--force] [--seed]' => 'Drop all tables, migrate (and seed)',
+                'make:migration <name>' => 'Create a migration file, e.g. create_posts_table',
+                'db:seed' => 'Run database/seeders/DatabaseSeeder.php',
+                'key:generate [--show] [--force]' => 'Create APP_KEY in .env (password pepper + encryption)',
+                'route:list [filter]' => 'Show every route with its name, action and middleware',
+                'tinker' => 'Interactive PHP shell with the app loaded',
+                'make:controller <Name> [--api]' => 'Create a controller in app/Http/Controllers',
+                'make:model <Name> [--migration]' => 'Create a model (and its migration)',
+                'make:middleware <Name>' => 'Create a middleware class',
+                'make:request <Name>' => 'Create a form request (rules + authorize) in app/Http/Requests',
+                'make:policy <Name>' => 'Create a policy in app/Policies (who may update/delete)',
+                'make:job <Name>' => 'Create a queued job in app/Jobs',
+                'make:component <name>' => 'Create a view component: resources/views/components (<x-name>)',
+                'make:seeder <Name>' => 'Create a seeder in database/seeders',
+                'make:notification <Name>' => 'Create a notification (mail/sms/slack) in app/Notifications',
+                'make:mail <name>' => 'Create an email template in resources/views/emails',
+                'make:test <Name> [--unit]' => 'Create a feature (or unit) test',
+                'security:check' => 'Deployment security checklist (exit 1 on failures)',
+                'queue:work [--once] [--stop-when-empty]' => 'Run queued jobs (QUEUE_DRIVER=database)',
+                'queue:failed / queue:retry <id|all>' => 'List / retry failed jobs',
+                'queue:flush' => 'Delete all failed jobs',
+                'schedule:run' => 'Run due scheduled tasks (call it every minute)',
+                'schedule:work' => 'Run the scheduler every minute in this terminal (no cron needed)',
+                'schedule:list' => 'Show scheduled tasks and their next run',
+                'websocket:serve [--port=6001] [--host=]' => 'Live updates: push Broadcast::to(...)->send() to open pages',
+                'cache:clear' => 'Delete everything in the cache',
+                'view:cache' => 'Precompile and lint every template (run on deploy)',
+                'view:clear' => 'Delete compiled templates in storage/cache/views',
+                'log:clear' => 'Delete the log files in storage/logs',
+                'test [filter]' => 'Run the tests in tests/',
+                'help' => 'Show this help',
+            ];
             if (is_file(BASE_PATH . '/release/tools/commands.php')) {
                 require_once BASE_PATH . '/release/tools/commands.php';
-                foreach (RELEASE_COMMANDS_HELP as $line) echo "  $line\n";
+                $help += RELEASE_COMMANDS_HELP;
             }
-            echo "  upgrade [--check|--from=file|--rollback] Update the framework files only (backup first)\n";
-            echo "  serve [--port=8000] [--host=127.0.0.1]  Start the development server\n";
-            echo "  migrate                                  Run pending database/migrations/*.php\n";
-            echo "  migrate:status                           Show which migrations have run (and their batch)\n";
-            echo "  migrate:rollback [--step=1]              Undo the last batch(es) of migrations\n";
-            echo "  make:migration <name>                    Create a migration file, e.g. create_posts_table\n";
-            echo "  migrate:fresh [--force] [--seed]         Drop all tables, migrate (and seed)\n";
-            echo "  db:seed                                  Run database/seeders/DatabaseSeeder.php\n";
-            echo "  key:generate [--show] [--force]          Create APP_KEY in .env (password pepper + encryption)\n";
-            echo "  route:list [filter]                      Show every route with its name, action and middleware
-";
-            echo "  tinker                                   Interactive PHP shell with the app loaded
-";
-            echo "  make:controller <Name> [--api]           Create a controller in app/Http/Controllers
-";
-            echo "  make:model <Name> [--migration]          Create a model (and its migration)
-";
-            echo "  make:middleware <Name>                   Create a middleware class
-";
-            echo "  make:request <Name>                      Create a form request (rules + authorize) in app/Http/Requests" . PHP_EOL;
-            echo "  make:policy <Name>                       Create a policy in app/Policies (who may update/delete)\n";
-            echo "  make:job <Name>                          Create a queued job in app/Jobs\n";
-            echo "  make:component <name>                    Create a view component: resources/views/components (<x-name>)\n";
-            echo "  make:seeder <Name>                       Create a seeder in database/seeders\n";
-            echo "  make:notification <Name>                 Create a notification (mail/sms/slack) in app/Notifications\n";
-            echo "  make:mail <name>                         Create an email template in resources/views/emails\n";
-            echo "  make:test <Name> [--unit]                Create a feature (or unit) test
-";
-            echo "  security:check                           Deployment security checklist (exit 1 on failures)
-";
-            echo "  queue:work [--once] [--stop-when-empty]   Run queued jobs (QUEUE_DRIVER=database)
-";
-            echo "  queue:failed / queue:retry <id|all>      List / retry failed jobs
-";
-            echo "  queue:flush                              Delete all failed jobs
-";
-            echo "  schedule:run                             Run due scheduled tasks (call it every minute)
-";
-            echo "  schedule:work                            Run the scheduler every minute in this terminal (no cron needed)\n";
-            echo "  websocket:serve [--port=6001] [--host=]  Live updates: push Broadcast::to(...)->send() to open pages\n";
-            echo "  schedule:list                           Show scheduled tasks and their next run
-";
-            echo "  cache:clear                              Delete everything in the file cache
-";
-            echo "  view:cache                               Precompile and lint every template (run on deploy)" . PHP_EOL;
-            echo "  view:clear                               Delete compiled templates in storage/cache/views
-";
-            echo "  log:clear                                Delete the log files in storage/logs
-";
-            echo "  test [filter]                            Run the tests in tests/\n";
-            echo "  help                                     Show this help\n";
+            echo 'Bongo ' . System\Framework::version() . " commands:\n";
+            foreach ($help as $usage => $description) {
+                printf("  %-44s %s\n", $usage, $description);
+            }
             break;
     }
 } catch (Throwable $e) {
     fwrite(STDERR, get_class($e) . ': ' . $e->getMessage() . "\n");
     exit(1);
-}
-
-/** "D:\project/database\x.php" → "database/x.php" */
-function relativePath(string $file): string
-{
-    $file = str_replace('\\', '/', $file);
-    $base = str_replace('\\', '/', BASE_PATH) . '/';
-    return str_starts_with($file, $base) ? substr($file, strlen($base)) : $file;
 }
 
 function runSeeder(): void

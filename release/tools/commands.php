@@ -10,9 +10,9 @@ require_once __DIR__ . '/ReleaseBranch.php';
 require_once __DIR__ . '/Packager.php';
 
 const RELEASE_COMMANDS_HELP = [
-    'release:build <folder>                   Build a fresh project (framework + starter files, no demo app)',
-    'release:branch                           Commit the clean framework (no demo, no tests) to the release branch',
-    'release:package [--out=dist]             Build the framework package for a GitHub release',
+    'release:build <folder>' => 'Build a fresh project (framework + starter files, no demo app)',
+    'release:branch' => 'Commit the clean framework (no demo, no tests) to the release branch',
+    'release:package [--out=dist]' => 'Build the framework package for a GitHub release',
 ];
 
 function runReleaseCommand(string $command, array $options, callable $optionValue): void
@@ -21,7 +21,7 @@ function runReleaseCommand(string $command, array $options, callable $optionValu
 
     switch ($command) {
         case 'release:package':
-            $path = relativePath((new System\Console\Packager(BASE_PATH))->package((string) $optionValue('out', BASE_PATH . '/dist')));
+            $path = relative_path((new System\Console\Packager(BASE_PATH))->package((string) $optionValue('out', BASE_PATH . '/dist')));
             echo "Package: $path" . PHP_EOL . "Checksum: $path.sha256" . PHP_EOL;
             echo "Attach both files to a GitHub release tagged v$version, e.g.:" . PHP_EOL;
             echo "  gh release create v$version $path $path.sha256 --notes \"What changed\"" . PHP_EOL;
