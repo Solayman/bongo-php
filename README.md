@@ -1,11 +1,13 @@
-# BongoMVC
+# Bongo PHP Framework
+
+*Made by [Nobotech](https://nobotech.xyz).*
 
 A lightweight PHP MVC framework with **zero required dependencies**: no Composer, no Node, no build step. Clone it, point it at a database, and run it.
 
-**New here? Read [Why BongoMVC?](WHY_BONGOMVC.md):** what you get, how small and fast it is (about 480 KB, zero dependencies, under 1 MB of memory per request), how it compares with other PHP frameworks, and when to choose something else.
+**New here? Read [Why Bongo?](WHY_BONGO.md):** what you get, how small and fast it is (about 480 KB, zero dependencies, under 1 MB of memory per request), how it compares with other PHP frameworks, and when to choose something else.
 
 ```bash
-git clone https://github.com/Solayman/BongoMvc.git && cd BongoMvc
+git clone https://github.com/Solayman/bongo-php.git && cd bongo-php
 cp .env.example .env            # set APP_URL and DB_* (Windows: copy .env.example .env)
 php bongo key:generate
 php bongo migrate
@@ -38,4 +40,4 @@ Requires PHP 8.0+ with `pdo_mysql` and `openssl`, plus MySQL or MariaDB. Compose
 - [TESTING_GUIDE.md](TESTING_GUIDE.md): a step-by-step checklist for trying each feature by hand in the browser.
 - `php bongo help`: every CLI command.
 
-BongoMVC is an independent project with its own code, not affiliated with any other framework.
+Bongo is an independent project with its own code, not affiliated with any other framework.

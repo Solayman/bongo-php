@@ -1,6 +1,6 @@
-# My BongoMVC app
+# My Bongo app
 
-Built with [BongoMVC](https://github.com/Solayman/BongoMvc): a lightweight PHP MVC framework with zero required dependencies.
+Built with [Bongo](https://github.com/Solayman/bongo-php): a lightweight PHP MVC framework with zero required dependencies.
 
 ## Start
 

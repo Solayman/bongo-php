@@ -1,6 +1,6 @@
 #!/usr/bin/env php
 <?php
-// BongoMVC command line tool: php bongo <command>
+// Bongo command line tool: php bongo <command>
 
 require __DIR__ . '/config/bootstrap.php';
 
@@ -21,7 +21,7 @@ try {
     switch ($command) {
         case '--version':
         case '-V':
-            echo 'BongoMVC ' . System\Framework::version() . PHP_EOL;
+            echo 'Bongo ' . System\Framework::version() . PHP_EOL;
             break;
 
         case 'release:package':
@@ -34,7 +34,7 @@ try {
         case 'upgrade':
             $upgrader = new System\Console\Upgrader(BASE_PATH);
             if ($hasOption('rollback')) {
-                echo 'Restored BongoMVC ' . $upgrader->rollback() . ' from the backup.' . PHP_EOL;
+                echo 'Restored Bongo ' . $upgrader->rollback() . ' from the backup.' . PHP_EOL;
                 break;
             }
             $sha = null;
@@ -66,7 +66,7 @@ try {
                 $sha = strtok($upgrader->download($shaUrl), ' ');
             }
             $result = $upgrader->apply($package, $sha);
-            echo "Upgraded BongoMVC {$result['from']} → {$result['to']} ({$result['files']} framework files)." . PHP_EOL;
+            echo "Upgraded Bongo {$result['from']} → {$result['to']} ({$result['files']} framework files)." . PHP_EOL;
             echo 'Backup: ' . relativePath($result['backup']) . '   (undo with: php bongo upgrade --rollback)' . PHP_EOL;
             foreach ($result['newConfig'] as $file => $keys) {
                 echo "New settings in config/$file: " . implode(', ', $keys) . ' (copy them from the release, or keep the defaults)' . PHP_EOL;
@@ -76,7 +76,7 @@ try {
 
         case 'release:branch':
             $commit = (new System\Console\ReleaseBranch(BASE_PATH))->update();
-            echo 'The release branch now holds BongoMVC ' . System\Framework::version() . " (commit $commit): the framework only, no demo app, no tests." . PHP_EOL;
+            echo 'The release branch now holds Bongo ' . System\Framework::version() . " (commit $commit): the framework only, no demo app, no tests." . PHP_EOL;
             echo 'Nothing was tagged or published. Push it with: git push origin release' . PHP_EOL;
             break;
 
@@ -87,7 +87,7 @@ try {
                 exit(1);
             }
             $count = (new System\Console\ReleaseBuilder(BASE_PATH))->build($target);
-            echo "Built a fresh BongoMVC " . System\Framework::version() . " project in $target ($count files)." . PHP_EOL;
+            echo "Built a fresh Bongo " . System\Framework::version() . " project in $target ($count files)." . PHP_EOL;
             echo "Next: cd $target, copy .env.example to .env, then php bongo key:generate, php bongo migrate, php bongo serve" . PHP_EOL;
             break;
 
@@ -106,7 +106,7 @@ try {
         case 'about':
             $size = System\Framework::size();
             $rows = [
-                'BongoMVC'      => System\Framework::version(),
+                'Bongo'      => System\Framework::version(),
                 'PHP'           => PHP_VERSION,
                 'Environment'   => (string) config('app.env') . (config('app.debug') ? ' (debug on)' : ''),
                 'URL'           => (string) config('app.url'),
@@ -247,7 +247,7 @@ try {
             break;
 
         case 'tinker':
-            echo "BongoMVC tinker. The app is loaded: try DB::table('users')->count(), config('app'), Hash::make('x').\n";
+            echo "Bongo tinker. The app is loaded: try DB::table('users')->count(), config('app'), Hash::make('x').\n";
             echo "Type exit to quit.\n";
             foreach (['DB' => System\Database\DB::class, 'Schema' => System\Database\Schema\Schema::class, 'Log' => System\Log\Log::class,
                       'Hash' => System\Security\Hash::class, 'Crypt' => System\Security\Crypt::class, 'Auth' => System\Auth\Auth::class] as $alias => $class) {
@@ -448,7 +448,7 @@ try {
 
         case 'help':
         default:
-            echo 'BongoMVC ' . System\Framework::version() . " commands:\n";
+            echo 'Bongo ' . System\Framework::version() . " commands:\n";
             echo "  about                                    Version, PHP, environment, drivers and framework size\n";
             echo "  down [--message=] [--retry=60] [--secret=] Maintenance mode: visitors see \"back soon\" (503)\n";
             echo "  up                                       Leave maintenance mode\n";

@@ -7,7 +7,7 @@ class HomeTest extends HttpTestCase
 {
     public function testWelcomePage(): void
     {
-        $this->get('/')->assertStatus(200)->assertSee('BongoMVC');
+        $this->get('/')->assertStatus(200)->assertSee('Bongo');
         $this->get('/?name=Rahim')->assertSee('Rahim');
     }
 

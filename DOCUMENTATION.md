@@ -1,6 +1,6 @@
-# BongoMVC Documentation
+# Bongo PHP Framework: Documentation
 
-BongoMVC is a lightweight PHP MVC framework with **zero required dependencies**. It needs no Composer and no `vendor/` folder: clone it, set `.env`, and run it. Composer packages and Node tooling are optional. If `vendor/autoload.php` exists, BongoMVC loads it; otherwise nothing changes.
+Bongo is a lightweight PHP MVC framework with **zero required dependencies**. It needs no Composer and no `vendor/` folder: clone it, set `.env`, and run it. Composer packages and Node tooling are optional. If `vendor/autoload.php` exists, Bongo loads it; otherwise nothing changes.
 
 Built in:
 
@@ -43,7 +43,7 @@ The repository currently includes an **e-commerce admin panel** (products, categ
 ## 2. Quick start
 
 ```bash
-git clone <repo-url> BongoMVC && cd BongoMVC
+git clone https://github.com/Solayman/bongo-php.git && cd bongo-php
 cp .env.example .env              # Windows: copy .env.example .env
 # edit .env: APP_NAME, APP_URL, DB_* values
 php bongo key:generate          # writes APP_KEY to .env
@@ -58,7 +58,7 @@ Demo login (seeded): **admin@example.com / password**. Change it on the Profile 
 
 | Key | Purpose |
 | --- | --- |
-| `APP_NAME` | Shown in the UI (default `BongoMVC`) |
+| `APP_NAME` | Shown in the UI (default `Bongo`) |
 | `APP_ENV` | `local`, `testing`, `production` |
 | `APP_DEBUG` | `true` shows error details. Defaults to on unless `APP_ENV=production`. |
 | `APP_URL` | Base URL. The router strips its path from each request; `url()`/`asset()` build links from it. **Must match how you open the site.** |
@@ -1118,7 +1118,7 @@ Each guard can set `login_url` (where `auth:<guard>` sends guests) and `home` (w
 
 ### JWT for APIs
 
-The `api` guard uses JSON Web Tokens, implemented in BongoMVC itself (`System\Security\Jwt`), with no packages:
+The `api` guard uses JSON Web Tokens, implemented in Bongo itself (`System\Security\Jwt`), with no packages:
 - **Signing:** HS256 with `JWT_SECRET`, or, if that's empty, a key derived from `APP_KEY`.
 - **Rejected tokens:** a bad signature, any other algorithm (including `"alg": "none"`), expired, not valid yet, or from another issuer.
 - **Claims:** `sub` (user id), `guard`, `iss`, `iat`, `nbf`, `exp` and a random `jti` per token.
@@ -1734,7 +1734,7 @@ Run the scheduler once a minute:
 
 ### "Table doesn't exist" errors
 
-If a query fails because a table or column is missing and migrations are pending, BongoMVC says so in four places: the log line (`| HINT: ... Run: php bongo migrate`), the debug error page, `php bongo security:check`, and the `php bongo serve` startup output.
+If a query fails because a table or column is missing and migrations are pending, Bongo says so in four places: the log line (`| HINT: ... Run: php bongo migrate`), the debug error page, `php bongo security:check`, and the `php bongo serve` startup output.
 
 ---
 
@@ -1931,7 +1931,7 @@ php bongo up                                         # live again
 | `master` | Development: the framework plus the e-commerce test app and all tests. Every change is an MR into `master`. |
 | `release` | Only the clean framework: what `php bongo release:build` produces, without the demo app and without tests. One commit per version. |
 
-`php bongo release:branch` adds that commit ("BongoMVC X.Y.Z"), built from the current `master`, using a temporary worktree so your folder isn't touched. Nothing is tagged or published. Push it with `git push origin release`.
+`php bongo release:branch` adds that commit ("Bongo X.Y.Z"), built from the current `master`, using a temporary worktree so your folder isn't touched. Nothing is tagged or published. Push it with `git push origin release`.
 
 ## 13a-2. Upgrading the framework
 
@@ -1939,7 +1939,7 @@ php bongo up                                         # live again
 php bongo upgrade --check      # installed vs latest version, and the release notes
 php bongo upgrade              # download, check the SHA-256, back up, replace, list new settings
 php bongo upgrade --rollback   # put the previous version back
-php bongo upgrade --from=bongomvc-framework-1.0.0.json.gz   # offline, from a downloaded package
+php bongo upgrade --from=bongo-framework-1.0.0.json.gz   # offline, from a downloaded package
 ```
 
 Only the framework's own files are replaced: `system/`, `bongo`, `public/index.php` and `config/bootstrap.php`. Your code and settings are never touched, and a backup goes to `storage/upgrade-backup/`. A package whose checksum doesn't match, or which tries to write outside the framework, is refused before anything changes. See `UPGRADE.md`.
@@ -1947,8 +1947,8 @@ Only the framework's own files are replaced: `system/`, `bongo`, `public/index.p
 **Publishing a release** (for maintainers): set the new version in `system/VERSION`, then:
 
 ```bash
-php bongo release:package                       # dist/bongomvc-framework-X.Y.Z.json.gz + .sha256
-gh release create vX.Y.Z dist/bongomvc-framework-X.Y.Z.json.gz dist/bongomvc-framework-X.Y.Z.json.gz.sha256 --notes "..."
+php bongo release:package                       # dist/bongo-framework-X.Y.Z.json.gz + .sha256
+gh release create vX.Y.Z dist/bongo-framework-X.Y.Z.json.gz dist/bongo-framework-X.Y.Z.json.gz.sha256 --notes "..."
 ```
 
 `UPGRADE_URL` points to the releases API (GitHub by default). Set `UPGRADE_TOKEN` when the repository is private.
@@ -1974,7 +1974,7 @@ The new project runs as built: `php bongo test` passes and its views compile. A 
 
 ## 14. The e-commerce test application
 
-The e-commerce app is how BongoMVC is tested the way a real project would use it. It stays in the repository for now, and will be removed later so the framework ships fresh. A copy is also on the `demo/ecommerce` branch.
+The e-commerce app is how Bongo is tested the way a real project would use it. It stays in the repository for now, and will be removed later so the framework ships fresh. A copy is also on the `demo/ecommerce` branch.
 
 ### Admin panel (`/`, signed in with the `web` guard)
 

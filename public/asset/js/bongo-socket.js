@@ -1,5 +1,5 @@
 /*
- * BongoMVC live updates: connects to `php bongo websocket:serve`.
+ * Bongo live updates: connects to `php bongo websocket:serve`.
  *
  *   <script src="{{ asset('asset/js/bongo-socket.js') }}"></script>
  *   <script>

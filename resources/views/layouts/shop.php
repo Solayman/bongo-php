@@ -69,7 +69,7 @@
 
 <footer class="border-top py-4 mt-4 text-secondary small">
     <div class="container d-flex justify-content-between flex-wrap gap-2">
-        <span>{{ config('app.name') }} · {{ __('A demo shop built on BongoMVC') }}</span>
+        <span>{{ config('app.name') }} · {{ __('A demo shop built on Bongo') }}</span>
         <a href="{{ url('/login') }}" class="text-secondary">{{ __('Admin') }}</a>
     </div>
 </footer>
