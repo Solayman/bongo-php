@@ -30,6 +30,8 @@ class Key
      */
     public static function derive(string $purpose): string
     {
+        // "bongomvc:" is the framework's old name. Keep it: changing it would invalidate
+        // every password (pepper), encrypted value and signed token made with this APP_KEY.
         return hash_hkdf('sha256', self::get(), 32, "bongomvc:$purpose");
     }
 
