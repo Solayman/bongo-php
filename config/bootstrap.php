@@ -81,15 +81,23 @@ foreach (glob(BASE_PATH . '/app/Helpers/*.php') ?: [] as $helperFile) {
 unset($helperFile);
 
 // ---------------------------
-// Load every config/*.php (except this file) into config('<file>.<key>')
+// Config: every config/*.php (except this file) as config('<file>.<key>'),
+// or one cached file made by `php bongo config:cache` (faster in production)
 // ---------------------------
-$GLOBALS['config'] = [];
-foreach (glob(__DIR__ . '/*.php') as $configFile) {
-    $name = basename($configFile, '.php');
-    if ($name !== 'bootstrap') {
-        $GLOBALS['config'][$name] = require $configFile;
+function load_config_files(): array
+{
+    $config = [];
+    foreach (glob(BASE_PATH . '/config/*.php') as $configFile) {
+        $name = basename($configFile, '.php');
+        if ($name !== 'bootstrap') {
+            $config[$name] = require $configFile;
+        }
     }
+    return $config;
 }
+
+define('CONFIG_CACHE', BASE_PATH . '/storage/cache/config.php');
+$GLOBALS['config'] = getenv('BONGO_CONFIG_CACHE') !== '0' && is_file(CONFIG_CACHE) ? require CONFIG_CACHE : load_config_files();
 
 // ---------------------------
 // Timezone (PHP and, on connect, MySQL use the same one)

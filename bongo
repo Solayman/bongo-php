@@ -2,6 +2,11 @@
 <?php
 // Bongo command line tool: php bongo <command>
 
+// Tests and config:* always read config/*.php, never a cached copy (a cached
+// DB_DATABASE would point the tests at the real database)
+if (in_array($_SERVER['argv'][1] ?? '', ['test', 'config:cache', 'config:clear'], true)) {
+    putenv('BONGO_CONFIG_CACHE=0');
+}
 require __DIR__ . '/config/bootstrap.php';
 
 use System\Database\Migrator;
@@ -406,6 +411,30 @@ try {
             echo 'Removed ' . System\Cache\Cache::flush() . ' cache file(s)' . PHP_EOL;
             break;
 
+        case 'config:cache':
+            // One file instead of every config/*.php on each request. Values must be plain data.
+            $check = function ($value, string $path) use (&$check) {
+                if (is_array($value)) {
+                    foreach ($value as $key => $item) $check($item, "$path.$key");
+                } elseif (!is_scalar($value) && $value !== null) {
+                    throw new RuntimeException("config('$path') is not plain data (" . get_debug_type($value) . '), so the config cannot be cached.');
+                }
+            };
+            $config = load_config_files();
+            $check($config, 'config');
+            if (!is_dir(dirname(CONFIG_CACHE))) mkdir(dirname(CONFIG_CACHE), 0775, true);
+            $tmp = CONFIG_CACHE . '.' . bin2hex(random_bytes(4));
+            file_put_contents($tmp, "<?php\n// Made by php bongo config:cache. Run it again after changing config/ or .env (or: php bongo config:clear)\nreturn " . var_export($config, true) . ";\n");
+            rename($tmp, CONFIG_CACHE);
+            if (function_exists('opcache_invalidate')) @opcache_invalidate(CONFIG_CACHE, true);
+            echo 'Config cached in ' . relative_path(CONFIG_CACHE) . '. Run php bongo config:cache again after changing config/ or .env.' . PHP_EOL;
+            break;
+
+        case 'config:clear':
+            echo is_file(CONFIG_CACHE) && unlink(CONFIG_CACHE) ? 'Config cache removed: config/*.php is read on every request again.' : 'No config cache.';
+            echo PHP_EOL;
+            break;
+
         case 'view:cache':
             $engine = System\View\ViewEngine::shared();
             $engine->clearCache();
@@ -472,6 +501,8 @@ try {
                 'schedule:list' => 'Show scheduled tasks and their next run',
                 'websocket:serve [--port=6001] [--host=]' => 'Live updates: push Broadcast::to(...)->send() to open pages',
                 'cache:clear' => 'Delete everything in the cache',
+                'config:cache' => 'Cache config/ and .env in one file for faster requests (run on deploy)',
+                'config:clear' => 'Remove the config cache',
                 'view:cache' => 'Precompile and lint every template (run on deploy)',
                 'view:clear' => 'Delete compiled templates in storage/cache/views',
                 'log:clear' => 'Delete the log files in storage/logs',
