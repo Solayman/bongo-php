@@ -13,6 +13,8 @@ use RuntimeException;
 class Connection
 {
     private static ?PDO $pdo = null;
+    /** Asked on every query (SQL dialect), so remembered */
+    private static ?string $driver = null;
 
     public static function getInstance(): PDO
     {
@@ -36,7 +38,7 @@ class Connection
     /** "mysql" or "sqlite" */
     public static function driver(): string
     {
-        return self::config()['driver'] ?? 'mysql';
+        return self::$driver ??= self::config()['driver'] ?? 'mysql';
     }
 
     public static function isSqlite(): bool
@@ -48,6 +50,7 @@ class Connection
     public static function reset(): void
     {
         self::$pdo = null;
+        self::$driver = null;
     }
 
     protected static function config(): array

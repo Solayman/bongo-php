@@ -32,7 +32,9 @@ class Key
     {
         // "bongomvc:" is the framework's old name. Keep it: changing it would invalidate
         // every password (pepper), encrypted value and signed token made with this APP_KEY.
-        return hash_hkdf('sha256', self::get(), 32, "bongomvc:$purpose");
+        static $keys = [];
+        $key = self::get();
+        return $keys[$key . "\0" . $purpose] ??= hash_hkdf('sha256', $key, 32, "bongomvc:$purpose");
     }
 
     public static function generate(): string
