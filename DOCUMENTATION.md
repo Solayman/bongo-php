@@ -1152,6 +1152,19 @@ $broker->sendResetLink($email);                       // RESET_LINK_SENT or THRO
 $broker->reset($email, $token, $newPassword);         // PASSWORD_RESET or INVALID_TOKEN
 ```
 
+### Remember me
+
+Both login pages have a **Remember me** checkbox. When it's ticked, the user stays signed in after closing the browser, for 30 days (`AUTH_REMEMBER_DAYS`):
+
+```php
+Auth::attempt($email, $password, $request->boolean('remember'));
+Auth::guard('customer')->attempt($email, $password, remember: true);
+```
+
+- The cookie is `remember_{guard}` (`remember_web`, `remember_customer`), so the admin and shop logins are remembered separately. It's `HttpOnly` and `SameSite=Lax`, and `Secure` on HTTPS.
+- Only a SHA-256 hash of the token is stored, in `users.remember_token`. Run `php bongo migrate` once to add the column. A forged or old cookie is ignored and deleted.
+- **Sign out** clears the token, so "remember me" stops working on every device.
+
 ### Authorization (who may do what)
 
 Authentication answers "who is this?". Authorization answers "may they do this?".

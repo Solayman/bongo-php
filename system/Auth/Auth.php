@@ -82,10 +82,11 @@ class Auth
         return self::guard()->id();
     }
 
-    public static function attempt(string $identifier, string $password): bool
+    /** Auth::attempt($email, $password, remember: true) keeps the user signed in after the browser closes */
+    public static function attempt(string $identifier, string $password, bool $remember = false): bool
     {
         $guard = self::guard();
-        return (bool) $guard->attempt($identifier, $password);
+        return (bool) ($guard instanceof SessionGuard ? $guard->attempt($identifier, $password, $remember) : $guard->attempt($identifier, $password));
     }
 
     public static function login(object $user): void

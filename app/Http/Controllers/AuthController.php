@@ -29,7 +29,7 @@ class AuthController extends Controller
             $this->failLogin(__('Too many login attempts. Try again in :minutes minute(s).', ['minutes' => $minutes]), $email);
         }
 
-        if (!Auth::attempt($email, $data['password'])) {
+        if (!Auth::attempt($email, $data['password'], $request->boolean('remember'))) {
             $throttle->hit($email, $ip);
             // Same message for unknown email and wrong password
             $this->failLogin(__('These credentials do not match our records.'), $email);

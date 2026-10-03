@@ -39,6 +39,10 @@
                            class="form-control <?= error('password') ? 'is-invalid' : '' ?>">
                     <div class="invalid-feedback">{{ error('password') }}</div>
                 </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" name="remember" value="1" id="remember">
+                    <label class="form-check-label" for="remember">{{ __('Remember me') }}</label>
+                </div>
                 <button type="submit" class="btn btn-dark w-100">{{ __('Sign in') }}</button>
                 <div class="text-center mt-2">
                     <a href="{{ route('password.request') }}" class="small">{{ __('Forgot your password?') }}</a>

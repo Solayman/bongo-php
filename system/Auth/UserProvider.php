@@ -39,6 +39,12 @@ class UserProvider
         return $id === null ? null : $this->query()->where('id', $id)->first();
     }
 
+    /** Store (or clear, with null) the hash of a user's "remember me" token */
+    public function setRememberToken(int $id, ?string $hash): void
+    {
+        DB::table($this->table)->where('id', $id)->update(['remember_token' => $hash]);
+    }
+
     public function findByIdentifier(string $value): ?object
     {
         return $this->query()->where($this->identifier, $value)->first();
