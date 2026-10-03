@@ -272,28 +272,28 @@ class Router
         $resolved = [];
 
         foreach (array_unique($expanded) as $item) {
-            [$name, $argString] = array_pad(explode(':', $item, 2), 2, null);
-            if (in_array($name, $skip, true)) {
-                continue;
+            if (!in_array(explode(':', $item, 2)[0], $skip, true)) {
+                $resolved[] = $this->parseMiddleware($item);
             }
-            $class = $this->middleware[$name] ?? $name;
-            if (!class_exists($class)) {
-                throw new RuntimeException("Middleware [$name] is not registered in config/app.php");
-            }
-            $resolved[] = [$class, $argString === null ? [] : explode(',', $argString)];
         }
 
         return $resolved;
     }
 
-    protected function runMiddleware(string $item): void
+    /** "throttle:60,1" → [class, ['60', '1']] */
+    protected function parseMiddleware(string $item): array
     {
         [$name, $argString] = array_pad(explode(':', $item, 2), 2, null);
         $class = $this->middleware[$name] ?? $name;
         if (!class_exists($class)) {
             throw new RuntimeException("Middleware [$name] is not registered in config/app.php");
         }
-        $this->call($class, $argString === null ? [] : explode(',', $argString));
+        return [$class, $argString === null ? [] : explode(',', $argString)];
+    }
+
+    protected function runMiddleware(string $item): void
+    {
+        $this->call(...$this->parseMiddleware($item));
     }
 
     protected function call(string $class, array $args): void
