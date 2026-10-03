@@ -13,6 +13,12 @@ class Dumper
         protected int $maxString = 2000
     ) {}
 
+    /** How many items of a list are shown */
+    public function maxItems(): int
+    {
+        return $this->maxItems;
+    }
+
     /** Which format suits the current request */
     public static function format(): string
     {
@@ -83,7 +89,23 @@ class Dumper
         return '<pre class="bongo-dump">' . $this->htmlValue($value, 0, []) . '</pre>';
     }
 
-    protected function htmlValue($value, int $depth, array $seen): string
+    /** In a long list, only the first records start opened; the rest are one folded line each */
+    protected const OPEN_FIRST = 10;
+
+    /** {id: 85, name: "Category 85", …}: the first plain fields, for a folded row */
+    protected function preview(array $fields): string
+    {
+        $parts = [];
+        foreach ($fields as $name => $v) {
+            if (count($parts) === 3) { $parts[] = '…'; break; }
+            if (is_scalar($v) || $v === null) {
+                $parts[] = $name . ': ' . (is_string($v) ? '"' . (mb_strlen($v) > 30 ? mb_substr($v, 0, 30) . '…' : $v) . '"' : var_export($v, true));
+            }
+        }
+        return $parts ? ' <span class="bd-meta">{' . htmlspecialchars(implode(', ', $parts), ENT_QUOTES, 'UTF-8') . '}</span>' : '';
+    }
+
+    protected function htmlValue($value, int $depth, array $seen, bool $open = true): string
     {
         $e = fn($s) => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
 
@@ -104,11 +126,13 @@ class Dumper
                 $rows = '';
                 $i = 0;
                 foreach ($value as $k => $v) {
-                    if (++$i > $this->maxItems) { $rows .= '<div class="bd-meta">... ' . (count($value) - $this->maxItems) . ' more</div>'; break; }
+                    if (++$i > $this->maxItems) { $rows .= '<div class="bd-meta">… ' . number_format(count($value) - $this->maxItems) . ' more (showing the first ' . $this->maxItems . ')</div>'; break; }
                     $key = is_int($k) ? '<span class="bd-num">' . $k . '</span>' : '<span class="bd-key">"' . $e($k) . '"</span>';
-                    $rows .= "<div>$key => " . $this->htmlValue($v, $depth + 1, $seen) . '</div>';
+                    $rows .= "<div>$key => " . $this->htmlValue($v, $depth + 1, $seen, $i <= self::OPEN_FIRST) . '</div>';
                 }
-                return '<details' . ($depth < 2 ? ' open' : '') . '><summary><span class="bd-type">array</span><span class="bd-meta">(' . count($value) . ')</span></summary><div class="bd-children">' . $rows . '</div></details>';
+                $isOpen = $depth < 2 && $open;
+                return '<details' . ($isOpen ? ' open' : '') . '><summary><span class="bd-type">array</span><span class="bd-meta">(' . count($value) . ')</span>'
+                    . ($isOpen ? '' : $this->preview($value)) . '</summary><div class="bd-children">' . $rows . '</div></details>';
             case is_object($value):
                 $id = spl_object_id($value);
                 $class = $e(get_class($value));
@@ -116,11 +140,15 @@ class Dumper
                 if ($depth >= $this->maxDepth) return "<span class=\"bd-type\">$class</span> <span class=\"bd-meta\">#$id {...}</span>";
                 $seen[$id] = true;
                 $rows = '';
+                $fields = [];
                 foreach ($this->properties($value) as [$name, $visibility, $v]) {
                     $badge = $visibility === 'public' ? '' : '<span class="bd-vis">' . $visibility . '</span> ';
                     $rows .= '<div>' . $badge . '<span class="bd-key">' . $e($name) . '</span>: ' . $this->htmlValue($v, $depth + 1, $seen) . '</div>';
+                    if ($visibility === 'public') $fields[$name] = $v;
                 }
-                return '<details' . ($depth < 2 ? ' open' : '') . "><summary><span class=\"bd-type\">$class</span> <span class=\"bd-meta\">#$id</span></summary><div class=\"bd-children\">$rows</div></details>";
+                $isOpen = $depth < 2 && $open;
+                return '<details' . ($isOpen ? ' open' : '') . "><summary><span class=\"bd-type\">$class</span> <span class=\"bd-meta\">#$id</span>"
+                    . ($isOpen ? '' : $this->preview($fields)) . "</summary><div class=\"bd-children\">$rows</div></details>";
         }
 
         return $e((string) $value);
@@ -154,7 +182,15 @@ class Dumper
         if (is_array($value)) {
             if ($depth >= $this->maxDepth) return '[...]';
             $out = [];
-            foreach ($value as $k => $v) $out[$k] = $this->plain($v, $depth + 1, $seen);
+            $i = 0;
+            foreach ($value as $k => $v) {
+                // Same limit as the HTML view, so 50,000 rows never become an 18 MB page
+                if (++$i > $this->maxItems) {
+                    $out['…'] = number_format(count($value) - $this->maxItems) . ' more items';
+                    break;
+                }
+                $out[$k] = $this->plain($v, $depth + 1, $seen);
+            }
             return $out;
         }
         if (is_object($value)) {
