@@ -21,7 +21,7 @@ Built in:
 | Localization | `__()`, `trans_choice()`, JSON + group translation files, `?lang=` / session / `Accept-Language`, translated validation messages; English and বাংলা included |
 | Cache & rate limits | File cache (`Cache::remember`), `throttle:60,1` middleware with rate-limit headers, `RateLimiter` |
 | Container & DI | Service container (`app()`, `bind/singleton/instance`, autowiring), controller method injection, route model binding (`edit(Product $product)` → 404 if missing) |
-| Generators | `make:controller [--api]`, `make:model [--migration]`, `make:middleware`, `make:request`, `make:test [--unit]`, `make:migration` |
+| Generators | `make:controller [--api]`, `make:model [--migration]`, `make:middleware`, `make:request`, `make:policy`, `make:job`, `make:component`, `make:seeder`, `make:notification`, `make:mail`, `make:test [--unit]`, `make:migration` |
 | Logging | Built-in daily log files in `storage/logs`, levels, secret masking; framework events logged automatically |
 | CLI | `php bongo serve / tinker / route:list / make:* / view:cache / view:clear / cache:clear / migrate / migrate:status / migrate:rollback / make:migration / db:seed / key:generate / log:clear / test` |
 
