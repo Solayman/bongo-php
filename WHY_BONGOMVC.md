@@ -1,6 +1,6 @@
 # Why BongoMVC?
 
-BongoMVC is a complete PHP MVC framework that fits in **500 KB of readable code with zero dependencies**. You get routing, an ORM, migrations, authentication, validation, templates, mail, queues, a scheduler, a test runner and security hardening. You don't need Composer, `vendor/`, Node or a build step: copy the folder, point the web server at `public/`, and it runs.
+BongoMVC is a complete PHP MVC framework that fits in **under 400 KB of readable code with zero dependencies**. You get routing, an ORM, migrations, authentication, validation, templates, mail, queues, a scheduler, a test runner and security hardening. You don't need Composer, `vendor/`, Node or a build step: copy the folder, point the web server at `public/`, and it runs.
 
 This page is for developers and teams deciding whether BongoMVC fits their project.
 
@@ -10,7 +10,7 @@ This page is for developers and teams deciding whether BongoMVC fits their proje
 
 | | |
 |---|---|
-| **Framework code** (`system/`) | **81 PHP files · 8,801 lines · 501 KB** |
+| **Framework code** (`system/`) | **93 PHP files · 10,443 lines · 384 KB** (see the current numbers with `php bongo about`) |
 | Core with CLI, front controller and config | 97 files · 355 KB · **96 KB zipped** |
 | Required packages | **0**: no Composer, no `vendor/`, no Node, no build step |
 | Requirements | PHP 8.0+ with `pdo_mysql` and `openssl`, plus MySQL or MariaDB |
