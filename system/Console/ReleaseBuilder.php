@@ -14,7 +14,8 @@ class ReleaseBuilder
     public const FRAMEWORK = [
         'system', 'bongo', 'config', 'lang',
         'public/index.php', 'public/.htaccess', 'public/storage/.htaccess',
-        '.gitignore', '.env.example', 'DOCUMENTATION.md', 'WHY_BONGO.md', 'UPGRADE.md',
+        '.gitignore', '.env.example', 'DOCUMENTATION.md', 'WHY_BONGO.md', 'UPGRADE.md', 'LICENSE', 'CHANGELOG.md',
+        'public/asset/js/bongo-socket.js',
         'app/Http/Controllers/Controller.php', 'app/Http/Middleware', 'app/Helpers/commonHelper.php',
         'resources/views/errors', 'resources/views/components/alert.php',
         'resources/views/partials/flash.php', 'resources/views/partials/debug-footer.php',
