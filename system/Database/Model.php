@@ -83,7 +83,14 @@ class Model implements \JsonSerializable
         if (static::$table) {
             return static::$table;
         }
-        return strtolower((new ReflectionClass(static::class))->getShortName()) . 's';
+        return self::baseName(static::class) . 's';
+    }
+
+    /** App\Models\OrderItem → "orderitem" (used for table and foreign key names) */
+    protected static function baseName(string $class): string
+    {
+        static $names = [];
+        return $names[$class] ??= strtolower(substr(strrchr('\\' . $class, '\\'), 1));
     }
 
     public static function primaryKey(): string
@@ -402,8 +409,8 @@ class Model implements \JsonSerializable
      */
     protected function belongsToMany(string $related, ?string $pivot = null, ?string $parentKey = null, ?string $relatedKey = null): BelongsToMany
     {
-        $mine = strtolower((new ReflectionClass(static::class))->getShortName());
-        $theirs = strtolower((new ReflectionClass($related))->getShortName());
+        $mine = self::baseName(static::class);
+        $theirs = self::baseName($related);
         if ($pivot === null) {
             $names = [$mine, $theirs];
             sort($names);
@@ -415,13 +422,13 @@ class Model implements \JsonSerializable
     /** Inverse: an OrderItem belongsTo an Order (order_items.order_id → orders.id) */
     protected function belongsTo(string $related, ?string $foreignKey = null, ?string $ownerKey = null): BelongsTo
     {
-        $foreignKey ??= strtolower((new ReflectionClass($related))->getShortName()) . '_id';
+        $foreignKey ??= self::baseName($related) . '_id';
         return new BelongsTo($this, $related, $foreignKey, $ownerKey ?? $related::primaryKey());
     }
 
     protected function defaultForeignKey(): string
     {
-        return strtolower((new ReflectionClass(static::class))->getShortName()) . '_id';
+        return self::baseName(static::class) . '_id';
     }
 
     public function setRelation(string $name, $value): void

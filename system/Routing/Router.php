@@ -15,6 +15,9 @@ class Router
 {
     /** @var RouteDefinition[] */
     protected array $routes = [];
+    /** name => route, rebuilt when routes are added (route() in views looks names up often) */
+    protected array $named = [];
+    protected int $namedCount = -1;
     protected array $groupStack = [];
     protected static ?Router $current = null;
 
@@ -150,20 +153,25 @@ class Router
     /** Path for a named route, e.g. url('products.edit', ['id' => 5]) → "/products/5/edit" */
     public function url(string $name, array $params = []): string
     {
-        foreach ($this->routes as $route) {
-            if ($route->name === $name) {
-                return $route->url($params);
-            }
-        }
-        throw new \InvalidArgumentException("Route [$name] is not defined");
+        $route = $this->named()[$name] ?? throw new \InvalidArgumentException("Route [$name] is not defined");
+        return $route->url($params);
     }
 
     public function has(string $name): bool
     {
-        foreach ($this->routes as $route) {
-            if ($route->name === $name) return true;
+        return isset($this->named()[$name]);
+    }
+
+    protected function named(): array
+    {
+        if ($this->namedCount !== count($this->routes)) {
+            $this->named = [];
+            foreach ($this->routes as $route) {
+                if ($route->name !== null && $route->name !== '') $this->named[$route->name] ??= $route;
+            }
+            $this->namedCount = count($this->routes);
         }
-        return false;
+        return $this->named;
     }
 
     // ------------------------------------------------------------------
