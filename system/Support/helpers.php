@@ -87,6 +87,27 @@ if (!function_exists('asset')) {
     }
 }
 
+if (!function_exists('broadcast')) {
+    /** Push a live update to open pages: broadcast('orders', 'order.created', ['id' => 5]) */
+    function broadcast(string $channel, string $event, array $data = []): int {
+        return \System\Broadcasting\Broadcast::to($channel)->send($event, $data);
+    }
+}
+
+if (!function_exists('websocket_url')) {
+    /** Where the browser connects: BongoSocket.connect('{{ websocket_url() }}') */
+    function websocket_url(): string {
+        return \System\Broadcasting\Broadcast::publicUrl();
+    }
+}
+
+if (!function_exists('channel_token')) {
+    /** Lets this page subscribe to a private- channel: socket.subscribe('private-user.5', '{{ channel_token('private-user.5') }}') */
+    function channel_token(string $channel, int $seconds = 3600): string {
+        return \System\Broadcasting\Broadcast::token($channel, $seconds);
+    }
+}
+
 if (!function_exists('e')) {
     /** HTML-escape a value */
     function e($value) {
