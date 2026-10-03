@@ -6,9 +6,9 @@ use System\Http\Request;
 
 class CustomerController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $search = Request::query('q');
+        $search = $request->query('q');
         $where = "u.role = 'customer'";
         $bindings = [];
         if ($search) {

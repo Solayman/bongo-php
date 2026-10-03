@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use System\Auth\Auth;
 use System\Database\DB;
+use System\Http\Request;
 use System\Http\Session;
 use System\Security\Hash;
 
@@ -13,10 +14,10 @@ class ProfileController extends Controller
         return $this->view('profile.edit', ['user' => Auth::user()]);
     }
 
-    public function update()
+    public function update(Request $request)
     {
         $user = Auth::user();
-        $data = $this->validate([
+        $data = $request->validate([
             'name'  => 'required|string|max:100',
             'email' => "required|email|max:150|unique:users,email,{$user->id}",
             'phone' => 'nullable|string|max:30',
@@ -29,10 +30,10 @@ class ProfileController extends Controller
         redirect(url('/profile'));
     }
 
-    public function updatePassword()
+    public function updatePassword(Request $request)
     {
         $user = Auth::user();
-        $data = $this->validate([
+        $data = $request->validate([
             'current_password' => 'required|string',
             'password'         => 'required|string|min:8|max:255|confirmed',
         ]);

@@ -7,10 +7,10 @@ use System\Http\Request;
 
 class OrderController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $status = Request::query('status');
-        $search = Request::query('q');
+        $status = $request->query('status');
+        $search = $request->query('q');
 
         $query = DB::table('orders')
             ->select('orders.*', 'users.name AS customer_name', 'users.email AS customer_email')
@@ -46,10 +46,10 @@ class OrderController extends Controller
         ]);
     }
 
-    public function updateStatus($id)
+    public function updateStatus(Request $request, $id)
     {
         $order = Order::find((int) $id) ?? abort(404, 'Order not found');
-        $data = $this->validate(['status' => 'required|in:' . implode(',', Order::STATUSES)]);
+        $data = $request->validate(['status' => 'required|in:' . implode(',', Order::STATUSES)]);
 
         Order::query()->where('id', $order->id)->update(['status' => $data['status']]);
 

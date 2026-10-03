@@ -5,6 +5,7 @@ use App\Http\Controllers\Controller;
 use System\Auth\Auth;
 use System\Auth\JwtGuard;
 use System\Auth\LoginThrottle;
+use System\Http\Request;
 
 /**
  * JWT login for API clients (mobile apps, SPAs, other servers).
@@ -12,15 +13,15 @@ use System\Auth\LoginThrottle;
 class AuthController extends Controller
 {
     /** POST /api/auth/login  {email, password} → {access_token, token_type, expires_in, user} */
-    public function login()
+    public function login(Request $request)
     {
-        $data = $this->validate([
+        $data = $request->validate([
             'email'    => 'required|email|max:150',
             'password' => 'required|string|max:255',
         ]);
 
         $email = strtolower($data['email']);
-        $ip = \System\Http\Request::ip();
+        $ip = $request->ip();
         $throttle = new LoginThrottle();
 
         if ($throttle->tooManyAttempts($email, $ip)) {

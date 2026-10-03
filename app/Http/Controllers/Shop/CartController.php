@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Shop;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Services\Cart;
+use System\Http\Request;
 
 class CartController extends Controller
 {
@@ -16,9 +17,9 @@ class CartController extends Controller
     }
 
     /** POST /shop/cart  {product_id, quantity} */
-    public function add()
+    public function add(Request $request)
     {
-        $data = $this->validate([
+        $data = $request->validate([
             'product_id' => 'required|integer|exists:products,id',
             'quantity'   => 'nullable|integer|between:1,' . Cart::MAX_QUANTITY,
         ]);
@@ -33,9 +34,9 @@ class CartController extends Controller
     }
 
     /** PATCH /shop/cart/{product}  {quantity} */
-    public function update(Product $product)
+    public function update(Request $request, Product $product)
     {
-        $data = $this->validate(['quantity' => 'required|integer|between:0,' . Cart::MAX_QUANTITY]);
+        $data = $request->validate(['quantity' => 'required|integer|between:0,' . Cart::MAX_QUANTITY]);
         $this->cart->update($product->id, min((int) $data['quantity'], (int) $product->stock));
         redirect(route('shop.cart'));
     }
