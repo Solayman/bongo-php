@@ -1,189 +1,273 @@
-# Why Bongo?
+<div align="center">
 
-Bongo is a complete PHP MVC framework that fits in **about 480 KB of readable code with zero dependencies**. You get routing, an ORM, migrations, authentication, validation, templates, mail, notifications, queues, a scheduler, live updates over WebSockets, a test runner and security hardening. You don't need Composer, `vendor/`, Node or a build step: copy the folder, point the web server at `public/`, and it runs.
+# 🥁 Bongo PHP Framework
 
-This page is for developers and teams deciding whether Bongo fits their project.
+### Everything you need. Nothing you don't.
 
----
+**A complete PHP framework in ~480 KB of code you can actually read.**<br>
+No Composer. No `vendor/`. No Node. No build step. Copy the folder, and it runs.
 
-## At a glance
+![PHP 8.0+](https://img.shields.io/badge/PHP-8.0%2B-777bb4?logo=php&logoColor=white)
+![Dependencies: 0](https://img.shields.io/badge/dependencies-0-brightgreen)
+![Tests: 312](https://img.shields.io/badge/tests-312%20passing-brightgreen)
+![Size: 170 KB](https://img.shields.io/badge/fresh%20project-~170%20KB-blue)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
+![বাংলা](https://img.shields.io/badge/বাংলা-built%20in-orange)
 
-| | |
-|---|---|
-| **Framework code** (`system/`) | **115 PHP files · 12,954 lines · 483 KB** (see the current numbers with `php bongo about`) |
-| A fresh project, without docs, as `.tar.gz` | about **170 KB** |
-| Required packages | **0**: no Composer, no `vendor/`, no Node, no build step |
-| Requirements | PHP 8.0+ with `openssl`, plus MySQL / MariaDB (`pdo_mysql`) **or** SQLite (`pdo_sqlite`) |
-| Optional | Redis (`redis` extension) for shared cache and sessions |
-| Memory per request | **0.45 MB** (JSON API) · **0.53 MB** (login page) · **0.65 MB** (shop page with database queries) |
-| Files loaded per request | 39 (JSON API) to 56 (full shop page); framework files: 20 to 28 |
-| Time per request | 8.5–9.4 ms (JSON API, login page), 18.9 ms (shop page with queries). Measured **without opcache**, the worst case. |
-| Tests | 310 automated tests, run with `php bongo test` |
-| Languages | English and Bangla (বাংলা) built in |
+[**Get started in 60 seconds**](#-get-started-in-60-seconds) · [**See the code**](#-see-how-it-feels) · [**Compare**](#-bongo-vs-the-others) · [**Docs**](DOCUMENTATION.md)
 
-Size and test numbers are from 2026-10-03; per-request and per-module numbers were measured on 2026-10-02, before the latest features. See [How these numbers were measured](#how-these-numbers-were-measured).
+</div>
 
 ---
 
-## Why choose it
+## 🤔 The problem
 
-### 1. You can read the whole framework
+You start a new PHP project. Before writing one line of your own code:
 
-The largest module, the database layer with its query builder, ORM, migrations and schema builder, is about 2,000 lines. Most modules are 200–600 lines. When something behaves unexpectedly, you can open the file and read it in minutes. There are no layers of packages to dig through.
+- ⏳ you install **dozens of packages** you never chose;
+- 📦 `vendor/` grows to **tens of megabytes**;
+- 🧩 something breaks, and the bug is **five layers deep in code you've never seen**;
+- 🔁 a dependency update breaks your app on a Friday afternoon.
 
-| Module | Files | Lines | What it does |
-|---|---:|---:|---|
-| Database | 14 | 2,012 | Query builder, ORM models and relations, eager loading, migrations, schema builder, transactions |
-| Http | 11 | 881 | Requests, form requests, uploads, sessions, middleware, error pages |
-| Auth | 7 | 641 | Session and JWT guards, multiple guards, login throttling, password reset |
-| View | 6 | 627 | Template engine (`@if`, `@foreach`, `@extends`, …) with a compiled cache |
-| Routing | 4 | 530 | Routes, groups, named routes, middleware, route model binding |
-| Testing | 5 | 492 | Test runner, HTTP test client, assertions |
-| Debug | 2 | 398 | Error page with source and stack trace, `dump()`/`dd()`, query log |
-| Security | 6 | 365 | Encryption, password hashing, JWT, CSRF, security headers, `security:check` |
-| Mail | 4 | 354 | SMTP, log and file drivers, queued mail |
-| Validation | 1 | 345 | About 35 rules, translated messages, file validation |
-| Scheduling | 4 | 307 | Cron expressions, scheduled tasks, built-in maintenance |
-| Support | 1 | 302 | Helpers (`url()`, `route()`, `old()`, `__()`, …) |
-| Queue | 3 | 284 | Background jobs: retries, backoff, failed jobs, crash recovery |
-| Cache | 3 | 252 | File cache, rate limiter |
-| Container | 3 | 248 | Dependency injection |
-| Log | 2 | 227 | Daily log files with levels |
-| Others | 5 | 536 | Console generators, events, translation, storage |
-
-### 2. Nothing to install, nothing to break
-
-- **No dependency updates.** Packages can't break your app, and supply-chain attacks through a dependency don't apply.
-- **Any host works.** Shared hosting, a VPS or a laptop: if it runs PHP 8 and MySQL, it runs Bongo.
-- **Composer is optional.** If you want a package, `vendor/autoload.php` is loaded when it exists. The framework never needs it.
-
-### 3. Secure by default
-
-These protections are on from the first request, with no setup:
-
-- **Passwords:** Argon2id, plus a pepper from `APP_KEY`.
-- **Login attacks:** login throttling and account lockout, plus rate limiting (`throttle` middleware).
-- **Forms:** CSRF protection on every form.
-- **Sessions:** strict session cookies with idle and absolute timeouts.
-- **Templates:** output is escaped by default (`{{ }}`). JSON in templates is safe inside `<script>`, and section values such as page titles are escaped.
-- **Uploads:** checked by their real content, not their extension, so a renamed `.php` file is rejected. They're stored with random names.
-- **Encryption:** AES-256-GCM, plus HS256 JWT for APIs, with token revocation.
-- **Headers and proxies:** security headers, optional CSP, CORS for APIs, and trusted-proxy handling so client IPs can't be faked.
-- **`php bongo security:check`:** audits your setup before you go live (debug mode, HTTPS, keys, demo passwords, pending migrations).
-
-### 4. Errors tell you how to fix them
-
-- The debug error page shows the source line, the stack trace and the queries that ran.
-- A missing table while migrations haven't run says **"Run: php bongo migrate"** in the log, on the error page and in `serve`.
-- A broken template names its file. `php bongo view:cache` checks every template before you deploy.
-- Every error is written to `storage/logs` with its request method and path.
-
-### 5. Everything a real app needs is built in
-
-| Area | Included |
-|---|---|
-| Routing | Groups, prefixes, names, middleware with parameters, route model binding, `route:list` |
-| Controllers | Dependency injection, form request classes, `return $this->view(...)`, JSON for arrays |
-| Database | MySQL or SQLite: query builder, models, relations (incl. many-to-many), soft deletes, eager loading, `withCount`, pagination, transactions, migrations, seeders |
-| Real-time and notifications | WebSocket server with public and private channels; notifications by mail, SMS and Slack; HTTP client |
-| Scaling out | Optional Redis cache and sessions shared by several servers |
-| Auth | Several guards at once (admin session, customer session, JWT API), password reset by email |
-| Views | Layouts, sections, partials, stacks, `$loop`, `@auth('guard')`, `@error`, `@csrf`, custom directives |
-| Background work | Queues (`queue:work`), a scheduler (`schedule:run`), queued mail |
-| Mail | SMTP, a log driver for development, a file driver for tests |
-| i18n | `__()`, plurals, Bangla translations, a language switcher |
-| Testing | `php bongo test`: a separate test database and a real HTTP test server |
-| CLI | `serve`, `migrate`, `make:controller/model/request/middleware/test/migration`, `queue:*`, `schedule:*`, `view:cache`, `security:check`, `tinker` |
-
-### 6. Familiar to PHP developers
-
-The routes, controllers, models, migrations and `@if` / `@foreach` templates follow patterns most PHP developers already know, so a new team member is productive on day one. The code itself is written from scratch for Bongo.
+**Bongo takes a different path.** Everything a real web app needs is built in, written from scratch, in one small folder you can read from top to bottom.
 
 ---
 
-## When Bongo is a good fit
-
-- Business apps, admin panels, shops, dashboards and internal tools.
-- JSON APIs for mobile or front-end apps.
-- Shared hosting, or servers where you can't, or don't want to, run Composer or Node.
-- Teams that want to understand, and own, every line their app runs on.
-- Teaching: students can read the framework itself to learn how MVC, routing, ORMs and security really work.
-
-## When to choose something else
-
-Be honest about the limits:
-
-| Limit | Today |
-|---|---|
-| Database | MySQL / MariaDB and SQLite. **PostgreSQL and SQL Server are not supported yet.** |
-| Queue backend | Database queue only. There's no Redis or SQS queue driver yet. |
-| Ecosystem | No package marketplace. Features you'd install from a marketplace elsewhere (payments, admin panels, OAuth logins), you write yourself or add with Composer. |
-| Community | New and small: few tutorials, Stack Overflow answers or ready-made developers who already know it. |
-| Real-time | The built-in WebSocket server suits dashboards and notifications. For tens of thousands of open connections, use a dedicated real-time service. |
-| Scale | Fine for typical business traffic on one or a few servers. Very large, multi-region systems with dedicated platform teams are better served by a framework with a large ecosystem. |
-
----
-
-## Compared with other PHP frameworks
-
-Every framework makes trade-offs. This table shows where Bongo stands next to well-known PHP frameworks, so you can pick the right tool. The others are mature, popular projects; the facts about them are general and can change between versions, so check their own documentation for details.
-
-| | **Bongo** | **Laravel** | **Symfony** | **CodeIgniter 4** | **Slim** |
-|---|---|---|---|---|---|
-| Kind | Full-stack, minimal | Full-stack | Full-stack, component-based | Full-stack, light | Micro-framework |
-| Install | Copy the folder | Composer | Composer | Composer or zip download | Composer |
-| Third-party packages needed | **None** | Many (in `vendor/`) | Many (in `vendor/`) | Few | Several |
-| Size of a fresh project | **≈ 170 KB zipped** | Tens of MB with `vendor/` | Tens of MB with `vendor/` | A few MB | A few MB with `vendor/` |
-| Read the whole framework yourself | **Yes, ~13,000 lines** | Not realistic | Not realistic | Possible but large | Yes (but much less built in) |
-| ORM and migrations | Built in | Built in | Built in (Doctrine) | Built in | Add a package |
-| Auth, validation, mail, queues, scheduler | Built in | Built in | Built in or packages | Partly built in | Add packages |
-| WebSockets / live updates | Built in (pure PHP) | Separate package or service | Separate package or service | Not built in | Not built in |
-| Security audit command | `php bongo security:check` | Community packages | Community packages | Not built in | Not built in |
-| Bangla built in | **Yes** | Via language packs | Via translations | Via language packs | No |
-| Ecosystem, jobs, tutorials | Small, new | **Very large** | **Very large** | Large | Medium |
-| Long-term support, big teams | Early (0.x) | Mature | Mature, LTS versions | Mature | Mature |
-
-**In short:**
-- **Choose Bongo** when you want a complete framework you can fully read, own and deploy anywhere by copying files, especially on shared hosting, for teaching, or for teams that want no dependency churn.
-- **Choose Laravel or Symfony** when you need a huge ecosystem, many ready-made packages, easy hiring and long-term support for large teams.
-- **Choose CodeIgniter** when you want a light, mature framework with a large community.
-- **Choose Slim** when you only need a small API router and will pick every other part yourself.
-
-Bongo is written from scratch. It shares common MVC ideas (routes, controllers, models, migrations) with these frameworks, but no code.
-
----
-
-## How these numbers were measured
-
-Measured on this repository with PHP 8.3 on Windows, on 2026-10-02.
-
-**Size and files** (framework only, the demo shop excluded):
+## ⚡ Get started in 60 seconds
 
 ```bash
-find system -name "*.php" | wc -l                     # files
-find system -name "*.php" -exec cat {} + | wc -l      # lines
-du -sk system                                         # size on disk (KB)
-tar -czf core.tgz system bongo public/index.php config && du -k core.tgz   # zipped
+git clone https://github.com/Solayman/bongo-php.git my-app && cd my-app
+cp .env.example .env        # set your database (MySQL or SQLite)
+php bongo key:generate
+php bongo migrate
+php bongo serve             # → http://127.0.0.1:8000
 ```
 
-**Per request:** `public/index.php` ran once per request in a fresh PHP process, in production mode (`APP_ENV=production`, `APP_DEBUG=false`) with precompiled views (`php bongo view:cache`). Memory is `memory_get_peak_usage()`, and files is `get_included_files()`. Times are the median of 6 runs, **with opcache turned off**. With opcache on, which is the normal setup on a live server, PHP doesn't recompile the files on each request, so real responses are faster.
+That's it. There's no `composer install` and no `npm install`, so there's nothing to wait for.
+
+---
+
+## 👀 See how it feels
+
+If you've written PHP before, you already know how to use Bongo.
+
+**Routes** (`routes/web.php`)
+```php
+Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+Route::post('/products', [ProductController::class, 'store'])->middleware('auth');
+```
+
+**Controller**
+```php
+public function store(Request $request)
+{
+    $data = $request->validate([
+        'name'  => 'required|string|max:150',
+        'price' => 'required|numeric|min:0',
+    ]);
+
+    Product::create($data);
+
+    flash('success', 'Product created.');
+    redirect(route('products.index'));
+}
+```
+
+**Model**
+```php
+class Category extends Model
+{
+    protected array $fillable = ['name', 'slug'];
+
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class);
+    }
+}
+
+$categories = Category::withCount('products')->orderBy('name')->get();   // $category->products_count
+```
+
+**View** (`resources/views/categories/index.php`)
+```html
+@extends('layouts.admin')
+
+@section('content')
+    @foreach($categories as $category)
+        <p>{{ $category->name }} ({{ $category->products_count }} products)</p>
+    @endforeach
+@endsection
+```
+
+**Live updates** with no Node and no Pusher:
+```php
+Broadcast::to('orders')->send('order.created', ['id' => $order->id]);
+```
+```js
+BongoSocket.connect('{{ websocket_url() }}').on('orders', 'order.created', o => alert('New order #' + o.id));
+```
+
+**Tests**, built in:
+```php
+$this->get('/products')->assertStatus(200)->assertSee('Yoga Mat');
+```
+```bash
+php bongo test        # → Tests: 312 passed
+```
+
+---
+
+## 🏆 8 reasons developers choose Bongo
+
+### 1. 📖 You can read the whole framework
+About **13,000 lines** in total, and most modules are 200–600 lines. When something surprises you, open the file and understand it in minutes. No magic, no package maze.
+
+### 2. 🪶 Zero dependencies, zero breakage
+No `vendor/`, so there are no supply-chain attacks through dependencies and no surprise breaking updates. It runs on **shared hosting, a VPS or a laptop**. Composer stays optional: add packages when *you* want them.
+
+### 3. 🚀 Fast and light
+| | |
+|---|---|
+| Memory per request | **0.45–0.65 MB** |
+| Response time (no opcache, the worst case) | **8.5 ms** (JSON API) to **18.9 ms** (full shop page with queries) |
+| Framework files loaded per request | **20–28** |
+| `php bongo config:cache` | Startup **36% faster** (17.3 → 11.1 ms) |
+
+### 4. 🔒 Secure by default, from the first request
+- **Passwords and logins:** Argon2id plus a pepper, login throttling and account lockout.
+- **Forms and sessions:** CSRF on every form, strict session cookies.
+- **Output:** escaped by default.
+- **Uploads:** checked by their real content, so a renamed `.php` file is rejected.
+- **Encryption and APIs:** AES-256-GCM, JWT with revocation, signed URLs.
+- **Network:** security headers, CORS and trusted proxies.
+- **`php bongo security:check`** audits your server before you go live.
+
+### 5. 🩺 Errors that tell you how to fix them
+A beautiful debug page with the source line, the stack trace, the queries that ran and a **"How to fix"** hint:
+> *Table `products` doesn't exist → Run: `php bongo migrate`*
+
+`dd()` shows clean, collapsible output, even for lists of 1,000+ rows.
+
+### 6. 🧰 Everything a real app needs, built in
+| | |
+|---|---|
+| **Web** | Routing, middleware, form requests, validation (~35 rules), file uploads, view components `<x-alert>` |
+| **Data** | MySQL or SQLite, models, relations (incl. many-to-many), soft deletes, eager loading, `withCount`, migrations, seeders |
+| **Users** | Session and JWT login, several guards at once, remember me, email verification, password reset, policies |
+| **Background** | Queues, a scheduler (no cron needed while developing), queued mail |
+| **Talking out** | Mail (SMTP), notifications (mail, SMS, Slack), an HTTP client with retries |
+| **Real-time** | A WebSocket server with public and private channels, in pure PHP |
+| **Scale** | Optional Redis cache and sessions, `config:cache`, `view:cache` |
+| **Ops** | Maintenance mode (`down` / `up`), `php bongo upgrade`, daily logs |
+
+### 7. 🇧🇩 Bangla, built in
+Bongo ships with **বাংলা built in**, which is rare among PHP frameworks: translations, a language switcher and translated validation messages. English works the same way, and you can add any other language with one JSON file.
+
+### 8. 🧪 Tested, and testing is easy
+**312 automated tests** cover the framework. Your own tests get a separate database, a real HTTP test server, and `Mail::fake()`, `Http::fake()`, `Notify::fake()` and `Broadcast::fake()`, all with **no PHPUnit to install**.
+
+---
+
+## 🥊 Bongo vs the others
+
+Every framework makes trade-offs. Here's an honest look. The others are excellent, mature projects; check their own docs for details.
+
+| | **🥁 Bongo** | Laravel | Symfony | CodeIgniter 4 | Slim |
+|---|---|---|---|---|---|
+| Kind | **Full-stack, minimal** | Full-stack | Full-stack, component-based | Full-stack, light | Micro-framework |
+| Install | **Copy the folder** | Composer | Composer | Composer or zip | Composer |
+| Packages needed | **0** | Many | Many | Few | Several |
+| Fresh project size | **≈ 170 KB** | Tens of MB | Tens of MB | A few MB | A few MB |
+| Readable end to end | **✅ ~13k lines** | ❌ | ❌ | ⚠️ Large | ✅ (but little built in) |
+| ORM, auth, queues, mail | ✅ Built in | ✅ Built in | ✅ Built in or packages | ⚠️ Partly | ❌ Add packages |
+| WebSockets | **✅ Built in** | Separate package | Separate package | ❌ | ❌ |
+| Security audit command | **✅** | Community package | Community package | ❌ | ❌ |
+| Bangla built in | **✅** | Language pack | Translations | Language pack | ❌ |
+| Ecosystem and jobs | 🌱 New | 🌳 Huge | 🌳 Huge | 🌲 Large | 🌿 Medium |
+| Maturity | 🌱 0.x | Mature | Mature, LTS | Mature | Mature |
+
+**Pick Bongo** when you want a complete framework you fully understand, own and can deploy anywhere.<br>
+**Pick Laravel or Symfony** when you need a huge ecosystem, many ready-made packages and easy hiring.<br>
+**Pick Slim** when you only need a tiny router and will choose every other part yourself.
+
+> Bongo is written from scratch. It shares common MVC ideas (routes, controllers, models, migrations) with these frameworks, but no code.
+
+---
+
+## 🎯 Perfect for
+
+✅ **Business apps, admin panels, shops and dashboards**<br>
+✅ **JSON APIs** for mobile and front-end apps<br>
+✅ **Shared hosting**, or servers without Composer or Node<br>
+✅ **Teams** that want to own every line they run<br>
+✅ **Learning**: read a real framework and see how MVC, ORMs and security work inside
+
+## ⚠️ Be honest: when to choose something else
+
+| | Today |
+|---|---|
+| Databases | MySQL / MariaDB and SQLite. **PostgreSQL and SQL Server are not supported yet.** |
+| Queues | Database queue only, with no Redis or SQS driver yet |
+| Ecosystem | No package marketplace yet: you build features such as payments or OAuth yourself, or add them with Composer |
+| Community | New and small, with few tutorials so far. You could write the first one! |
+| Very large systems | Great for one or several servers. Multi-region platforms with big teams are better served by a framework with a large ecosystem. |
+
+---
+
+## ❓ FAQ
+
+**Can I still use Composer packages?**<br>
+Yes. If `vendor/autoload.php` exists, Bongo loads it. The framework itself never needs it.
+
+**Is it production-ready?**<br>
+It's tested by 312 automated tests and a complete e-commerce demo app, and it has a production security checklist (`php bongo security:check`). It's version 0.x, so expect fast improvements.
+
+**How do I upgrade?**<br>
+`php bongo upgrade` replaces only the framework files, checks the SHA-256, makes a backup and never touches your app. `--rollback` undoes it.
+
+**Will it be maintained?**<br>
+Bongo is developed by [Nobotech](https://nobotech.xyz) and released under the MIT license. Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
+<div align="center">
+
+## 🥁 Ready to play?
+
+```bash
+git clone https://github.com/Solayman/bongo-php.git my-app
+```
+
+**[📚 Read the docs](DOCUMENTATION.md)** · **[🤝 Contribute](CONTRIBUTING.md)** · **[🐛 Report a bug](https://github.com/Solayman/bongo-php/issues)**
+
+⭐ **If Bongo saves you time, give it a star. It helps others find it.**
+
+<sub>Made with ❤️ by Nobotech · MIT License</sub>
+
+</div>
+
+---
+
+<details>
+<summary><b>📏 How the numbers were measured</b></summary>
+
+Measured on this repository with PHP 8.3 on Windows.
+
+**Size** (framework only, demo app excluded), on 2026-10-03:
+```bash
+find system -name "*.php" | wc -l                     # 114 files
+find system -name "*.php" -exec cat {} + | wc -l      # 12,779 lines
+```
+
+**Per request** (on 2026-10-02): `public/index.php` ran in a fresh PHP process, in production mode with precompiled views. Memory is `memory_get_peak_usage()`; times are the median of 6 runs **with opcache off**, the worst case. With opcache on, as on a normal live server, responses are faster.
 
 | Route | What it does | Files | Memory | Time |
 |---|---|---:|---:|---:|
 | `GET /api/health` | JSON, no database | 39 | 0.45 MB | 8.5 ms |
-| `GET /login` | HTML page with a layout and the CSRF token | 47 | 0.53 MB | 9.1 ms |
-| `GET /api/products` | API with JWT check (401 without a token) | 40 | 0.45 MB | 9.4 ms |
-| `GET /shop` | Product grid: database queries, layout, partials, translations | 56 | 0.65 MB | 18.9 ms |
+| `GET /login` | HTML page, layout, CSRF token | 47 | 0.53 MB | 9.1 ms |
+| `GET /api/products` | API with JWT check | 40 | 0.45 MB | 9.4 ms |
+| `GET /shop` | Product grid, queries, partials, translations | 56 | 0.65 MB | 18.9 ms |
 
----
+**`config:cache`** (2026-10-03): the median of 15 runs of the bootstrap went from 17.3 ms to 11.1 ms.
 
-## Get started
-
-```bash
-cp .env.example .env
-php bongo key:generate
-php bongo migrate
-php bongo serve          # http://127.0.0.1:8000
-```
-
-Read [DOCUMENTATION.md](DOCUMENTATION.md) for the full guide, and [TESTING_GUIDE.md](TESTING_GUIDE.md) to check every feature by hand.
+</details>
