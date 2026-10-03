@@ -41,3 +41,11 @@ Requires PHP 8.0+ with `pdo_mysql` and `openssl`, plus MySQL or MariaDB. Compose
 - `php bongo help`: every CLI command.
 
 Bongo is an independent project with its own code, not affiliated with any other framework.
+
+## Contributing and license
+
+- [CONTRIBUTING.md](CONTRIBUTING.md): how to report bugs and send pull requests.
+- [SECURITY.md](SECURITY.md): report security problems privately.
+- [CHANGELOG.md](CHANGELOG.md): what changed in each version.
+
+Bongo is open source under the [MIT License](LICENSE), © 2026 Nobotech.
