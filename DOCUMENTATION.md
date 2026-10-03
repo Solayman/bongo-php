@@ -350,7 +350,35 @@ class ProductController extends Controller
 }
 ```
 
-**Request:** `Request::all()` (query, form and JSON body), `Request::input('key', $default)`, `Request::only([...])`, `Request::query('key')`, `Request::file('photo')`, `Request::method()`, `Request::path()`, `Request::header('X')`, `Request::wantsJson()`. String input is trimmed, and empty strings count as missing.
+### The request
+
+Ask for the request as a parameter, and it's passed in. Route parameters can come before or after it:
+
+```php
+use System\Http\Request;
+
+public function store(Request $request)
+{
+    $data = $request->validate(['name' => 'required|string|max:100']);   // back with errors on failure
+    Category::create($data);
+}
+
+public function update(Request $request, $id) { ... }
+```
+
+| Method | |
+| --- | --- |
+| `$request->validate($rules, $messages, $attributes)` | The validated fields; failure goes back with errors (422 JSON for APIs) |
+| `$request->all()` · `input('name', $default)` · `only([...])` · `except([...])` · `query('page')` | Input: query string, form and JSON body. Strings are trimmed, and `input()` treats `""` as missing. |
+| `$request->has('name')` · `has(['a', 'b'])` · `filled('name')` · `missing('name')` | Sent at all · sent with a value · not sent |
+| `$request->boolean('active')` · `integer('qty', 1)` | Checkbox (`on`, `1`, `true`, `yes`) and whole-number input |
+| `$request->file('photo')` · `files('photos')` · `hasFile('photo')` | Uploads |
+| `$request->route('id')` · `user()` · `user('customer')` | Route parameter · signed-in user |
+| `$request->method()` · `isMethod('post')` · `path()` · `url()` · `fullUrl()` · `ip()` · `header('X')` · `wantsJson()` | About the request |
+
+Every method also works statically, anywhere: `Request::input('name')`.
+
+**`dd($request)`** shows the method, full URL, input (passwords and tokens masked), uploads, route parameters, IP and headers (cookies and `Authorization` left out).
 
 ### Route model binding and dependency injection
 

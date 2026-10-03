@@ -1,10 +1,135 @@
 <?php
 namespace System\Http;
 
+/**
+ * The current HTTP request. Use it either way:
+ *
+ *   public function store(Request $request)         // type-hinted in an action (recommended)
+ *   {
+ *       $data = $request->validate(['name' => 'required|string|max:100']);
+ *       $request->input('name');  $request->boolean('active');  $request->file('photo');
+ *   }
+ *
+ *   Request::input('name');                          // or statically, anywhere
+ */
 class Request
 {
     /** Parameters of the matched route, e.g. ['product' => '20'] for /products/{product} */
     protected static array $routeParameters = [];
+
+    /**
+     * Validate the input and return only the validated fields. On failure the browser goes
+     * back with the errors and old input; API clients get 422 JSON.
+     */
+    public static function validate(array $rules, array $messages = [], array $attributes = []): array
+    {
+        $data = self::all() + self::files();
+        $errors = \System\Validation\Validator::make($data, $rules, $messages, $attributes);
+        if ($errors) {
+            \System\Validation\Validator::respondWithErrors($errors, $data);
+        }
+        $keys = array_unique(array_map(fn($field) => explode('.', $field)[0], array_keys($rules)));
+        return array_intersect_key($data, array_flip($keys));
+    }
+
+    /** Was the field sent at all (even empty)? has('name') · has(['name', 'email']) = all of them */
+    public static function has(string|array $keys): bool
+    {
+        $all = self::all() + self::files();
+        foreach ((array) $keys as $key) {
+            if (!array_key_exists($key, $all)) return false;
+        }
+        return true;
+    }
+
+    /** Was the field sent with a value (not "" or [])? */
+    public static function filled(string $key): bool
+    {
+        $value = (self::all() + self::files())[$key] ?? null;
+        return $value !== null && $value !== '' && $value !== [];
+    }
+
+    public static function missing(string $key): bool
+    {
+        return !self::has($key);
+    }
+
+    /** "1", "true", "on", "yes" → true; anything else (or missing) → $default/false. For checkboxes. */
+    public static function boolean(string $key, bool $default = false): bool
+    {
+        $value = self::all()[$key] ?? null;
+        return $value === null ? $default : filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /** A whole number, or $default when missing or not a number */
+    public static function integer(string $key, int $default = 0): int
+    {
+        $value = filter_var(self::all()[$key] ?? null, FILTER_VALIDATE_INT);
+        return $value === false ? $default : $value;
+    }
+
+    /** All input except these fields */
+    public static function except(array $keys): array
+    {
+        return array_diff_key(self::all(), array_flip($keys));
+    }
+
+    /** isMethod('post'): the method the route sees (a form's _method=PUT counts as PUT) */
+    public static function isMethod(string $method): bool
+    {
+        return self::method() === strtoupper($method);
+    }
+
+    /** The signed-in user (default guard, or a named one: user('customer')) */
+    public static function user(?string $guard = null): ?object
+    {
+        $user = $guard === null ? \System\Auth\Auth::user() : \System\Auth\Auth::guard($guard)->user();
+        return is_object($user) ? $user : null;
+    }
+
+    /** "http://localhost:8000/products" (no query string) */
+    public static function url(): string
+    {
+        $scheme = self::isSecure() ? 'https' : 'http';
+        $host = (string) ($_SERVER['HTTP_HOST'] ?? parse_url((string) config('app.url', 'http://localhost'), PHP_URL_HOST) ?? 'localhost');
+        return $scheme . '://' . $host . (parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/');
+    }
+
+    /** url() with the query string */
+    public static function fullUrl(): string
+    {
+        $query = (string) ($_SERVER['QUERY_STRING'] ?? '');
+        return self::url() . ($query !== '' ? "?$query" : '');
+    }
+
+    /** What dd($request) / dump($request) shows; secrets are masked */
+    public function __debugInfo(): array
+    {
+        $input = [];
+        foreach (self::all() as $key => $value) {
+            $input[$key] = preg_match('/pass|secret|token|key/i', (string) $key) ? '***' : $value;
+        }
+        $headers = [];
+        foreach ($_SERVER as $name => $value) {
+            if (str_starts_with($name, 'HTTP_') && !in_array($name, ['HTTP_COOKIE', 'HTTP_AUTHORIZATION'], true)) {
+                $headers[ucwords(strtolower(str_replace('_', '-', substr($name, 5))), '-')] = $value;
+            }
+        }
+        return [
+            'method'  => self::method(),
+            'url'     => self::fullUrl(),
+            'path'    => self::path(),
+            'input'   => $input,
+            'files'   => array_map(fn($file) => is_array($file)
+                ? array_map(fn($f) => $f->clientName() . ' (' . $f->size() . ' bytes)', $file)
+                : $file->clientName() . ' (' . $file->size() . ' bytes)', self::files()),
+            'route'   => self::route(),
+            'ip'      => self::ip(),
+            'ajax'    => self::header('X-Requested-With') === 'XMLHttpRequest',
+            'json'    => self::wantsJson(),
+            'headers' => $headers,
+        ];
+    }
 
     /** Set by the router before the action runs */
     public static function setRouteParameters(array $parameters): void

@@ -28,9 +28,9 @@ class Generator
         return ['data' => ['id' => (int) \$id]];
     }
 
-    public function store()
+    public function store(Request \$request)
     {
-        \$data = \$this->validate([
+        \$data = \$request->validate([
             // 'name' => 'required|string|max:100',
         ]);
 
@@ -38,12 +38,23 @@ class Generator
     }
 PHP
             : <<<PHP
-    public function index()
+    public function index(Request \$request)
     {
         return \$this->view('{$this->viewName($class)}.index', []);
     }
+
+    public function store(Request \$request)
+    {
+        \$data = \$request->validate([
+            // 'name' => 'required|string|max:100',
+        ]);
+
+        // Model::create(\$data);
+        redirect(url('/'));
+    }
 PHP;
 
+        $use .= "use System\\Http\\Request;\n";
         return $this->write($path, "<?php\nnamespace $namespace;\n\n$use\nclass $class extends Controller\n{\n$body\n}\n");
     }
 
