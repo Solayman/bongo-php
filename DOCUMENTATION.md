@@ -790,6 +790,28 @@ Custom error pages: `resources/views/errors/{404,405,419,...}.php`.
 
 ## 8. Database
 
+### MySQL or SQLite
+
+MySQL is the default. For a small app, a demo or tests without a database server, use SQLite: the whole database is one file.
+
+```ini
+# .env
+DB_CONNECTION=sqlite
+DB_SQLITE_PATH=D:/projects/shop/database/database.sqlite   # optional, this is the default place
+```
+
+PHP needs the `pdo_sqlite` extension (`extension=pdo_sqlite` in php.ini). Then run `php bongo migrate` as usual. Migrations, models and the query builder are the same for both databases. The few differences:
+
+| | MySQL | SQLite |
+|---|---|---|
+| `->after('column')` | places the new column | ignored (new columns go last) |
+| `$table->dropForeign()` | works | not supported, so copy the table instead |
+| `lockForUpdate()` / `sharedLock()` | row locks | ignored (a write locks the whole file) |
+| `upsert()` | `ON DUPLICATE KEY` | `ON CONFLICT` (same result) |
+| Raw SQL in `DB::raw()` | MySQL functions | write SQL both understand, or check `Connection::driver()` |
+
+`php bongo test` uses `storage/testing/database.sqlite` when `DB_CONNECTION=sqlite`, so your real database file is never touched.
+
 ### Query builder
 
 ```php

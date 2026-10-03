@@ -12,14 +12,14 @@
             @else
                 <div class="value"><i class="bi bi-x-circle-fill text-danger fs-5"></i> Not connected</div>
             @endif
-            <div class="sub">{{ $connection['username'] . '@' . $connection['host'] }}:{{ $connection['port'] }}</div>
+            <div class="sub">{{ $db['server'] }}</div>
         </div></div>
     </div>
     <div class="col-md-4">
         <div class="card stat-tile h-100"><div class="card-body">
             <div class="label">Schema</div>
-            <div class="value">{{ $connection['database'] }}</div>
-            <div class="sub">MySQL {{ $db['version'] ?? 'n/a' }} · PHP {{ PHP_VERSION }}</div>
+            <div class="value">{{ $db['name'] }}</div>
+            <div class="sub">{{ $db['product'] }} {{ $db['version'] ?? 'n/a' }} · PHP {{ PHP_VERSION }}</div>
         </div></div>
     </div>
     <div class="col-md-4">
@@ -51,17 +51,17 @@
     </div>
     <div class="col-lg-8">
         <div class="card">
-            <div class="card-header bg-white fw-semibold">Tables in {{ $connection['database'] }}</div>
+            <div class="card-header bg-white fw-semibold">Tables in {{ $db['name'] }}</div>
             <div class="table-responsive">
                 <table class="table table-sm table-hover mb-0">
                     <thead class="table-light"><tr><th>Table</th><th class="num">≈ Rows</th><th class="num">Size (KB)</th><th>Engine</th></tr></thead>
                     <tbody>
                     @foreach($db['tables'] as $table)
                         <tr>
-                            <td>{{ $table->TABLE_NAME }}</td>
-                            <td class="num">{{ number_format((int) $table->TABLE_ROWS) }}</td>
-                            <td class="num">{{ number_format(((int) $table->DATA_LENGTH + (int) $table->INDEX_LENGTH) / 1024) }}</td>
-                            <td>{{ $table->ENGINE ?? '' }}</td>
+                            <td>{{ $table->name }}</td>
+                            <td class="num">{{ number_format($table->rows) }}</td>
+                            <td class="num">{{ $table->kb === null ? '—' : number_format($table->kb) }}</td>
+                            <td>{{ $table->engine }}</td>
                         </tr>
                     @endforeach
                     </tbody>

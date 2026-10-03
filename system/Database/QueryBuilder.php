@@ -398,9 +398,10 @@ class QueryBuilder
             $sql .= " LIMIT {$this->limit}";
         }
         if ($this->offset !== null) {
-            $sql .= " OFFSET {$this->offset}";
+            $sql .= ($this->limit === null && Connection::isSqlite() ? ' LIMIT -1' : '') . " OFFSET {$this->offset}";
         }
-        return $sql . ($this->lock ?? '');
+        // SQLite locks the whole file during a write transaction, so row locks are not needed (or valid)
+        return $sql . (Connection::isSqlite() ? '' : ($this->lock ?? ''));
     }
 
     /** All bindings in SQL order */
@@ -592,9 +593,13 @@ class QueryBuilder
             }
             array_push($bindings, ...array_values($row));
         }
-        $set = implode(', ', array_map(fn($c) => "$c = VALUES($c)", $update ?? $columns));
         $sql = "INSERT INTO {$this->table} (" . implode(',', $columns) . ') VALUES '
-            . implode(',', array_fill(0, count($rows), $placeholders)) . " ON DUPLICATE KEY UPDATE $set";
+            . implode(',', array_fill(0, count($rows), $placeholders));
+        if (Connection::isSqlite()) {
+            $sql .= ' ON CONFLICT DO UPDATE SET ' . implode(', ', array_map(fn($c) => "$c = excluded.$c", $update ?? $columns));
+        } else {
+            $sql .= ' ON DUPLICATE KEY UPDATE ' . implode(', ', array_map(fn($c) => "$c = VALUES($c)", $update ?? $columns));
+        }
         return $this->run($sql, $bindings)->rowCount();
     }
 
@@ -640,7 +645,9 @@ class QueryBuilder
     {
         $this->assertHasWhere($all, 'update');
 
-        $set = implode(',', array_map(fn($col) => "$col = ?", array_keys($data)));
+        // SQLite does not accept "table.column" on the left of SET
+        $column = fn($col) => Connection::isSqlite() && str_starts_with($col, "{$this->table}.") ? substr($col, strlen($this->table) + 1) : $col;
+        $set = implode(',', array_map(fn($col) => $column($col) . ' = ?', array_keys($data)));
         $this->run("UPDATE {$this->table} SET $set" . $this->compileWheres(), [...array_values($data), ...$this->bindings]);
         return true;
     }
@@ -681,7 +688,16 @@ class QueryBuilder
 
     public function truncate(): bool
     {
-        $this->run("TRUNCATE TABLE {$this->table}", []);
+        if (Connection::isSqlite()) {
+            $this->run("DELETE FROM {$this->table}", []);
+            // Restart the ids at 1 (sqlite_sequence only exists once an AUTOINCREMENT table does)
+            try {
+                $this->run('DELETE FROM sqlite_sequence WHERE name = ?', [$this->table]);
+            } catch (\PDOException) {
+            }
+        } else {
+            $this->run("TRUNCATE TABLE {$this->table}", []);
+        }
         return true;
     }
 }
