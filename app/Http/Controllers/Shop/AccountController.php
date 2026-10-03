@@ -63,7 +63,8 @@ class AccountController extends Controller
         ]);
 
         Auth::guard('customer')->login($user);
-        flash('success', __('Welcome, :name! Your account is ready.', ['name' => $user->name]));
+        $user->sendEmailVerification();
+        flash('success', __('Welcome, :name! We sent you an email: click the link in it to verify your address.', ['name' => $user->name]));
         redirect(route('shop.index'));
     }
 

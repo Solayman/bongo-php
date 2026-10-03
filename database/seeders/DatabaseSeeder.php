@@ -20,6 +20,7 @@ class DatabaseSeeder
             'email'    => 'admin@example.com',
             'password' => Hash::make('password'),
             'role'     => 'admin',
+            'email_verified_at' => date('Y-m-d H:i:s'),
         ]);
 
         $customerNames = [
@@ -34,6 +35,7 @@ class DatabaseSeeder
                 'email'    => strtolower(explode(' ', $name)[0]) . ($i + 1) . '@example.com',
                 'password' => $customerPassword,
                 'role'     => 'customer',
+                'email_verified_at' => date('Y-m-d H:i:s'),
                 'phone'    => '+880 17' . str_pad((string) mt_rand(0, 99999999), 8, '0', STR_PAD_LEFT),
             ]);
         }

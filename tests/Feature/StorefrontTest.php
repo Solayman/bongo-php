@@ -10,6 +10,42 @@ class StorefrontTest extends HttpTestCase
         $this->submit('/shop/register', '/shop/register', [
             'name' => 'Shopper', 'email' => $email, 'password' => 'shopper-pass', 'password_confirmation' => 'shopper-pass',
         ])->assertRedirect('/shop');
+        $this->get($this->verificationLink($email))->assertRedirect('/shop');
+    }
+
+    /** The link in the newest verification email sent to $email, as a path */
+    protected function verificationLink(string $email): string
+    {
+        foreach (array_reverse($this->sentMails()) as $mail) {
+            if (in_array($email, array_column($mail['to'] ?? [], 'email'), true) || str_contains(json_encode($mail['to'] ?? []), $email)) {
+                preg_match('#href="([^"]+/shop/email/verify/[^"]+)"#', $mail['html'] ?? '', $m);
+                $url = html_entity_decode($m[1] ?? '');
+                return (string) parse_url($url, PHP_URL_PATH) . '?' . parse_url($url, PHP_URL_QUERY);
+            }
+        }
+        throw new \System\Testing\AssertionFailed("No verification email for $email");
+    }
+
+    public function testNewCustomersVerifyTheirEmailBeforeCheckout(): void
+    {
+        $this->submit('/shop/register', '/shop/register', [
+            'name' => 'New One', 'email' => 'new-one@example.com', 'password' => 'shopper-pass', 'password_confirmation' => 'shopper-pass',
+        ])->assertRedirect('/shop');
+
+        // Not verified yet: checkout and orders send them to the notice page
+        $this->get('/shop/checkout')->assertRedirect('/shop/email/verify');
+        $this->get('/shop/orders')->assertRedirect('/shop/email/verify');
+        $this->get('/shop/email/verify')->assertSee('new-one@example.com')->assertSee('Send the link again');
+
+        $link = $this->verificationLink('new-one@example.com');
+
+        // A changed or expired link does nothing
+        $this->get(str_replace('signature=', 'signature=0', $link))->assertStatus(403);
+        $this->get(preg_replace('/expires=\d+/', 'expires=' . (time() + 99999), $link))->assertStatus(403);
+
+        $this->get($link)->assertRedirect('/shop');
+        $this->assertTrue($this->db('users')->where('email', 'new-one@example.com')->first()->email_verified_at !== null);
+        $this->get('/shop/orders')->assertStatus(200);
     }
 
     protected function addToCart(int $productId, int $quantity = 1)
