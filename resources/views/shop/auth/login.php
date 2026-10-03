@@ -17,6 +17,10 @@
                 <input type="password" id="password" name="password" autocomplete="current-password" class="form-control @error('password') is-invalid @enderror">
                 @error('password') <div class="invalid-feedback">{{ $message }}</div> @enderror
             </div>
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" name="remember" value="1" id="remember">
+                <label class="form-check-label" for="remember">{{ __('Remember me') }}</label>
+            </div>
             <button type="submit" class="btn btn-dark w-100">{{ __('Sign in') }}</button>
         </form>
         <div class="d-flex justify-content-between small mt-3">

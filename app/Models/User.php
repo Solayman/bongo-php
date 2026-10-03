@@ -9,7 +9,7 @@ class User extends Model
 {
     protected static $table = 'users';
     protected array $fillable = ['name', 'email', 'password', 'role', 'phone'];
-    protected array $hidden = ['password'];
+    protected array $hidden = ['password', 'remember_token'];
     protected array $casts = ['id' => 'int'];
 
     public function orders(): HasMany

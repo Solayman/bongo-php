@@ -30,7 +30,7 @@ class AccountController extends Controller
         if ($throttle->tooManyAttempts($email, $request->ip())) {
             $this->fail(__('Too many login attempts. Try again in :minutes minute(s).', ['minutes' => (int) ceil($throttle->availableIn($email, $request->ip()) / 60)]), $email);
         }
-        if (!Auth::guard('customer')->attempt($email, $data['password'])) {
+        if (!Auth::guard('customer')->attempt($email, $data['password'], $request->boolean('remember'))) {
             $throttle->hit($email, $request->ip());
             $this->fail(__('These credentials do not match our records.'), $email);
         }

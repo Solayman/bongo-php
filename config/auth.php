@@ -17,6 +17,9 @@ return [
     // "Forgot password": which provider, and how long a reset link works (minutes)
     'passwords' => ['provider' => 'users', 'expire' => 60],
 
+    // "Remember me" on the login forms: how long the cookie keeps a user signed in (days)
+    'remember_days' => (int) env('AUTH_REMEMBER_DAYS', 30),
+
     // Where users come from: a table plus optional fixed conditions
     'providers' => [
         'users' => ['table' => 'users'],
