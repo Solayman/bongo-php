@@ -3,6 +3,7 @@
 ## Git & Branching Strategy
 - **Main Branch**: `master` (production-ready code).
 - **Working / Push Branch**: `solayman` (all development code must be pushed to the `solayman` branch).
+- **Protected Branch (STRICT - DO NOT TOUCH)**: `release` (NEVER touch, modify, checkout, rebase, or push to the `release` branch under any circumstances).
 - **Merge Requests / Pull Requests**:
   1. Commit code to `solayman`.
   2. Push to `origin/solayman`.
