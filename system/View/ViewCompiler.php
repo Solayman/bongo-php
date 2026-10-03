@@ -2,7 +2,7 @@
 namespace System\View;
 
 /**
- * Compiles BongoMVC templates to plain PHP.
+ * Compiles Bongo templates to plain PHP.
  *
  *   {{ $x }}  escaped echo        {!! $x !!}  raw echo        {{-- note --}}  comment
  *   @{{ x }}  prints "{{ x }}" literally

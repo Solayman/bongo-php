@@ -4,7 +4,7 @@ namespace System\Log;
 use Throwable;
 
 /**
- * BongoMVC's built-in logger.
+ * Bongo's built-in logger.
  *
  *   logger()->info('Order {id} shipped', ['id' => 42]);
  *   Log::error('Payment failed', ['exception' => $e]);
@@ -89,7 +89,7 @@ class Logger
             }
             $this->prune();
         } catch (Throwable $e) {
-            error_log('[BongoMVC logger] ' . $e->getMessage() . ' | ' . rtrim($line));
+            error_log('[Bongo logger] ' . $e->getMessage() . ' | ' . rtrim($line));
         }
     }
 

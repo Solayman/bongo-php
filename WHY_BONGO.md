@@ -1,8 +1,8 @@
-# Why BongoMVC?
+# Why Bongo?
 
-BongoMVC is a complete PHP MVC framework that fits in **about 480 KB of readable code with zero dependencies**. You get routing, an ORM, migrations, authentication, validation, templates, mail, notifications, queues, a scheduler, live updates over WebSockets, a test runner and security hardening. You don't need Composer, `vendor/`, Node or a build step: copy the folder, point the web server at `public/`, and it runs.
+Bongo is a complete PHP MVC framework that fits in **about 480 KB of readable code with zero dependencies**. You get routing, an ORM, migrations, authentication, validation, templates, mail, notifications, queues, a scheduler, live updates over WebSockets, a test runner and security hardening. You don't need Composer, `vendor/`, Node or a build step: copy the folder, point the web server at `public/`, and it runs.
 
-This page is for developers and teams deciding whether BongoMVC fits their project.
+This page is for developers and teams deciding whether Bongo fits their project.
 
 ---
 
@@ -54,7 +54,7 @@ The largest module, the database layer with its query builder, ORM, migrations a
 ### 2. Nothing to install, nothing to break
 
 - **No dependency updates.** Packages can't break your app, and supply-chain attacks through a dependency don't apply.
-- **Any host works.** Shared hosting, a VPS or a laptop: if it runs PHP 8 and MySQL, it runs BongoMVC.
+- **Any host works.** Shared hosting, a VPS or a laptop: if it runs PHP 8 and MySQL, it runs Bongo.
 - **Composer is optional.** If you want a package, `vendor/autoload.php` is loaded when it exists. The framework never needs it.
 
 ### 3. Secure by default
@@ -97,11 +97,11 @@ These protections are on from the first request, with no setup:
 
 ### 6. Familiar to PHP developers
 
-The routes, controllers, models, migrations and `@if` / `@foreach` templates follow patterns most PHP developers already know, so a new team member is productive on day one. The code itself is written from scratch for BongoMVC.
+The routes, controllers, models, migrations and `@if` / `@foreach` templates follow patterns most PHP developers already know, so a new team member is productive on day one. The code itself is written from scratch for Bongo.
 
 ---
 
-## When BongoMVC is a good fit
+## When Bongo is a good fit
 
 - Business apps, admin panels, shops, dashboards and internal tools.
 - JSON APIs for mobile or front-end apps.
@@ -126,9 +126,9 @@ Be honest about the limits:
 
 ## Compared with other PHP frameworks
 
-Every framework makes trade-offs. This table shows where BongoMVC stands next to well-known PHP frameworks, so you can pick the right tool. The others are mature, popular projects; the facts about them are general and can change between versions, so check their own documentation for details.
+Every framework makes trade-offs. This table shows where Bongo stands next to well-known PHP frameworks, so you can pick the right tool. The others are mature, popular projects; the facts about them are general and can change between versions, so check their own documentation for details.
 
-| | **BongoMVC** | **Laravel** | **Symfony** | **CodeIgniter 4** | **Slim** |
+| | **Bongo** | **Laravel** | **Symfony** | **CodeIgniter 4** | **Slim** |
 |---|---|---|---|---|---|
 | Kind | Full-stack, minimal | Full-stack | Full-stack, component-based | Full-stack, light | Micro-framework |
 | Install | Copy the folder | Composer | Composer | Composer or zip download | Composer |
@@ -144,12 +144,12 @@ Every framework makes trade-offs. This table shows where BongoMVC stands next to
 | Long-term support, big teams | Early (0.x) | Mature | Mature, LTS versions | Mature | Mature |
 
 **In short:**
-- **Choose BongoMVC** when you want a complete framework you can fully read, own and deploy anywhere by copying files, especially on shared hosting, for teaching, or for teams that want no dependency churn.
+- **Choose Bongo** when you want a complete framework you can fully read, own and deploy anywhere by copying files, especially on shared hosting, for teaching, or for teams that want no dependency churn.
 - **Choose Laravel or Symfony** when you need a huge ecosystem, many ready-made packages, easy hiring and long-term support for large teams.
 - **Choose CodeIgniter** when you want a light, mature framework with a large community.
 - **Choose Slim** when you only need a small API router and will pick every other part yourself.
 
-BongoMVC is written from scratch. It shares common MVC ideas (routes, controllers, models, migrations) with these frameworks, but no code.
+Bongo is written from scratch. It shares common MVC ideas (routes, controllers, models, migrations) with these frameworks, but no code.
 
 ---
 

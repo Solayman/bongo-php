@@ -4,7 +4,7 @@ namespace System\Console;
 use RuntimeException;
 
 /**
- * php bongo release:build <folder>: a fresh BongoMVC project without the demo application.
+ * php bongo release:build <folder>: a fresh Bongo project without the demo application.
  * The framework files below are copied as they are; release/skeleton/ adds the starter
  * files (welcome page, routes, User model, empty seeder, example tests, README).
  */
@@ -14,7 +14,7 @@ class ReleaseBuilder
     public const FRAMEWORK = [
         'system', 'bongo', 'config', 'lang',
         'public/index.php', 'public/.htaccess', 'public/storage/.htaccess',
-        '.gitignore', '.env.example', 'DOCUMENTATION.md', 'WHY_BONGOMVC.md', 'UPGRADE.md',
+        '.gitignore', '.env.example', 'DOCUMENTATION.md', 'WHY_BONGO.md', 'UPGRADE.md',
         'app/Http/Controllers/Controller.php', 'app/Http/Middleware', 'app/Helpers/commonHelper.php',
         'resources/views/errors', 'resources/views/components/alert.php',
         'resources/views/partials/flash.php', 'resources/views/partials/debug-footer.php',

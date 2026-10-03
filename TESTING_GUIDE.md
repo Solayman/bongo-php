@@ -1,4 +1,4 @@
-# BongoMVC Manual Testing Guide
+# Bongo PHP Framework: Manual Testing Guide
 
 This is a checklist for checking each framework feature **by hand, in the browser**. Tick the box when you see the expected result. The automated tests (`php bongo test`) check the same features; this guide lets a person see them working.
 
@@ -221,7 +221,7 @@ Delete the generated test files afterwards.
 
 - [ ] Log times match your clock. If they don't, set `APP_TIMEZONE` in `.env` (e.g. `APP_TIMEZONE=Asia/Dhaka`).
 
-- [ ] **Framework self-check:** Routing, Environment, Config, View engine, Session and Database are all **OK**. "Composer (optional)" shows **Not installed**, which is expected because BongoMVC needs no Composer.
+- [ ] **Framework self-check:** Routing, Environment, Config, View engine, Session and Database are all **OK**. "Composer (optional)" shows **Not installed**, which is expected because Bongo needs no Composer.
 - [ ] **Tables:** lists your database tables, with approximate row counts.
 - [ ] **Upload test:** choose 2–3 images and click **Check files**. A green message lists each file with its type, size in KB and pixel size.
 - [ ] Rename a text file to `fake.png` and include it. The page says **File N: The photos must be an image**, naming the position of the bad file.

@@ -1,4 +1,4 @@
-# Upgrading BongoMVC
+# Upgrading the Bongo PHP Framework
 
 ```bash
 php bongo upgrade --check     # installed vs latest version, and what changed
@@ -12,7 +12,7 @@ An upgrade replaces only the framework: `system/`, `bongo`, `public/index.php` a
 
 New settings in a release are listed after the upgrade (for example `New settings in config/mail.php: …`). Copy the ones you want from the release's `config/` files.
 
-Without internet access, download `bongomvc-framework-X.Y.Z.json.gz` and its `.sha256` from the release page and run `php bongo upgrade --from=bongomvc-framework-X.Y.Z.json.gz`. For a private repository, set `UPGRADE_TOKEN` in `.env` to a GitHub token that can read it.
+Without internet access, download `bongo-framework-X.Y.Z.json.gz` and its `.sha256` from the release page and run `php bongo upgrade --from=bongo-framework-X.Y.Z.json.gz`. For a private repository, set `UPGRADE_TOKEN` in `.env` to a GitHub token that can read it.
 
 Versions follow semantic versioning: a change in the **first** number (1.x → 2.0) can need changes in your code, and those are described below.
 

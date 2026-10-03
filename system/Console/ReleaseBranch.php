@@ -4,7 +4,7 @@ namespace System\Console;
 use RuntimeException;
 
 /**
- * php bongo release:branch → the "release" git branch gets one new commit, "BongoMVC X.Y.Z":
+ * php bongo release:branch → the "release" git branch gets one new commit, "Bongo X.Y.Z":
  * the clean framework from release:build (no demo app, no tests). Nothing is tagged or
  * published; master and the working folder are not touched (a temporary git worktree is used).
  */
@@ -43,7 +43,7 @@ class ReleaseBranch
                 throw new RuntimeException("The {$this->branch} branch already holds this exact build. Nothing to commit.");
             }
             $source = trim($this->git('rev-parse --short HEAD'));
-            $message = "BongoMVC $version\n\nThe framework only, built from master $source with php bongo release:build: no demo application and no tests.";
+            $message = "Bongo $version\n\nThe framework only, built from master $source with php bongo release:build: no demo application and no tests.";
             $this->git('commit -q -m ' . escapeshellarg($message), $tree);
             return trim($this->git('rev-parse --short HEAD', $tree));
         } finally {

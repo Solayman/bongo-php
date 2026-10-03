@@ -10,7 +10,7 @@ use RuntimeException;
  */
 class PendingRequest
 {
-    protected array $headers = ['Accept' => 'application/json', 'User-Agent' => 'BongoMVC'];
+    protected array $headers = ['Accept' => 'application/json', 'User-Agent' => 'Bongo'];
     protected int $timeout = 30;
     protected int $tries = 1;
     protected int $retryDelayMs = 0;

@@ -6,7 +6,7 @@ use RuntimeException;
 /**
  * Upgrades only the framework's own files, never your code:
  *
- *   php bongo release:package          → dist/bongomvc-framework-0.9.0.json.gz (+ .sha256), for a GitHub release
+ *   php bongo release:package          → dist/bongo-framework-0.9.0.json.gz (+ .sha256), for a GitHub release
  *   php bongo upgrade --check          → installed vs latest version and the release notes
  *   php bongo upgrade                  → download, verify the SHA-256, back up, replace, report new config keys
  *   php bongo upgrade --from=file.gz   → the same from a downloaded package (offline)
@@ -42,7 +42,7 @@ class Upgrader
         }
 
         if (!is_dir($outDir)) mkdir($outDir, 0775, true);
-        $path = rtrim($outDir, '/\\') . "/bongomvc-framework-$version.json.gz";
+        $path = rtrim($outDir, '/\\') . "/bongo-framework-$version.json.gz";
         file_put_contents($path, gzencode(json_encode(['version' => $version, 'files' => $files, 'config' => $config], JSON_UNESCAPED_SLASHES), 9));
         file_put_contents("$path.sha256", hash_file('sha256', $path) . '  ' . basename($path) . "\n");
         return $path;
@@ -53,7 +53,7 @@ class Upgrader
     /** The latest release: [version, notes, package url, sha256 url] (GitHub's releases API by default) */
     public function latest(): array
     {
-        $url = (string) config('app.upgrade_url', 'https://api.github.com/repos/Solayman/BongoMvc/releases/latest');
+        $url = (string) config('app.upgrade_url', 'https://api.github.com/repos/Solayman/bongo-php/releases/latest');
         $release = json_decode($this->download($url), true);
         if (!is_array($release) || empty($release['tag_name'])) {
             throw new RuntimeException("No release found at $url");
@@ -77,7 +77,7 @@ class Upgrader
         }
         $package = json_decode((string) @gzdecode((string) file_get_contents($packageFile)), true);
         if (!is_array($package) || empty($package['version']) || empty($package['files'])) {
-            throw new RuntimeException('Not a BongoMVC framework package.');
+            throw new RuntimeException('Not a Bongo framework package.');
         }
 
         // Only framework paths, no "../" tricks
@@ -134,7 +134,7 @@ class Upgrader
     /** GET a URL (with UPGRADE_TOKEN for private repositories) */
     public function download(string $url): string
     {
-        $headers = "User-Agent: BongoMVC-upgrade\r\nAccept: application/vnd.github+json, application/octet-stream\r\n";
+        $headers = "User-Agent: Bongo-upgrade\r\nAccept: application/vnd.github+json, application/octet-stream\r\n";
         if ($token = (string) config('app.upgrade_token', '')) {
             $headers .= "Authorization: Bearer $token\r\n";
         }

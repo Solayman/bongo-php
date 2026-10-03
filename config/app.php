@@ -1,6 +1,6 @@
 <?php
 return [
-    'name'  => env('APP_NAME', 'BongoMVC'),
+    'name'  => env('APP_NAME', 'Bongo'),
     'env'   => env('APP_ENV', 'local'),
     'debug' => env('APP_DEBUG', env('APP_ENV', 'local') !== 'production'),
     'url'   => env('APP_URL', 'http://127.0.0.1:8000'),
@@ -9,7 +9,7 @@ return [
     'editor' => env('APP_EDITOR', 'vscode'),
 
     // php bongo upgrade: where to find the latest release, and a token for a private repository
-    'upgrade_url'   => env('UPGRADE_URL', 'https://api.github.com/repos/Solayman/BongoMvc/releases/latest'),
+    'upgrade_url'   => env('UPGRADE_URL', 'https://api.github.com/repos/Solayman/bongo-php/releases/latest'),
     'upgrade_token' => env('UPGRADE_TOKEN', ''),
 
     // Used by PHP dates, log timestamps and the MySQL session (e.g. Asia/Dhaka)
