@@ -1402,6 +1402,37 @@ Unsupported codes are ignored. The admin top bar and the login page have a langu
 
 ---
 
+## 9c. Calling other APIs (HTTP client)
+
+```php
+use System\Http\Http;
+
+$response = Http::withToken($apiKey)->post('https://sms.example.com/send', ['to' => $phone, 'text' => 'Code 1234']);
+$response->ok();              // 2xx
+$response->status();          // 201
+$response->json('data.id');   // a value in the JSON body (dots go deeper)
+$response->body();  $response->header('Content-Type');
+$response->throw();           // RequestException for 4xx/5xx
+
+Http::get($url, ['page' => 2]);                  // query string
+Http::asForm()->post($url, $data);               // form instead of JSON
+Http::withHeaders(['X-Shop' => '7'])->timeout(10)->retry(3, 200)->put($url, $data);   // 3 tries on 5xx or no connection
+```
+
+Bodies are JSON unless you call `asForm()`. A server that can't be reached throws `ConnectionException`. Only `http`/`https` URLs are allowed. It uses cURL when available, and PHP streams otherwise.
+
+**In tests**, nothing should leave the machine:
+
+```php
+Http::fake([
+    'sms.example.com/*' => Http::response(['id' => 'msg-7'], 201),
+    'pay.example.com/*' => fn($request) => Http::response(['ok' => true]),
+]);
+// ... code that calls the APIs ...
+$sent = Http::sent();     // [['method' => 'POST', 'url' => ..., 'headers' => ..., 'data' => ..., 'body' => ...], ...]
+Http::reset();
+```
+
 ## 10. Cache and rate limiting
 
 ### Cache
