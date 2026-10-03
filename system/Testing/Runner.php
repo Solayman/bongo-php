@@ -105,6 +105,8 @@ class Runner
             'MAIL_DRIVER' => 'file',
             'MAIL_PATH'   => BASE_PATH . '/storage/mail/testing',
             'SECURITY_CSP' => "default-src 'self'; frame-ancestors 'self'",
+            // Redis cache/sessions of a test run never mix with the app's keys
+            'REDIS_PREFIX' => config('database.redis.prefix', 'bongo:') . 'testing:',
         ];
         foreach ($overrides as $name => $value) {
             $_ENV[$name] = $value;
@@ -120,8 +122,12 @@ class Runner
         foreach (glob(BASE_PATH . '/storage/mail/testing/*.json') ?: [] as $old) {
             @unlink($old);
         }
+        $GLOBALS['config']['database']['redis']['prefix'] = $overrides['REDIS_PREFIX'];
         \System\Cache\Cache::setStore(null);
         (new \System\Cache\FileStore(BASE_PATH . '/storage/cache/testing'))->flush();
+        if (config('cache.driver') === 'redis') {
+            \System\Cache\Cache::store()->flush();
+        }
         \System\Log\Logger::setInstance(null);
 
         // Each run starts with an empty test log, so assertions only see this run's entries
@@ -172,7 +178,7 @@ class Runner
         foreach (['APP_ENV', 'APP_DEBUG', 'DB_DATABASE', 'APP_KEY', 'LOG_PATH', 'CACHE_PATH', 'MAIL_DRIVER', 'MAIL_PATH', 'SECURITY_CSP'] as $name) {
             $env[$name] = getenv($name);
         }
-        foreach (['DB_CONNECTION', 'DB_SQLITE_PATH'] as $name) {
+        foreach (['DB_CONNECTION', 'DB_SQLITE_PATH', 'CACHE_DRIVER', 'SESSION_DRIVER', 'REDIS_HOST', 'REDIS_PORT', 'REDIS_PREFIX'] as $name) {
             if (getenv($name) !== false) $env[$name] = getenv($name);
         }
         $env['APP_URL'] = self::$baseUrl;

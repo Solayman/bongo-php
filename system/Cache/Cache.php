@@ -2,7 +2,8 @@
 namespace System\Cache;
 
 /**
- * Application cache (files in storage/cache/data, no extra services needed).
+ * Application cache: files in storage/cache/data (no extra services needed),
+ * or Redis with CACHE_DRIVER=redis.
  *
  *   $stats = Cache::remember('dashboard.stats', 300, fn() => expensiveQuery());
  *   Cache::put('key', $value, 60);  Cache::get('key', 'default');  Cache::forget('key');
@@ -18,14 +19,17 @@ namespace System\Cache;
  */
 class Cache
 {
-    protected static ?FileStore $store = null;
+    protected static ?Store $store = null;
 
-    public static function store(): FileStore
+    /** The store from config/cache.php: files (default) or Redis (CACHE_DRIVER=redis) */
+    public static function store(): Store
     {
-        return self::$store ??= new FileStore((string) config('cache.path', base_path('storage/cache/data')));
+        return self::$store ??= config('cache.driver', 'file') === 'redis'
+            ? new RedisStore()
+            : new FileStore((string) config('cache.path', base_path('storage/cache/data')));
     }
 
-    public static function setStore(?FileStore $store): void
+    public static function setStore(?Store $store): void
     {
         self::$store = $store;
     }

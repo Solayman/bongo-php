@@ -1,0 +1,114 @@
+<?php
+namespace Tests\Unit;
+
+use System\Cache\RedisStore;
+use System\Http\RedisSessionHandler;
+use System\Testing\TestCase;
+
+/**
+ * Runs when the redis extension is loaded and a Redis server answers
+ * (REDIS_HOST / REDIS_PORT); otherwise every test passes without checks.
+ */
+class RedisTest extends TestCase
+{
+    protected ?\Redis $redis = null;
+    protected string $prefix = 'bongo:testing:unit:';
+
+    public function setUp(): void
+    {
+        parent::setUp();
+        if (!extension_loaded('redis')) return;
+        try {
+            $redis = new \Redis();
+            $redis->connect((string) config('database.redis.host'), (int) config('database.redis.port'), 0.5);
+            $redis->ping();
+            $this->redis = $redis;
+        } catch (\Throwable) {
+            $this->redis = null;
+        }
+    }
+
+    protected function store(): ?RedisStore
+    {
+        if ($this->redis === null) {
+            $this->assertTrue(true);
+            return null;
+        }
+        $store = new RedisStore($this->redis, $this->prefix . 'cache:');
+        $store->flush();
+        return $store;
+    }
+
+    public function testPutGetForgetAndRemember(): void
+    {
+        if (!$store = $this->store()) return;
+
+        $this->assertNull($store->get('missing'));
+        $this->assertSame('x', $store->get('missing', 'x'));
+
+        $store->put('user', ['id' => 7, 'name' => 'Ana'], 60);
+        $this->assertSame(['id' => 7, 'name' => 'Ana'], $store->get('user'));
+        $this->assertTrue($store->has('user'));
+        $this->assertTrue($store->ttl('user') > 50);
+
+        $store->put('forever', false);
+        $this->assertFalse($store->get('forever', 'default'), 'false is a value, not a miss');
+        $this->assertNull($store->ttl('forever'));
+
+        $calls = 0;
+        $compute = function () use (&$calls) { $calls++; return 42; };
+        $this->assertSame(42, $store->remember('slow', 60, $compute));
+        $this->assertSame(42, $store->remember('slow', 60, $compute));
+        $this->assertSame(1, $calls);
+
+        $store->forget('user');
+        $this->assertFalse($store->has('user'));
+        $this->assertSame(0, $store->ttl('user'));
+    }
+
+    public function testIncrementIsAtomicAndKeepsExpiry(): void
+    {
+        if (!$store = $this->store()) return;
+
+        $this->assertSame(1, $store->increment('hits', 1, 120));
+        $this->assertSame(6, $store->increment('hits', 5, 9999));
+        $this->assertSame(6, $store->get('hits'));
+        $this->assertTrue($store->ttl('hits') <= 120, 'the first expiry is kept');
+        $this->assertSame(4, $store->increment('hits', -2));
+    }
+
+    public function testFlushOnlyRemovesThisAppsKeys(): void
+    {
+        if (!$store = $this->store()) return;
+
+        $this->redis->set($this->prefix . 'other-app', '1');
+        $store->put('a', 1);
+        $store->put('b', 2);
+
+        $this->assertSame(2, $store->flush());
+        $this->assertFalse($store->has('a'));
+        $this->assertSame('1', $this->redis->get($this->prefix . 'other-app'));
+        $this->redis->del($this->prefix . 'other-app');
+    }
+
+    public function testSessionHandler(): void
+    {
+        if ($this->redis === null) {
+            $this->assertTrue(true);
+            return;
+        }
+        $handler = new RedisSessionHandler(60, $this->redis, $this->prefix . 'session:');
+        $id = bin2hex(random_bytes(16));
+
+        $this->assertSame('', $handler->read($id));
+        $this->assertFalse($handler->validateId($id), 'unknown ids are rejected (strict mode)');
+
+        $handler->write($id, 'auth_user|i:5;');
+        $this->assertSame('auth_user|i:5;', $handler->read($id));
+        $this->assertTrue($handler->validateId($id));
+        $this->assertTrue($this->redis->ttl($this->prefix . 'session:' . $id) <= 60);
+
+        $handler->destroy($id);
+        $this->assertSame('', $handler->read($id));
+    }
+}

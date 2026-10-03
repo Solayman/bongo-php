@@ -1508,7 +1508,7 @@ Http::reset();
 
 ### Cache
 
-A file cache in `storage/cache/data`. It needs no Redis or Memcached, and works anywhere PHP can write files.
+A file cache in `storage/cache/data` by default. It needs no Redis or Memcached, and works anywhere PHP can write files. Redis is optional (see below).
 
 ```php
 use System\Cache\Cache;
@@ -1522,6 +1522,24 @@ Cache::flush();                      // or: php bongo cache:clear
 ```
 
 Values are serialized PHP, so arrays and objects work. Each key is one file, written atomically.
+
+### Redis (optional): cache and sessions
+
+Files are fine on one server. When the app runs on **several servers** behind a load balancer, they must share the cache and the sessions, and Redis does that. It needs the `redis` PHP extension (`extension=redis`).
+
+```ini
+# .env
+CACHE_DRIVER=redis        # Cache:: and the rate limiter
+SESSION_DRIVER=redis      # logins are shared by every server
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_PREFIX=bongo:       # every key starts with this; give each app its own
+```
+
+Your code doesn't change, because `Cache::...`, `throttle` and `session()` work the same. Redis removes expired keys by itself. `Cache::flush()` / `php bongo cache:clear` only delete keys with this app's prefix, never the whole Redis database. `php bongo test` adds `testing:` to the prefix, so tests never touch the app's keys.
+
+For anything else, `System\Redis\Redis::connection()` returns the connected `\Redis` client.
 
 ### Rate limiting
 
