@@ -391,8 +391,20 @@ try {
             }
             break;
 
+        case 'websocket:serve':
+            // Live updates for open pages: Broadcast::to('orders')->send(...) arrives in the browser
+            $server = new System\Broadcasting\Server(
+                (string) $optionValue('host', config('broadcasting.host', '127.0.0.1')),
+                (int) $optionValue('port', config('broadcasting.port', 6001)),
+                (array) config('broadcasting.allowed_origins', [])
+            );
+            $server->listen();
+            echo 'Browsers connect to ' . System\Broadcasting\Broadcast::publicUrl() . '. Press Ctrl+C to stop.' . PHP_EOL;
+            $server->run();
+            break;
+
         case 'schedule:list':
-            $tasks = System\Scheduling\Schedule::load()->tasks();
+            $tasks =System\Scheduling\Schedule::load()->tasks();
             $now = new DateTimeImmutable();
             $width = max(array_map(fn($t) => strlen($t->getName()), $tasks)) + 2;
             printf("%-15s %-{$width}s %s%s", 'Cron', 'Task', 'Next run', PHP_EOL);
@@ -482,7 +494,8 @@ try {
             echo "  schedule:run                             Run due scheduled tasks (call it every minute)
 ";
             echo "  schedule:work                            Run the scheduler every minute in this terminal (no cron needed)\n";
-            echo "  schedule:list                            Show scheduled tasks and their next run
+            echo "  websocket:serve [--port=6001] [--host=]  Live updates: push Broadcast::to(...)->send() to open pages\n";
+            echo "  schedule:list                           Show scheduled tasks and their next run
 ";
             echo "  cache:clear                              Delete everything in the file cache
 ";

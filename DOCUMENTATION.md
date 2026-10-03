@@ -1473,6 +1473,67 @@ Notify::send($user, new OrderShipped($order));          // or a list of users
 
 Without `SMS_URL` or `SLACK_WEBHOOK_URL`, messages are written to the log, which is handy while developing. SMS and Slack use the HTTP client, with 2 tries. In tests, `Notify::fake()` records instead of sending, and `Notify::sent()` returns the list.
 
+## 9b-3. Live updates (WebSockets)
+
+Push changes to pages that are already open (a new order on the dashboard, a chat message, a "paid" notice) without reloading. It's built in: pure PHP, with no Node and no extension.
+
+**1. Start the server** (in its own terminal; on a server, keep it running with systemd or Supervisor):
+
+```bash
+php bongo websocket:serve            # ws://127.0.0.1:6001
+```
+
+**2. Send from PHP**, anywhere (controller, job, model event):
+
+```php
+use System\Broadcasting\Broadcast;
+
+Broadcast::to('orders')->send('order.created', ['id' => $order->id, 'total' => $order->total]);
+broadcast('orders', 'order.created', [...]);            // the same, as a helper
+```
+
+If the server isn't running, the broadcast is logged and skipped. Your request never fails because of it.
+
+**3. Listen in the page:**
+
+```html
+<script src="{{ asset('asset/js/bongo-socket.js') }}"></script>
+<script>
+  const socket = BongoSocket.connect('{{ websocket_url() }}');
+  socket.on('orders', 'order.created', data => alert('New order #' + data.id));
+</script>
+```
+
+The script reconnects (and subscribes again) by itself when the server restarts.
+
+**Private channels.** A channel whose name starts with `private-` needs a token, and only your server can make one. Give it only to the right user:
+
+```html
+<script>
+  socket.subscribe('private-user.{{ auth()->id() }}', '{{ channel_token('private-user.' . auth()->id()) }}');
+  socket.on('private-user.{{ auth()->id() }}', 'notice', data => alert(data.text));
+</script>
+```
+
+```php
+Broadcast::to("private-user.{$order->user_id}")->send('notice', ['text' => 'Your order shipped']);
+```
+
+| `.env` | Default | |
+|---|---|---|
+| `BROADCAST_HOST` | `127.0.0.1` | where the server listens (`0.0.0.0` = every interface) |
+| `BROADCAST_PORT` | `6001` | |
+| `BROADCAST_PUBLIC_URL` | `ws://<APP_URL host>:6001` | what browsers connect to, e.g. `wss://shop.com/ws` behind nginx |
+| `BROADCAST_ALLOWED_ORIGINS` | `APP_URL` | pages allowed to connect (comma separated) |
+
+**Security:**
+- Broadcasts from the app are signed with `APP_KEY`, so nobody else can send to your users. The app and the server need the same `APP_KEY`.
+- Pages from other sites are refused.
+- Private channels need a token that expires (1 hour by default).
+- For HTTPS sites, put the server behind your web server's proxy as `wss://`.
+
+**Tests:** `Broadcast::fake()` records instead of sending, and `Broadcast::sent()` returns what was broadcast.
+
 ## 9c. Calling other APIs (HTTP client)
 
 ```php
