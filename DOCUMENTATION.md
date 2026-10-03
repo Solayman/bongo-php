@@ -23,7 +23,7 @@ Built in:
 | Container & DI | Service container (`app()`, `bind/singleton/instance`, autowiring), controller method injection, route model binding (`edit(Product $product)` → 404 if missing) |
 | Generators | `make:controller [--api]`, `make:model [--migration]`, `make:middleware`, `make:request`, `make:policy`, `make:job`, `make:component`, `make:seeder`, `make:notification`, `make:mail`, `make:test [--unit]`, `make:migration` |
 | Logging | Built-in daily log files in `storage/logs`, levels, secret masking; framework events logged automatically |
-| CLI | `php bongo serve / tinker / route:list / make:* / view:cache / view:clear / cache:clear / migrate / migrate:status / migrate:rollback / make:migration / db:seed / key:generate / log:clear / test` |
+| CLI | `php bongo serve / tinker / route:list / make:* / config:cache / config:clear / view:cache / view:clear / cache:clear / migrate / migrate:status / migrate:rollback / make:migration / db:seed / key:generate / log:clear / test` |
 
 The repository currently includes an **e-commerce admin panel** (products, categories, orders, customers). It is the test application used to exercise the framework end to end, and it will be removed later so the framework ships fresh.
 
@@ -783,6 +783,19 @@ The first render compiles a template to plain PHP in `storage/cache/views`. Late
 - Within one page, each template is located and checked once. An `@include` inside a `@foreach` over 100 rows costs one file lookup, not 100. Long-running processes such as `queue:work` still pick up edited templates on their next render.
 - `VIEW_CACHE=false` turns caching off (only useful when debugging the compiler).
 - User data is never compiled as template code: `{{ $name }}` with the value `{{ phpversion() }}` prints that text.
+
+### Faster requests in production: `config:cache`
+
+Every request normally reads all `config/*.php` files. On a live server, cache them once in a single file:
+
+```bash
+php bongo config:cache    # run on every deploy, after changing config/ or .env
+php bongo config:clear    # back to reading config/*.php (e.g. while developing)
+```
+
+It made the framework start about **36% faster** in a test without opcache (17.3 ms → 11.1 ms). The values from `.env` are baked into the cache, so **run it again whenever you change `.env` or `config/`**. `php bongo test` always ignores the cache, so tests never reach the real database.
+
+A typical deploy: `php bongo migrate`, `php bongo config:cache`, `php bongo view:cache`.
 
 Custom error pages: `resources/views/errors/{404,405,419,...}.php`.
 
