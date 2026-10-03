@@ -19,6 +19,29 @@ $optionValue = function (string $name, $default = null) use ($options) {
 
 try {
     switch ($command) {
+        case '--version':
+        case '-V':
+            echo 'BongoMVC ' . System\Framework::version() . PHP_EOL;
+            break;
+
+        case 'about':
+            $size = System\Framework::size();
+            $rows = [
+                'BongoMVC'      => System\Framework::version(),
+                'PHP'           => PHP_VERSION,
+                'Environment'   => (string) config('app.env') . (config('app.debug') ? ' (debug on)' : ''),
+                'URL'           => (string) config('app.url'),
+                'Database'      => config('database.default') . ' · ' . config('database.connections.' . config('database.default') . '.database'),
+                'Mail driver'   => (string) config('mail.driver'),
+                'Queue driver'  => (string) config('queue.driver'),
+                'Framework'     => "{$size['files']} files · " . number_format($size['lines']) . " lines · {$size['kb']} KB (system/)",
+                'Dependencies'  => file_exists(base_path('vendor/autoload.php')) ? 'Composer packages loaded (optional)' : 'none',
+            ];
+            foreach ($rows as $label => $value) {
+                echo str_pad($label, 15) . $value . PHP_EOL;
+            }
+            break;
+
         case 'serve':
             $host = $optionValue('host', '127.0.0.1');
             $port = (int) $optionValue('port', env('APP_PORT', 8000));
@@ -310,7 +333,8 @@ try {
 
         case 'help':
         default:
-            echo "BongoMVC commands:\n";
+            echo 'BongoMVC ' . System\Framework::version() . " commands:\n";
+            echo "  about                                    Version, PHP, environment, drivers and framework size\n";
             echo "  serve [--port=8000] [--host=127.0.0.1]  Start the development server\n";
             echo "  migrate                                  Run pending database/migrations/*.php\n";
             echo "  migrate:status                           Show which migrations have run (and their batch)\n";
