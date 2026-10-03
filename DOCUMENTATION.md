@@ -1729,6 +1729,19 @@ public function testOrderConfirmation(): void
 
 ---
 
+## 13. Maintenance mode
+
+```bash
+php bongo down                                       # every page: "We'll be back soon" (HTTP 503)
+php bongo down --message="Upgrading the shop" --retry=120 --secret=let-me-in
+php bongo up                                         # live again
+```
+
+- API requests get JSON, `{"message": "...", "retry_after": 120}`, and every response sends `Retry-After`.
+- With `--secret`, visit `/let-me-in` once and your browser keeps working for 12 hours, so you can test the deploy while visitors see the notice.
+- To design the page yourself, create `resources/views/errors/503.php`; it receives `$message`.
+- The state is the file `storage/framework/down.json`, so it also works on several servers that share that folder.
+
 ## 13a. Branches and releases
 
 | Branch | Holds |
