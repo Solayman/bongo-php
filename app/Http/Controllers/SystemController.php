@@ -58,7 +58,15 @@ class SystemController extends Controller
             'logFile'    => $this->relativePath(Logger::instance()->file()),
             'logLevel'   => $logLevel,
             'logs'       => Logger::instance()->recent(50, $logLevel),
+            'mails'      => \System\Mail\Mailbox::latest(20),
         ]);
+    }
+
+    /** One email from the mailbox: its details, the HTML in a sandboxed frame, the text version */
+    public function mail(string $id)
+    {
+        $mail = \System\Mail\Mailbox::find($id) ?? abort(404, 'Email not found');
+        return $this->view('system.mail', ['mail' => $mail]);
     }
 
     /**

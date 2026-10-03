@@ -78,6 +78,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/system', [SystemController::class, 'index'])->name('system')->middleware('can:manage-system');
     Route::post('/system/log-test', [SystemController::class, 'logTest'])->name('system.log-test')->middleware('can:manage-system');
     Route::post('/system/upload-test', [SystemController::class, 'uploadTest'])->name('system.upload-test')->middleware('can:manage-system');
+    Route::get('/system/mail/{id}', [SystemController::class, 'mail'])->name('system.mail')->middleware('can:manage-system');
     Route::get('/system/error-test', [SystemController::class, 'errorTest'])->name('system.error-test');
     Route::get('/system/dump-test', [SystemController::class, 'dumpTest'])->name('system.dump-test');
 

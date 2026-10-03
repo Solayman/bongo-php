@@ -45,6 +45,11 @@ class Mailer
     protected function sendLog(Message $message): bool
     {
         Log::debug("Mail body\n" . $this->build($message));
+        // Outside production also keep a copy, so System status → Mailbox can show it
+        if (config('app.env') !== 'production') {
+            $this->sendFile($message);
+            Mailbox::prune(50);
+        }
         return true;
     }
 
