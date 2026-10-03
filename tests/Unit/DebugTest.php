@@ -38,6 +38,30 @@ class DebugTest extends TestCase
         $this->assertContains('…', $long['in']);
     }
 
+    public function testModelsDumpTheirColumnsNotTheirSettings(): void
+    {
+        $category = \App\Models\Category::hydrate(['id' => 1, 'name' => 'Books', 'slug' => 'books']);
+        $text = (new Dumper())->text([$category]);
+
+        $this->assertContains('name: "Books"', $text);
+        $this->assertContains('slug: "books"', $text);
+        foreach (['fillable', 'guarded', 'casts', 'original', 'attributes'] as $internal) {
+            $this->assertNotContains($internal, $text, "no $internal in the dump");
+        }
+
+        // Hidden columns are masked, loaded relations shown, unsaved edits listed
+        $user = \App\Models\User::hydrate(['id' => 2, 'name' => 'Rahim', 'password' => '$argon2id$secret']);
+        $user->setRelation('orders', [\App\Models\Category::hydrate(['id' => 9, 'name' => 'Order-like'])]);
+        $user->name = 'Rahim Uddin';
+        $text = (new Dumper())->text($user);
+        $this->assertContains('password: "***"', $text);
+        $this->assertNotContains('argon2id', $text);
+        $this->assertContains('orders:', $text);
+        $this->assertContains("'Rahim' → 'Rahim Uddin'", $text);
+
+        $this->assertContains('(not saved yet): true', (new Dumper())->text(new \App\Models\Category(['name' => 'New'])));
+    }
+
     public function testTextDumpShowsTypesVisibilityAndRecursion(): void
     {
         $probe = new DebugProbe();

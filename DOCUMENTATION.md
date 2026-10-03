@@ -1446,6 +1446,10 @@ In the browser the `dd()` page also shows:
 
 The page follows your system's light or dark mode.
 
+**Models dump as their data.** `dd($category)` or `dd(Category::query()->get())` shows each model's columns (`id`, `name`, `slug` …) straight away, then any loaded relations. Hidden columns such as `password` show as `"***"`. The model's settings (`$fillable`, `$casts` …) are left out. A new model shows `(not saved yet)`, and an edited one lists `(unsaved changes)` as `'old' → 'new'`.
+
+Any class can choose what a dump shows by defining `__debugInfo()`; `Request` and `Model` both do.
+
 Every dump says where it was called (`file:line`). Depth (8 levels), item count (200 per array) and string length (2000 characters) are limited, so huge values can't freeze the page.
 
 ### Debug error page
