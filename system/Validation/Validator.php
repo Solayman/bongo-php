@@ -121,10 +121,7 @@ class Validator
             return;
         }
 
-        $isEmpty = $value === null || $value === '' || $value === []
-            || ($value instanceof UploadedFile && $value->error() === UPLOAD_ERR_NO_FILE);
-
-        if ($isEmpty) {
+        if (self::isEmptyValue($value)) {
             $this->replace = [];
             if ($required = $this->requiredBy($rules, $field)) {
                 [$name, $param, $message] = $required;
@@ -503,25 +500,22 @@ class Validator
     /** Value at a dot path: get($data, 'items.0.qty') */
     public static function get(array $data, string $path)
     {
-        if (array_key_exists($path, $data)) {
-            return $data[$path];
-        }
-        foreach (explode('.', $path) as $segment) {
-            if (!is_array($data) || !array_key_exists($segment, $data)) {
-                return null;
-            }
-            $data = $data[$segment];
-        }
-        return $data;
+        return self::find($data, $path)[1];
     }
 
     public static function has(array $data, string $path): bool
     {
-        if (array_key_exists($path, $data)) return true;
+        return self::find($data, $path)[0];
+    }
+
+    /** [found, value] for "field" or "items.0.name" */
+    protected static function find(array $data, string $path): array
+    {
+        if (array_key_exists($path, $data)) return [true, $data[$path]];
         foreach (explode('.', $path) as $segment) {
-            if (!is_array($data) || !array_key_exists($segment, $data)) return false;
+            if (!is_array($data) || !array_key_exists($segment, $data)) return [false, null];
             $data = $data[$segment];
         }
-        return true;
+        return [true, $data];
     }
 }

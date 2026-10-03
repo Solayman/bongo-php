@@ -28,6 +28,21 @@ class ViewCompiler
     /** Directives that may follow text directly ("Home@endsection"); others need a non-word char before @ */
     protected const CLOSING = ['else', 'elseif', 'elsecan', 'stop', 'show', 'break', 'continue', 'empty', 'case', 'default'];
 
+    /** Directives without arguments that always compile to the same PHP */
+    protected const FIXED = [
+        'else' => '<?php else: ?>', 'csrf' => '<?php echo csrf_field(); ?>',
+        'endfor' => '<?php endfor; ?>', 'endwhile' => '<?php endwhile; ?>',
+        'endsection' => '<?php $this->sections->end(); ?>', 'stop' => '<?php $this->sections->end(); ?>',
+        'endpush' => '<?php $this->sections->endPush(); ?>',
+        'endif' => '<?php endif; ?>', 'endunless' => '<?php endif; ?>', 'endisset' => '<?php endif; ?>',
+        'endempty' => '<?php endif; ?>', 'endauth' => '<?php endif; ?>', 'endguest' => '<?php endif; ?>',
+        'endcan' => '<?php endif; ?>', 'endcannot' => '<?php endif; ?>', 'enderror' => '<?php endif; ?>',
+        'endonce' => '<?php endif; ?>', 'endenv' => '<?php endif; ?>', 'endproduction' => '<?php endif; ?>',
+    ];
+
+    /** @checked($x), @selected, @disabled, @readonly, @required: print the attribute when true */
+    protected const ATTRIBUTES = ['checked', 'selected', 'disabled', 'readonly', 'required'];
+
     protected static array $custom = [];
     protected array $verbatim = [];
     protected int $forelse = 0;
@@ -94,6 +109,13 @@ class ViewCompiler
             return (static::$custom[$name])($args);
         }
 
+        if (isset(self::FIXED[$name])) {
+            return self::FIXED[$name];
+        }
+        if (in_array($name, self::ATTRIBUTES, true)) {
+            return "<?php if ($args) echo '$name'; ?>";
+        }
+
         $method = 'compile' . ucfirst($name);
         if (!method_exists($this, $method)) {
             return $m[0]; // not a directive (e.g. an email address or CSS @media)
@@ -106,25 +128,16 @@ class ViewCompiler
 
     protected function compileIf($a)       { return "<?php if ($a): ?>"; }
     protected function compileElseif($a)   { return "<?php elseif ($a): ?>"; }
-    protected function compileElse()       { return '<?php else: ?>'; }
-    protected function compileEndif()      { return '<?php endif; ?>'; }
     protected function compileUnless($a)   { return "<?php if (!($a)): ?>"; }
-    protected function compileEndunless()  { return '<?php endif; ?>'; }
     protected function compileIsset($a)    { return "<?php if (isset($a)): ?>"; }
-    protected function compileEndisset()   { return '<?php endif; ?>'; }
-    protected function compileEndempty()   { return '<?php endif; ?>'; }
     /** @auth / @auth('customer'): signed in with the default guard or a named one */
     protected function compileAuth($a)     { return '<?php if (auth(' . ($a ?? '') . ')): ?>'; }
-    protected function compileEndauth()    { return '<?php endif; ?>'; }
     protected function compileGuest($a)    { return '<?php if (!auth(' . ($a ?? '') . ')): ?>'; }
-    protected function compileEndguest()   { return '<?php endif; ?>'; }
 
     /** @can('delete', $product) ... @elsecan('update', $product) ... @else ... @endcan · @cannot(...) ... @endcannot */
     protected function compileCan($a)      { return "<?php if (can($a)): ?>"; }
     protected function compileElsecan($a)  { return "<?php elseif (can($a)): ?>"; }
-    protected function compileEndcan()     { return '<?php endif; ?>'; }
     protected function compileCannot($a)   { return "<?php if (!can($a)): ?>"; }
-    protected function compileEndcannot()  { return '<?php endif; ?>'; }
 
     /** @empty($x) is a condition; a bare @empty inside @forelse starts the "no items" part */
     protected function compileEmpty($a)
@@ -158,9 +171,7 @@ class ViewCompiler
     protected function compileForeach($a)    { return '<?php ' . $this->openLoop((string) $a, ++$this->forelse) . ' ?>'; }
     protected function compileEndforeach()   { return '<?php endforeach; $loop = array_pop($__loops); ?>'; }
     protected function compileFor($a)        { return "<?php for ($a): ?>"; }
-    protected function compileEndfor()       { return '<?php endfor; ?>'; }
     protected function compileWhile($a)      { return "<?php while ($a): ?>"; }
-    protected function compileEndwhile()     { return '<?php endwhile; ?>'; }
     protected function compileBreak($a)      { return $a === null ? '<?php break; ?>' : "<?php if ($a) break; ?>"; }
     protected function compileContinue($a)   { return $a === null ? '<?php continue; ?>' : "<?php if ($a) continue; ?>"; }
 
@@ -183,10 +194,8 @@ class ViewCompiler
     // --- Helpers ------------------------------------------------------
 
     protected function compilePhp($a)        { return "<?php ($a); ?>"; }
-    protected function compileCsrf()         { return '<?php echo csrf_field(); ?>'; }
     protected function compileMethod($a)     { return "<?php echo method_field($a); ?>"; }
     protected function compileError($a)      { return "<?php if (\$message = error($a)): ?>"; }
-    protected function compileEnderror()     { return '<?php endif; ?>'; }
 
     protected function compileJson($a)
     {
@@ -274,11 +283,6 @@ class ViewCompiler
 
     // --- Form attributes ----------------------------------------------
 
-    protected function compileChecked($a)   { return "<?php if ($a) echo 'checked'; ?>"; }
-    protected function compileSelected($a)  { return "<?php if ($a) echo 'selected'; ?>"; }
-    protected function compileDisabled($a)  { return "<?php if ($a) echo 'disabled'; ?>"; }
-    protected function compileReadonly($a)  { return "<?php if ($a) echo 'readonly'; ?>"; }
-    protected function compileRequired($a)  { return "<?php if ($a) echo 'required'; ?>"; }
 
     /** @class(['btn', 'btn-primary' => $active, 'd-none' => !$show]) → class="btn btn-primary" */
     protected function compileClass($a)
@@ -296,19 +300,15 @@ class ViewCompiler
     }
 
     /** @includeWhen($user->isAdmin(), 'partials.admin-bar', [...]) */
-    protected function compileIncludeWhen($a)
+    protected function compileIncludeWhen($a, bool $negate = false)
     {
         $parts = $this->splitArguments((string) $a);
         $condition = array_shift($parts);
+        $condition = $negate ? "!($condition)" : $condition;
         return "<?php if ($condition) echo \$this->includeView(get_defined_vars(), " . implode(', ', $parts) . '); ?>';
     }
 
-    protected function compileIncludeUnless($a)
-    {
-        $parts = $this->splitArguments((string) $a);
-        $condition = array_shift($parts);
-        return "<?php if (!($condition)) echo \$this->includeView(get_defined_vars(), " . implode(', ', $parts) . '); ?>';
-    }
+    protected function compileIncludeUnless($a) { return $this->compileIncludeWhen($a, true); }
 
     /** @includeFirst(['shop.custom-banner', 'partials.banner'], [...]): the first view that exists */
     protected function compileIncludeFirst($a)
@@ -337,13 +337,10 @@ class ViewCompiler
         return "<?php if (\$this->sections->once('$id')): ?>";
     }
 
-    protected function compileEndonce()        { return '<?php endif; ?>'; }
 
     /** @env('local') / @env(['local', 'testing']) ... @endenv · @production ... @endproduction */
     protected function compileEnv($a)          { return "<?php if (in_array(config('app.env'), (array) ($a), true)): ?>"; }
-    protected function compileEndenv()         { return '<?php endif; ?>'; }
     protected function compileProduction()     { return "<?php if (config('app.env') === 'production'): ?>"; }
-    protected function compileEndproduction()  { return '<?php endif; ?>'; }
 
     protected function compileDump($a)         { return "<?php dump($a); ?>"; }
 
@@ -357,8 +354,6 @@ class ViewCompiler
         return count($parts) > 1 ? $this->compileSet($a) : "<?php \$this->sections->start($a); ?>";
     }
 
-    protected function compileEndsection()   { return '<?php $this->sections->end(); ?>'; }
-    protected function compileStop()         { return '<?php $this->sections->end(); ?>'; }
 
     /** @set('title', $product->name): the value is text, so it is escaped (a product name cannot inject HTML) */
     protected function compileSet($a)
@@ -402,7 +397,6 @@ class ViewCompiler
     protected function compileYield($a)      { return "<?php echo \$this->sections->get($a); ?>"; }
     protected function compileInclude($a)    { return "<?php echo \$this->includeView(get_defined_vars(), $a); ?>"; }
     protected function compilePush($a)       { return "<?php \$this->sections->startPush($a); ?>"; }
-    protected function compileEndpush()      { return '<?php $this->sections->endPush(); ?>'; }
     protected function compileStack($a)      { return "<?php echo \$this->sections->stack($a); ?>"; }
 
     // ------------------------------------------------------------------
