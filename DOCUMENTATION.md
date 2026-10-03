@@ -1441,7 +1441,7 @@ Parameters named like a secret (`$password`, `$token`, `$secret`, `$key`) are sh
 In the browser the `dd()` page also shows:
 - **Open in editor**, a link to the exact line. Set `APP_EDITOR=vscode` (the default), `phpstorm`, `sublime` or `none`.
 - A coloured request badge (`POST /categories`), plus the time and memory used so far.
-- **Source**: the lines around the `dd()` call, with that line highlighted.
+- **Source**, folded below the values: click it to see the lines around the `dd()` call, with that line highlighted.
 - One card per value, with its type, and **Expand all**, **Collapse all** and **Copy as JSON** buttons.
 
 The page follows your system's light or dark mode.
