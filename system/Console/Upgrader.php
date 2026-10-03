@@ -6,7 +6,7 @@ use RuntimeException;
 /**
  * Upgrades only the framework's own files, never your code:
  *
- *   php bongo release:package          → dist/bongo-framework-0.9.0.json.gz (+ .sha256), for a GitHub release
+ *   (the package is built with php bongo release:package, a maintainer tool in release/tools/)
  *   php bongo upgrade --check          → installed vs latest version and the release notes
  *   php bongo upgrade                  → download, verify the SHA-256, back up, replace, report new config keys
  *   php bongo upgrade --from=file.gz   → the same from a downloaded package (offline)
@@ -20,33 +20,6 @@ class Upgrader
     public const FRAMEWORK_FILES = ['system', 'bongo', 'public/index.php', 'config/bootstrap.php'];
 
     public function __construct(protected string $base) {}
-
-    // --- Packaging ------------------------------------------------------
-
-    /** Write the package and its .sha256; returns the package path */
-    public function package(string $outDir): string
-    {
-        $version = \System\Framework::version();
-        $files = [];
-        foreach (self::FRAMEWORK_FILES as $path) {
-            foreach ($this->filesUnder("{$this->base}/$path") as $file) {
-                $files[$this->relative($file)] = base64_encode((string) file_get_contents($file));
-            }
-        }
-        // Every config file's keys, so an upgrade can tell which new settings you don't have yet
-        $config = [];
-        foreach (glob("{$this->base}/config/*.php") ?: [] as $file) {
-            if (basename($file) !== 'bootstrap.php') {
-                $config[basename($file)] = array_keys((array) (function () use ($file) { return require $file; })());
-            }
-        }
-
-        if (!is_dir($outDir)) mkdir($outDir, 0775, true);
-        $path = rtrim($outDir, '/\\') . "/bongo-framework-$version.json.gz";
-        file_put_contents($path, gzencode(json_encode(['version' => $version, 'files' => $files, 'config' => $config], JSON_UNESCAPED_SLASHES), 9));
-        file_put_contents("$path.sha256", hash_file('sha256', $path) . '  ' . basename($path) . "\n");
-        return $path;
-    }
 
     // --- Checking ---------------------------------------------------------
 

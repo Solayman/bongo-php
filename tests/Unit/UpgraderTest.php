@@ -1,6 +1,9 @@
 <?php
 namespace Tests\Unit;
 
+require_once BASE_PATH . "/release/tools/commands.php";
+
+use System\Console\Packager;
 use System\Console\ReleaseBuilder;
 use System\Console\Upgrader;
 use System\Testing\TestCase;
@@ -36,7 +39,7 @@ class UpgraderTest extends TestCase
 
     public function testUpgradeReplacesOnlyTheFrameworkAndCanBeRolledBack(): void
     {
-        $package = (new Upgrader(BASE_PATH))->package("$this->tmp/dist");
+        $package = (new Packager(BASE_PATH))->package("$this->tmp/dist");
         $sha = strtok((string) file_get_contents("$package.sha256"), ' ');
         $project = $this->oldProject();
 
@@ -60,7 +63,7 @@ class UpgraderTest extends TestCase
 
     public function testBadDownloadsChangeNothing(): void
     {
-        $package = (new Upgrader(BASE_PATH))->package("$this->tmp/dist");
+        $package = (new Packager(BASE_PATH))->package("$this->tmp/dist");
         $project = $this->oldProject();
 
         $this->assertThrows(\RuntimeException::class, fn() => (new Upgrader($project))->apply($package, str_repeat('0', 64)));
