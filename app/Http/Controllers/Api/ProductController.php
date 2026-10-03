@@ -19,11 +19,11 @@ class ProductController extends Controller
             ->leftJoin('categories', 'categories.id', '=', 'products.category_id')
             ->orderBy('products.id');
 
-        if ($q = $request->query('q')) {
+        if ($q = $request->q) {
             $query->whereRaw('products.name LIKE ? OR products.sku LIKE ?', ["%$q%", "%$q%"]);
         }
 
-        $page = $query->paginate(min(100, max(1, (int) $request->query('per_page', 15))));
+        $page = $query->paginate(min(100, max(1, (int) ($request->per_page ?? 15))));
 
         return [
             'data' => array_map(fn($p) => ['price' => (float) $p->price, 'stock' => (int) $p->stock] + (array) $p, $page['data']),

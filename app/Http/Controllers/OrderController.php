@@ -9,8 +9,8 @@ class OrderController extends Controller
 {
     public function index(Request $request)
     {
-        $status = $request->query('status');
-        $search = $request->query('q');
+        $status = $request->status;
+        $search = $request->q;
 
         $query = DB::table('orders')
             ->select('orders.*', 'users.name AS customer_name', 'users.email AS customer_email')

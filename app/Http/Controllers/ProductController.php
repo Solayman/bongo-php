@@ -13,9 +13,9 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $search = $request->query('q');
-        $categoryId = $request->query('category');
-        $status = $request->query('status');
+        $search = $request->q;
+        $categoryId = $request->category;
+        $status = $request->status;
 
         $query = DB::table('products')
             ->select('products.*', 'categories.name AS category_name', '(SELECT COUNT(*) FROM order_items oi WHERE oi.product_id = products.id) AS order_count')

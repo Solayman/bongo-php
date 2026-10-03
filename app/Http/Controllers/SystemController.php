@@ -30,7 +30,7 @@ class SystemController extends Controller
             $db['error'] = $e->getMessage();
         }
 
-        $logLevel = $request->query('level');
+        $logLevel = $request->level;
         if (!isset(Logger::LEVELS[$logLevel ?? ''])) {
             $logLevel = null;
         }

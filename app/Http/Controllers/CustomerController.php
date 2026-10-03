@@ -8,7 +8,7 @@ class CustomerController extends Controller
 {
     public function index(Request $request)
     {
-        $search = $request->query('q');
+        $search = $request->q;
         $where = "u.role = 'customer'";
         $bindings = [];
         if ($search) {
