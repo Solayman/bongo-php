@@ -10,15 +10,15 @@ use System\Http\Request;
 class CatalogController extends Controller
 {
     /** GET /shop */
-    public function index()
+    public function index(Request $request)
     {
         $query = Product::query()->where('status', 'active')->orderBy('name');
 
-        if ($q = Request::query('q')) {
+        if ($q = $request->query('q')) {
             $query->whereRaw('name LIKE ? OR description LIKE ?', ["%$q%", "%$q%"]);
         }
         $category = null;
-        if ($slug = Request::query('category')) {
+        if ($slug = $request->query('category')) {
             $category = Category::where('slug', $slug)->first();
             $query->where('category_id', $category->id ?? 0);
         }

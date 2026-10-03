@@ -21,20 +21,20 @@ class AccountController extends Controller
         return $this->view('shop.auth.login');
     }
 
-    public function login()
+    public function login(Request $request)
     {
-        $data = $this->validate(['email' => 'required|email|max:150', 'password' => 'required|string|max:255']);
+        $data = $request->validate(['email' => 'required|email|max:150', 'password' => 'required|string|max:255']);
         $email = strtolower($data['email']);
         $throttle = new LoginThrottle();
 
-        if ($throttle->tooManyAttempts($email, Request::ip())) {
-            $this->fail(__('Too many login attempts. Try again in :minutes minute(s).', ['minutes' => (int) ceil($throttle->availableIn($email, Request::ip()) / 60)]), $email);
+        if ($throttle->tooManyAttempts($email, $request->ip())) {
+            $this->fail(__('Too many login attempts. Try again in :minutes minute(s).', ['minutes' => (int) ceil($throttle->availableIn($email, $request->ip()) / 60)]), $email);
         }
         if (!Auth::guard('customer')->attempt($email, $data['password'])) {
-            $throttle->hit($email, Request::ip());
+            $throttle->hit($email, $request->ip());
             $this->fail(__('These credentials do not match our records.'), $email);
         }
-        $throttle->clear($email, Request::ip());
+        $throttle->clear($email, $request->ip());
 
         $intended = Session::get('url.intended', '/shop');
         Session::forget('url.intended');
@@ -47,9 +47,9 @@ class AccountController extends Controller
         return $this->view('shop.auth.register');
     }
 
-    public function register()
+    public function register(Request $request)
     {
-        $data = $this->validate([
+        $data = $request->validate([
             'name'     => 'required|string|max:100',
             'email'    => 'required|email|max:150|unique:users,email',
             'password' => 'required|string|min:8|max:255|confirmed',

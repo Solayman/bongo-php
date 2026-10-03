@@ -7,6 +7,7 @@ use App\Services\Cart;
 use System\Auth\Auth;
 use System\Database\DB;
 use System\Events\Event;
+use System\Http\Request;
 
 class CheckoutController extends Controller
 {
@@ -26,9 +27,9 @@ class CheckoutController extends Controller
     }
 
     /** POST /shop/checkout */
-    public function place()
+    public function place(Request $request)
     {
-        $data = $this->validate([
+        $data = $request->validate([
             'shipping_address' => 'required|string|min:8|max:255',
             'phone'            => 'nullable|string|max:30',
         ]);

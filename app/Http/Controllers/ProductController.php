@@ -11,11 +11,11 @@ use System\Storage\Storage;
 
 class ProductController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $search = Request::query('q');
-        $categoryId = Request::query('category');
-        $status = Request::query('status');
+        $search = $request->query('q');
+        $categoryId = $request->query('category');
+        $status = $request->query('status');
 
         $query = DB::table('products')
             ->select('products.*', 'categories.name AS category_name', '(SELECT COUNT(*) FROM order_items oi WHERE oi.product_id = products.id) AS order_count')

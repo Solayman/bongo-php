@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use System\Auth\Auth;
 use System\Auth\LoginThrottle;
+use System\Http\Request;
 use System\Http\Session;
 
 class AuthController extends Controller
@@ -12,15 +13,15 @@ class AuthController extends Controller
         return $this->view('auth.login');
     }
 
-    public function login()
+    public function login(Request $request)
     {
-        $data = $this->validate([
+        $data = $request->validate([
             'email'    => 'required|email|max:150',
             'password' => 'required|string|max:255',
         ]);
 
         $email = strtolower($data['email']);
-        $ip = \System\Http\Request::ip();
+        $ip = $request->ip();
         $throttle = new LoginThrottle();
 
         if ($throttle->tooManyAttempts($email, $ip)) {

@@ -16,9 +16,9 @@ class PasswordResetController extends Controller
     }
 
     /** POST /forgot-password */
-    public function sendLink()
+    public function sendLink(Request $request)
     {
-        $data = $this->validate(['email' => 'required|email|max:150']);
+        $data = $request->validate(['email' => 'required|email|max:150']);
 
         if ($this->broker->sendResetLink($data['email']) === PasswordBroker::THROTTLED) {
             Session::flash('_errors', ['email' => __('Too many reset requests. Please wait a few minutes.')]);
@@ -32,9 +32,9 @@ class PasswordResetController extends Controller
     }
 
     /** GET /reset-password/{token}?email=... */
-    public function showReset(string $token)
+    public function showReset(Request $request, string $token)
     {
-        $email = (string) Request::query('email', '');
+        $email = (string) $request->query('email', '');
         return $this->view('auth.reset-password', [
             'token' => $token,
             'email' => $email,
@@ -43,9 +43,9 @@ class PasswordResetController extends Controller
     }
 
     /** POST /reset-password */
-    public function reset()
+    public function reset(Request $request)
     {
-        $data = $this->validate([
+        $data = $request->validate([
             'token'    => ['required', 'regex:/^[a-f0-9]{64}$/'],
             'email'    => 'required|email|max:150',
             'password' => 'required|string|min:8|max:255|confirmed',

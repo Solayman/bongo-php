@@ -322,16 +322,16 @@ use System\Http\Request;
 
 class ProductController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $products = Product::query()->where('status', 'active')->orderBy('id', 'DESC')->paginate(10);
-        return $this->view('products.index', ['products' => $products, 'q' => Request::query('q')]);
+        return $this->view('products.index', ['products' => $products, 'q' => $request->query('q')]);
     }
 
-    public function store()
+    public function store(Request $request)
     {
         // On failure: errors + old input are flashed and the user is sent back
-        $data = $this->validate([
+        $data = $request->validate([
             'name'  => 'required|string|max:150',
             'sku'   => 'required|max:50|unique:products,sku',
             'price' => 'required|numeric|min:0',
@@ -344,7 +344,7 @@ class ProductController extends Controller
 
     public function edit($id)
     {
-        $product = Product::find((int) $id) ?? abort(404, 'Product not found');
+        $product = Product::findOrFail($id);   // 404 page when it doesn't exist
         // ...
     }
 }
@@ -432,12 +432,12 @@ Classes with constructor dependencies are built automatically. Interfaces and ab
 
 ### Validation
 
-`$this->validate($rules)` in a controller checks the request (fields and uploaded files).
+`$request->validate($rules)` in an action checks the request (fields and uploaded files).
 - **On failure:** browsers are sent back with the errors and their old input; API clients get **422** JSON.
 - **On success:** it returns only the validated fields.
 
 ```php
-$data = $this->validate([
+$data = $request->validate([
     'name'        => 'required|string|max:150',
     'email'       => 'required|email|unique:users,email',
     'website'     => 'nullable|url',
@@ -563,13 +563,13 @@ On failure the result is the same as `$this->validate()`: the browser goes back 
 use System\Http\Request;
 use System\Storage\Storage;
 
-$data = $this->validate(['photo' => 'required|image|max:2048']);
+$data = $request->validate(['photo' => 'required|image|max:2048']);
 $path = $data['photo']->store('products');   // "products/3f9c…e1.jpg" (in public/storage)
 $product->update(['image' => $path]);
 
-Storage::url($path);       // http://…/storage/products/3f9c…e1.jpg
-Storage::delete($old);     // when replacing
-Request::file('photo');    // UploadedFile or null; Request::hasFile('photo')
+Storage::url($path);        // http://…/storage/products/3f9c…e1.jpg
+Storage::delete($old);      // when replacing
+$request->file('photo');    // UploadedFile or null; $request->hasFile('photo')
 ```
 
 Uploads are safe by default:
@@ -582,18 +582,17 @@ Uploads are safe by default:
 **Several files in one field:** `<input type="file" name="photos[]" multiple>`
 
 ```php
-$this->validate([
+$request->validate([
     'photos'   => 'required|array|max:5',                          // 1 to 5 files
     'photos.*' => 'image|max:2048|dimensions:min_width=400',        // every file
 ]);
 
-foreach (Request::files('photos') as $photo) {   // a list of UploadedFile; empty slots are skipped
+foreach ($request->files('photos') as $photo) {   // a list of UploadedFile; empty slots are skipped
     $paths[] = $photo->store('gallery');
 }
-// In a form request: $request->files('photos')
 ```
 
-`Request::files()` without a key returns every field, with lists for multi-file fields. `Request::file('x')` is for single-file fields.
+`$request->files()` without a key returns every field, with lists for multi-file fields. `$request->file('x')` is for single-file fields.
 
 | File rule | |
 | --- | --- |

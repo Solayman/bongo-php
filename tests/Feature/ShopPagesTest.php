@@ -144,7 +144,7 @@ class ShopPagesTest extends HttpTestCase
     {
         // The header names the method that called dd(), the file and line, and the request
         $this->get('/system/dump-test')->assertStatus(500)
-            ->assertSee('<code class="in" title="App\Http\Controllers\SystemController">SystemController::dumpTest()</code>')
+            ->assertSee('<code class="in" title="App\Http\Controllers\SystemController">SystemController::dumpTest($request = Request)</code>')
             ->assertSee('app/Http/Controllers/SystemController.php:')
             ->assertSee('<span class="method m-get">GET</span><span class="path">/system/dump-test</span>')
             ->assertSee('Open in editor')->assertSee('vscode://file/')
@@ -155,7 +155,7 @@ class ShopPagesTest extends HttpTestCase
         $json = json_decode($this->get('/system/dump-test', ['Accept' => 'application/json'])->body, true);
         $this->assertSame('admin@example.com', $json['dd'][0]['email']);
         $this->assertContains('SystemController.php', $json['at']);
-        $this->assertSame('SystemController::dumpTest()', $json['in']);
+        $this->assertSame('SystemController::dumpTest($request = Request)', $json['in']);
         $this->assertSame('GET /system/dump-test', $json['request']);
     }
 

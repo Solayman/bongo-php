@@ -13,7 +13,7 @@ use System\Security\Key;
 
 class SystemController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $connection = config('database.connections.' . config('database.default'));
 
@@ -30,7 +30,7 @@ class SystemController extends Controller
             $db['error'] = $e->getMessage();
         }
 
-        $logLevel = Request::query('level');
+        $logLevel = $request->query('level');
         if (!isset(Logger::LEVELS[$logLevel ?? ''])) {
             $logLevel = null;
         }
@@ -68,17 +68,17 @@ class SystemController extends Controller
      * Try multiple uploads and the file rules by hand: validates photos[] and reports
      * what it found. Nothing is stored.
      */
-    public function uploadTest()
+    public function uploadTest(Request $request)
     {
-        $this->validate([
+        $request->validate([
             'photos'   => 'required|array|max:5',
             'photos.*' => 'image|max:2048|dimensions:max_width=6000,max_height=6000',
-        ], null, ['photos.required' => 'Choose at least one image.']);
+        ], ['photos.required' => 'Choose at least one image.']);
 
         $lines = array_map(function ($file) {
             [$w, $h] = getimagesize($file->path()) ?: [0, 0];
             return sprintf('%s (%s, %d KB, %dx%d px)', $file->clientName(), $file->mimeType(), (int) ceil($file->size() / 1024), $w, $h);
-        }, Request::files('photos'));
+        }, $request->files('photos'));
 
         flash('success', count($lines) . ' image(s) passed validation: ' . implode('; ', $lines) . '. Nothing was stored.');
         redirect(url('/system#uploads'));
@@ -103,14 +103,14 @@ class SystemController extends Controller
         throw new \RuntimeException('Test exception from the System status page (order ' . $order['id'] . ')');
     }
 
-    public function dumpTest()
+    public function dumpTest(Request $request)
     {
         if (!config('app.debug')) {
             abort(404);
         }
         $user = clone Auth::user();
         unset($user->password);
-        dd($user, ['request' => Request::all(), 'config.app' => config('app')], new \ArrayObject([1, 2, 3]));
+        dd($user, ['request' => $request->all(), 'config.app' => config('app')], new \ArrayObject([1, 2, 3]));
     }
 
     /** Live checks a person can read: [label => [ok, detail]] */
