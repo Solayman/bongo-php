@@ -68,6 +68,21 @@ class QueryBuilder
         return $this;
     }
 
+    /**
+     * Query scopes: Product::query()->active() calls Product::scopeActive($query).
+     * Anything else is an unknown method.
+     */
+    public function __call(string $method, array $args)
+    {
+        $scope = 'scope' . ucfirst($method);
+        if ($this->model !== null && method_exists($this->model, $scope)) {
+            (new $this->model())->$scope($this, ...$args);
+            return $this;
+        }
+        throw new \BadMethodCallException("Call to undefined method " . static::class . "::$method()"
+            . ($this->model ? " (no scope $scope() on {$this->model} either)" : ''));
+    }
+
     /** Include soft-deleted rows */
     public function withTrashed(): self
     {
