@@ -37,6 +37,7 @@ class PasswordResetTest extends HttpTestCase
         $this->submit('/forgot-password', '/forgot-password', ['email' => $this->email])->assertRedirect('/forgot-password');
         $this->get('/forgot-password')->assertSee('If that email has an account, we have sent a link');
         $this->assertCount($before + 1, $this->sentMails());
+        $this->assertMailSent($this->email, 'Reset your password');
 
         $mail = $this->lastMail();
         $this->assertSame([[$this->email, 'Reset Me']], $mail['to']);

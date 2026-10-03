@@ -19,6 +19,18 @@ class Mail
         self::$mailer = $mailer;
     }
 
+    /** For tests: keep emails in memory instead of sending them (see Mail::sent()) */
+    public static function fake(): FakeMailer
+    {
+        return self::$mailer = new FakeMailer();
+    }
+
+    /** The emails sent since Mail::fake(), oldest first ([] when not faked) */
+    public static function sent(): array
+    {
+        return self::$mailer instanceof FakeMailer ? self::$mailer->sent : [];
+    }
+
     public static function to(string $email, ?string $name = null): Message
     {
         return (new Message(self::mailer()))->to($email, $name);
