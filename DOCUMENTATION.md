@@ -1651,8 +1651,21 @@ class ProductTest extends System\Testing\HttpTestCase
 ```
 
 **Assertions:**
-- On a test: `assertTrue`, `assertFalse`, `assertSame`, `assertEquals`, `assertNotSame`, `assertNull`, `assertCount`, `assertContains`, `assertNotContains`, `assertArrayHasKey`, `assertThrows`.
+- On a test: `assertTrue`, `assertFalse`, `assertSame`, `assertEquals`, `assertNotSame`, `assertNull`, `assertNotNull`, `assertCount`, `assertContains`, `assertNotContains`, `assertArrayHasKey`, `assertThrows`.
 - On a response: `assertStatus`, `assertRedirect('/path')`, `assertSee`, `assertDontSee`, plus `->location()`, `->csrfToken()` and `->header()`.
+- Mail: `assertMailSent('rahim@example.com', 'Your order')` returns that email (`['subject']`, `['html']`, `['text']`, `['attachments']`). `assertNoMailSent()`. The address is matched ignoring case, and the subject by "contains". When nothing matches, the message lists what was sent.
+
+**Testing mail:** in a unit test, call `Mail::fake()` first, so emails stay in memory and nothing is sent. HTTP tests need nothing extra: the test server already writes its emails to `storage/mail/testing`.
+
+```php
+public function testOrderConfirmation(): void
+{
+    Mail::fake();
+    $order->sendConfirmation();
+    $mail = $this->assertMailSent('rahim@example.com', 'confirmed');
+    $this->assertContains('ORD-00042', $mail['html']);
+}
+```
 
 ---
 

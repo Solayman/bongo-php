@@ -13,6 +13,29 @@ class MailEventTest extends TestCase
         Event::forget();
     }
 
+    public function testMailFakeAndAssertions(): void
+    {
+        \System\Mail\Mail::fake();
+        try {
+            $this->assertNoMailSent();
+            \System\Mail\Mail::to('Rahim@Example.com', 'Rahim')->subject('Your order #42')->text('Thanks')->send();
+
+            $mail = $this->assertMailSent('rahim@example.com', 'order #42');   // case-insensitive address
+            $this->assertSame('Thanks', $mail['text']);
+            $this->assertCount(1, \System\Mail\Mail::sent());
+
+            // A missing email fails with a message that lists what was sent
+            try {
+                $this->assertMailSent('karim@example.com');
+                throw new \RuntimeException('should have failed');
+            } catch (\System\Testing\AssertionFailed $e) {
+                $this->assertContains('No email to karim@example.com. Sent: "Your order #42" to Rahim@Example.com', $e->getMessage());
+            }
+        } finally {
+            \System\Mail\Mail::setMailer(null);
+        }
+    }
+
     public function testAttachments(): void
     {
         $mailer = new Mailer(['driver' => 'log', 'from' => ['address' => 'shop@example.com', 'name' => 'Bongo Shop']]);

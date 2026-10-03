@@ -59,7 +59,10 @@ class Mailer
         if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
             throw new RuntimeException("Cannot create mail directory $dir");
         }
-        $name = date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.json';
+        // 20261003_101500_<5 hex of microseconds><3 random hex>: names sort in sending order,
+        // even for several emails in the same second
+        [$usec, $sec] = explode(' ', microtime());
+        $name = date('Ymd_His', (int) $sec) . '_' . sprintf('%05x', (int) ($usec * 1000000)) . substr(bin2hex(random_bytes(2)), 0, 3) . '.json';
         return file_put_contents("$dir/$name", json_encode($message->toArray(), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) !== false;
     }
 
