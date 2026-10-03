@@ -36,7 +36,7 @@ class ExceptionPage
                 . ' <span class="where">' . $h($this->relative($p->getFile())) . ':' . $p->getLine() . '</span></div>';
         }
 
-        $hint = \System\Database\MigrationHint::for($e);
+        $hint = Hint::for($e);
         $hintHtml = $hint ? '<div class="hint"><strong>How to fix:</strong> ' . $h($hint) . '</div>' : '';
         $title = $h(get_class($e));
         $message = $h($e->getMessage());

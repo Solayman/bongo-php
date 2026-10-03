@@ -17,7 +17,7 @@ try {
         : Log::debug('HTTP {status} on {method} {path}', $context);
     ErrorPage::render($e->status(), $e->getMessage());
 } catch (Throwable $e) {
-    $hint = System\Database\MigrationHint::for($e);
+    $hint = System\Debug\Hint::for($e);
     Log::error('Uncaught ' . get_class($e) . ': ' . $e->getMessage() . ($hint ? " | HINT: $hint" : ''), [
         'method' => Request::method(), 'path' => Request::path(), 'exception' => $e,
     ]);
