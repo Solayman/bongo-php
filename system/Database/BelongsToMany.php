@@ -28,6 +28,13 @@ class BelongsToMany extends Relation
             ->where("{$this->pivot}.{$this->parentKey}", $this->parent->getKey());
     }
 
+    /** For withCount('tags'): the number of links in the pivot table */
+    public function countSubquery(string $parentTable): string
+    {
+        return "(SELECT COUNT(*) FROM {$this->pivot} WHERE {$this->pivot}.{$this->parentKey} = $parentTable."
+            . $this->parent::primaryKey() . ')';
+    }
+
     public function getResults(): array
     {
         return $this->query->get();

@@ -913,6 +913,23 @@ $order = Order::create(['user_id' => 3, 'status' => 'pending', 'total' => 0]);  
 Order::destroy([7, 8]);
 ```
 
+**Counting related rows:** `withCount` adds a `{relation}_count` column, with no SQL to write. It works for `hasMany`, `hasOne` and `belongsToMany`, and skips soft-deleted rows.
+
+```php
+$categories = Category::withCount('products')->orderBy('name')->get();
+$category->products_count;
+Product::withCount('tags', 'reviews')->where('status', 'active')->paginate(20);
+```
+
+**Insert or update in one query (`upsert`):** rows whose unique key already exists are updated, and new ones are inserted.
+
+```php
+DB::table('products')->upsert([
+    ['sku' => 'BG-1', 'price' => 9.5, 'stock' => 10],
+    ['sku' => 'BG-2', 'price' => 4.0, 'stock' => 3],
+], ['price', 'stock']);   // the columns to change on existing rows (default: all of them)
+```
+
 **Model events:** define the method on your model and it runs at that moment. Return `false` from a `…ing` method to cancel.
 
 ```php

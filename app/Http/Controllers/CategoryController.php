@@ -2,20 +2,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
-use System\Database\DB;
 use System\Http\Request;
 
 class CategoryController extends Controller
 {
     public function index()
     {
-        $categories = DB::raw(
-            'SELECT c.*, COUNT(p.id) AS product_count
-             FROM categories c
-             LEFT JOIN products p ON p.category_id = c.id
-             GROUP BY c.id
-             ORDER BY c.name'
-        );
+        $categories = Category::withCount('products')->orderBy('name')->get();   // $category->products_count
 
         return $this->view('categories.index', ['categories' => $categories]);
     }
