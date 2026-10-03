@@ -271,6 +271,12 @@ class Model implements \JsonSerializable
     // Persistence
     // ------------------------------------------------------------------
 
+    /** A plain query for this row only (no model hydration, no soft-delete filter) */
+    protected function keyQuery(): QueryBuilder
+    {
+        return (new QueryBuilder(static::tableName()))->where(static::$primaryKey, $this->getKey());
+    }
+
     /**
      * INSERT a new model, or UPDATE only the changed columns of an existing one.
      * Model events run around it: saving → creating/updating → (query) → created/updated → saved.
@@ -288,7 +294,7 @@ class Model implements \JsonSerializable
             $dirty = $this->getDirty();
             unset($dirty[static::$primaryKey]);
             if ($dirty) {
-                (new QueryBuilder(static::tableName()))->where(static::$primaryKey, $this->getKey())->update($dirty);
+                $this->keyQuery()->update($dirty);
             }
             $this->original = $this->attributes;
             $this->fireEvent('updated');
@@ -339,10 +345,10 @@ class Model implements \JsonSerializable
         }
         if (static::$softDeletes) {
             $now = date('Y-m-d H:i:s');
-            (new QueryBuilder(static::tableName()))->where(static::$primaryKey, $this->getKey())->update(['deleted_at' => $now]);
+            $this->keyQuery()->update(['deleted_at' => $now]);
             $this->attributes['deleted_at'] = $this->original['deleted_at'] = $now;
         } else {
-            (new QueryBuilder(static::tableName()))->where(static::$primaryKey, $this->getKey())->delete();
+            $this->keyQuery()->delete();
             $this->exists = false;
         }
         $this->fireEvent('deleted');
@@ -355,7 +361,7 @@ class Model implements \JsonSerializable
         if (!$this->exists) {
             return false;
         }
-        (new QueryBuilder(static::tableName()))->where(static::$primaryKey, $this->getKey())->delete();
+        $this->keyQuery()->delete();
         $this->exists = false;
         return true;
     }
@@ -363,7 +369,7 @@ class Model implements \JsonSerializable
     /** Undo a soft delete */
     public function restore(): bool
     {
-        (new QueryBuilder(static::tableName()))->where(static::$primaryKey, $this->getKey())->update(['deleted_at' => null]);
+        $this->keyQuery()->update(['deleted_at' => null]);
         $this->attributes['deleted_at'] = $this->original['deleted_at'] = null;
         return true;
     }
@@ -377,7 +383,7 @@ class Model implements \JsonSerializable
     /** Reload columns from the database (relations are cleared) */
     public function refresh(): static
     {
-        $row = (new QueryBuilder(static::tableName()))->asArray()->where(static::$primaryKey, $this->getKey())->first();
+        $row = $this->keyQuery()->asArray()->first();
         if ($row) {
             $this->attributes = $row;
             $this->original = $row;

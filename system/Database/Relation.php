@@ -28,6 +28,12 @@ abstract class Relation
     /** Load the relation for many parents with one query and attach it to each */
     abstract public function eagerLoad(array $models, string $name): void;
 
+    /** The distinct non-null values of $attribute across $models (for one whereIn) */
+    protected static function keysOf(array $models, string $attribute): array
+    {
+        return array_values(array_unique(array_filter(array_map(fn($m) => $m->getAttribute($attribute), $models), fn($k) => $k !== null)));
+    }
+
     public function __call(string $method, array $args)
     {
         $result = $this->query->$method(...$args);
@@ -50,7 +56,7 @@ abstract class Relation
      */
     public function countSubquery(string $parentTable): string
     {
-        if (!$this instanceof HasMany && !$this instanceof HasOne) {
+        if (!$this instanceof HasOneOrMany) {
             throw new \LogicException('withCount() works for hasMany, hasOne and belongsToMany relations');
         }
         $related = ($this->related)::tableName();

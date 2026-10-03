@@ -80,7 +80,7 @@ class BelongsToMany extends Relation
 
     public function eagerLoad(array $models, string $name): void
     {
-        $ids = array_values(array_unique(array_filter(array_map(fn($m) => $m->getKey(), $models), fn($k) => $k !== null)));
+        $ids = self::keysOf($models, $this->parent::primaryKey());
         $grouped = [];
         if ($ids) {
             $table = ($this->related)::tableName();
