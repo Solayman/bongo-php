@@ -222,18 +222,18 @@ if (!function_exists('dump')) {
      */
     function dump(...$values) {
         $dumper = new \System\Debug\Dumper();
-        $at = \System\Debug\Dumper::caller();
+        $context = \System\Debug\Dumper::context();
         switch (\System\Debug\Dumper::format()) {
             case 'text':
-                echo "\u{25B6} $at\n";
+                echo "\u{25B6} " . \System\Debug\Dumper::headline($context) . "\n";
                 foreach ($values as $value) echo $dumper->text($value);
                 break;
             case 'json':
-                echo json_encode(['dump' => array_map([$dumper, 'plain'], $values), 'at' => $at], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR), "\n";
+                echo json_encode(['dump' => array_map([$dumper, 'plain'], $values)] + array_filter($context), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR), "\n";
                 break;
             default:
                 echo \System\Debug\Dumper::styles();
-                echo '<div class="bongo-dump-src">' . htmlspecialchars($at) . '</div>';
+                echo '<div class="bongo-dump-src">' . htmlspecialchars(\System\Debug\Dumper::headline(['request' => null] + $context)) . '</div>';
                 foreach ($values as $value) echo $dumper->html($value);
         }
         return $values[0] ?? null;
@@ -244,11 +244,12 @@ if (!function_exists('dd')) {
     /** Dump the values and stop the request ("dump and die") */
     function dd(...$values) {
         $dumper = new \System\Debug\Dumper();
-        $at = \System\Debug\Dumper::caller();
+        $context = \System\Debug\Dumper::context();
+        $at = $context['at'];
         $format = \System\Debug\Dumper::format();
 
         if ($format === 'text') {
-            echo "\u{25B6} $at\n";
+            echo "\u{25B6} " . \System\Debug\Dumper::headline($context) . "\n";
             foreach ($values as $value) echo $dumper->text($value);
             exit(1);
         }
@@ -258,15 +259,27 @@ if (!function_exists('dd')) {
 
         if ($format === 'json') {
             if (!headers_sent()) header('Content-Type: application/json');
-            echo json_encode(['dd' => array_map([$dumper, 'plain'], $values), 'at' => $at], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR);
+            echo json_encode(['dd' => array_map([$dumper, 'plain'], $values)] + array_filter($context), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR);
             exit;
         }
 
+        // Header: the method that called dd() with its parameter values, the file and line, the request
+        $title = $context['in'] ?? $at;
+        $meta = array_filter([$context['in'] ? $at : null, $context['request']]);
         if (!headers_sent()) header('Content-Type: text/html; charset=UTF-8');
-        echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>dd() · ' . htmlspecialchars($at) . '</title>'
+        echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>dd() · ' . htmlspecialchars($title) . '</title>'
             . \System\Debug\Dumper::styles()
-            . '<style>body{background:#11121a;margin:0;padding:24px;font-family:system-ui,sans-serif}h1{color:#cdd6f4;font-size:15px;font-weight:500}h1 code{color:#89b4fa}</style>'
-            . '</head><body><h1>dd() called at <code>' . htmlspecialchars($at) . '</code></h1>';
+            . '<style>body{background:#11121a;margin:0;padding:24px;font-family:system-ui,sans-serif}h1{color:#cdd6f4;font-size:15px;font-weight:500;margin:0 0 4px}h1 code{color:#89b4fa}'
+            . '.dd-meta{color:#7f849c;font:12px ui-monospace,Consolas,monospace;margin:0 0 16px}.dd-meta b{color:#a6e3a1;font-weight:600}</style>'
+            . '</head><body><h1>dd() in <code' . ($context['class'] ? ' title="' . htmlspecialchars($context['class']) . '"' : '') . '>' . htmlspecialchars($title) . '</code></h1>';
+        if ($meta) {
+            $parts = array_map(fn($part) => htmlspecialchars($part), $meta);
+            if ($context['request']) {
+                // Bold the HTTP method: "<b>POST</b> /categories"
+                $parts[count($parts) - 1] = preg_replace('/^(\S+)/', '<b>$1</b>', $parts[count($parts) - 1]);
+            }
+            echo '<p class="dd-meta">' . implode(' · ', $parts) . '</p>';
+        }
         foreach ($values as $value) echo $dumper->html($value);
         echo '</body></html>';
         exit;

@@ -139,11 +139,18 @@ class ShopPagesTest extends HttpTestCase
 
     public function testDdInBrowserAndForJson(): void
     {
-        $this->get('/system/dump-test')->assertStatus(500)->assertSee('dd() called at')->assertSee('admin@example.com')->assertSee('ArrayObject');
+        // The header names the method that called dd(), the file and line, and the request
+        $this->get('/system/dump-test')->assertStatus(500)
+            ->assertSee('dd() in <code title="App\Http\Controllers\SystemController">SystemController::dumpTest()</code>')
+            ->assertSee('app/Http/Controllers/SystemController.php:')
+            ->assertSee('<b>GET</b> /system/dump-test')
+            ->assertSee('admin@example.com')->assertSee('ArrayObject');
 
         $json = json_decode($this->get('/system/dump-test', ['Accept' => 'application/json'])->body, true);
         $this->assertSame('admin@example.com', $json['dd'][0]['email']);
         $this->assertContains('SystemController.php', $json['at']);
+        $this->assertSame('SystemController::dumpTest()', $json['in']);
+        $this->assertSame('GET /system/dump-test', $json['request']);
     }
 
     public function testDebugFooterShowsQueries(): void

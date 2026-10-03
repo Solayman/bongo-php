@@ -1399,7 +1399,16 @@ The output adapts to where it runs:
 | --- | --- |
 | Browser | Collapsible, colour-coded tree: types, string lengths, array counts, object class + id, `protected`/`private` properties, recursion marked |
 | Terminal (`php bongo tinker`, scripts, tests) | Plain text: `#protected`, `-private`, `{*recursion*}` |
-| API / JSON request | `{"dd": [...], "at": "app/Http/Controllers/X.php:12"}` |
+| API / JSON request | `{"dd": [...], "at": "app/Http/Controllers/X.php:12", "in": "X::update($id = \"4\")", "request": "PUT /x/4"}` |
+
+The header tells you where you are: the method that called `dd()` with the values it received, the file and line, and the request:
+
+```
+dd() in CategoryController::update($id = "4")
+app/Http/Controllers/CategoryController.php:41 · PUT /categories/4
+```
+
+Parameters named like a secret (`$password`, `$token`, `$secret`, `$key`) are shown as `"***"`. Long strings are cut short, arrays show as `array(3)`, and objects show their class and id (`Product #20`). A form's `_method=PUT` shows as `PUT`.
 
 Every dump says where it was called (`file:line`). Depth (8 levels), item count (200 per array) and string length (2000 characters) are limited, so huge values can't freeze the page.
 

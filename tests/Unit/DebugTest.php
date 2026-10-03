@@ -15,6 +15,29 @@ class DebugProbe
 
 class DebugTest extends TestCase
 {
+    /** Called like a controller action: dump() inside reports this method and its values */
+    public function update($id, string $password = '', ?object $product = null): array
+    {
+        return Dumper::context();
+    }
+
+    public function testContextNamesTheCallingMethodAndItsValues(): void
+    {
+        $product = (object) ['id' => 7];
+        $context = $this->update('4', 'hunter2', $product);
+
+        $this->assertSame('DebugTest::update($id = "4", $password = "***", $product = stdClass #7)', $context['in'], 'secrets are masked');
+        $this->assertSame(self::class, $context['class']);
+        $this->assertContains('tests/Unit/DebugTest.php:', $context['at']);
+        $this->assertSame(null, $context['request'], 'no HTTP request on the command line');
+        $this->assertSame($context['in'] . ' · ' . $context['at'], Dumper::headline($context));
+
+        // Long strings and arrays stay short in the header
+        $long = (fn(string $text, array $rows) => Dumper::context())(str_repeat('x', 100), [1, 2, 3]);
+        $this->assertContains('array(3)', $long['in']);
+        $this->assertContains('…', $long['in']);
+    }
+
     public function testTextDumpShowsTypesVisibilityAndRecursion(): void
     {
         $probe = new DebugProbe();
