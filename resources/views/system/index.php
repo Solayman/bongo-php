@@ -256,6 +256,29 @@
     </div>
 </div>
 
+<div class="card mt-4" id="mailbox">
+    <div class="card-header bg-white fw-medium">Mailbox <span class="text-secondary small fw-normal">· emails sent with the {{ config('mail.driver') }} driver, newest first</span></div>
+    @if($mails)
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light"><tr><th style="width: 160px;">Time</th><th>To</th><th>Subject</th><th style="width: 40px;"></th></tr></thead>
+                <tbody>
+                @foreach($mails as $mail)
+                    <tr>
+                        <td class="text-secondary small">{{ $mail['time'] }}</td>
+                        <td class="small">{{ $mail['to'] }}</td>
+                        <td><a href="{{ route('system.mail', ['id' => $mail['id']]) }}">{{ $mail['subject'] ?: '(no subject)' }}</a></td>
+                        <td class="text-secondary">@if($mail['attachments'])<i class="bi bi-paperclip" title="{{ $mail['attachments'] }} attachment(s)"></i>@endif</td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
+        </div>
+    @else
+        <div class="card-body text-secondary small">No emails yet. Use "Forgot your password?" on the login page, or register in the shop, and the email appears here.</div>
+    @endif
+</div>
+
 <div class="card mt-4" id="uploads">
     <div class="card-header bg-white fw-medium">Upload test</div>
     <div class="card-body">

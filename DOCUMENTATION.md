@@ -1261,6 +1261,10 @@ Mail::to($customer->email)
 
 The file type is detected from the content when you don't give one. File names are cleaned, so they can't add mail headers.
 
+**Mailbox, to read the emails you sent while developing:** System status → **Mailbox** lists the newest emails. Open one to see its recipients, its attachments, the HTML version in a sandboxed frame (no scripts), and the plain-text version.
+- It shows what the `file` driver saves in `storage/mail`.
+- Outside production, the `log` driver (the default) also keeps a copy there, keeping the newest 50.
+
 | `.env` | Default | |
 | --- | --- | --- |
 | `MAIL_DRIVER` | `log` | `log` writes emails to the log (development), `smtp` sends them for real, `file` writes JSON files to `storage/mail` |
