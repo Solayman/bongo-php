@@ -2,7 +2,7 @@
 
 A lightweight PHP MVC framework with **zero required dependencies**: no Composer, no Node, no build step. Clone it, point it at a database, and run it.
 
-**New here? Read [Why BongoMVC?](WHY_BONGOMVC.md):** what you get, how small and fast it is (under 400 KB, zero dependencies, under 1 MB of memory per request), and when to choose something else.
+**New here? Read [Why BongoMVC?](WHY_BONGOMVC.md):** what you get, how small and fast it is (about 480 KB, zero dependencies, under 1 MB of memory per request), how it compares with other PHP frameworks, and when to choose something else.
 
 ```bash
 git clone https://github.com/Solayman/BongoMvc.git && cd BongoMvc

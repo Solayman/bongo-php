@@ -1,6 +1,6 @@
 # Why BongoMVC?
 
-BongoMVC is a complete PHP MVC framework that fits in **under 400 KB of readable code with zero dependencies**. You get routing, an ORM, migrations, authentication, validation, templates, mail, queues, a scheduler, a test runner and security hardening. You don't need Composer, `vendor/`, Node or a build step: copy the folder, point the web server at `public/`, and it runs.
+BongoMVC is a complete PHP MVC framework that fits in **about 480 KB of readable code with zero dependencies**. You get routing, an ORM, migrations, authentication, validation, templates, mail, notifications, queues, a scheduler, live updates over WebSockets, a test runner and security hardening. You don't need Composer, `vendor/`, Node or a build step: copy the folder, point the web server at `public/`, and it runs.
 
 This page is for developers and teams deciding whether BongoMVC fits their project.
 
@@ -10,17 +10,18 @@ This page is for developers and teams deciding whether BongoMVC fits their proje
 
 | | |
 |---|---|
-| **Framework code** (`system/`) | **93 PHP files · 10,443 lines · 384 KB** (see the current numbers with `php bongo about`) |
-| Core with CLI, front controller and config | 97 files · 355 KB · **96 KB zipped** |
+| **Framework code** (`system/`) | **115 PHP files · 12,954 lines · 483 KB** (see the current numbers with `php bongo about`) |
+| A fresh project, without docs, as `.tar.gz` | about **170 KB** |
 | Required packages | **0**: no Composer, no `vendor/`, no Node, no build step |
-| Requirements | PHP 8.0+ with `pdo_mysql` and `openssl`, plus MySQL or MariaDB |
+| Requirements | PHP 8.0+ with `openssl`, plus MySQL / MariaDB (`pdo_mysql`) **or** SQLite (`pdo_sqlite`) |
+| Optional | Redis (`redis` extension) for shared cache and sessions |
 | Memory per request | **0.45 MB** (JSON API) · **0.53 MB** (login page) · **0.65 MB** (shop page with database queries) |
 | Files loaded per request | 39 (JSON API) to 56 (full shop page); framework files: 20 to 28 |
 | Time per request | 8.5–9.4 ms (JSON API, login page), 18.9 ms (shop page with queries). Measured **without opcache**, the worst case. |
-| Tests | 226 automated tests, run with `php bongo test` |
+| Tests | 310 automated tests, run with `php bongo test` |
 | Languages | English and Bangla (বাংলা) built in |
 
-All numbers were measured on this repository; see [How these numbers were measured](#how-these-numbers-were-measured).
+Size and test numbers are from 2026-10-03; per-request and per-module numbers were measured on 2026-10-02, before the latest features. See [How these numbers were measured](#how-these-numbers-were-measured).
 
 ---
 
@@ -83,7 +84,9 @@ These protections are on from the first request, with no setup:
 |---|---|
 | Routing | Groups, prefixes, names, middleware with parameters, route model binding, `route:list` |
 | Controllers | Dependency injection, form request classes, `return $this->view(...)`, JSON for arrays |
-| Database | Query builder, models, relations, eager loading, pagination, transactions with savepoints, migrations, seeders |
+| Database | MySQL or SQLite: query builder, models, relations (incl. many-to-many), soft deletes, eager loading, `withCount`, pagination, transactions, migrations, seeders |
+| Real-time and notifications | WebSocket server with public and private channels; notifications by mail, SMS and Slack; HTTP client |
+| Scaling out | Optional Redis cache and sessions shared by several servers |
 | Auth | Several guards at once (admin session, customer session, JWT API), password reset by email |
 | Views | Layouts, sections, partials, stacks, `$loop`, `@auth('guard')`, `@error`, `@csrf`, custom directives |
 | Background work | Queues (`queue:work`), a scheduler (`schedule:run`), queued mail |
@@ -112,12 +115,41 @@ Be honest about the limits:
 
 | Limit | Today |
 |---|---|
-| Database | **MySQL / MariaDB only**. PostgreSQL, SQLite and SQL Server are not supported yet. |
-| Sessions | PHP's own file sessions. There's no database or Redis session store yet. |
-| Cache and queue backends | File cache and a database queue. There's no Redis or Memcached driver. |
-| Ecosystem | No package marketplace. Features you'd install from a marketplace elsewhere, you write yourself or add with Composer. |
-| Real-time | No built-in WebSockets or broadcasting. |
+| Database | MySQL / MariaDB and SQLite. **PostgreSQL and SQL Server are not supported yet.** |
+| Queue backend | Database queue only. There's no Redis or SQS queue driver yet. |
+| Ecosystem | No package marketplace. Features you'd install from a marketplace elsewhere (payments, admin panels, OAuth logins), you write yourself or add with Composer. |
+| Community | New and small: few tutorials, Stack Overflow answers or ready-made developers who already know it. |
+| Real-time | The built-in WebSocket server suits dashboards and notifications. For tens of thousands of open connections, use a dedicated real-time service. |
 | Scale | Fine for typical business traffic on one or a few servers. Very large, multi-region systems with dedicated platform teams are better served by a framework with a large ecosystem. |
+
+---
+
+## Compared with other PHP frameworks
+
+Every framework makes trade-offs. This table shows where BongoMVC stands next to well-known PHP frameworks, so you can pick the right tool. The others are mature, popular projects; the facts about them are general and can change between versions, so check their own documentation for details.
+
+| | **BongoMVC** | **Laravel** | **Symfony** | **CodeIgniter 4** | **Slim** |
+|---|---|---|---|---|---|
+| Kind | Full-stack, minimal | Full-stack | Full-stack, component-based | Full-stack, light | Micro-framework |
+| Install | Copy the folder | Composer | Composer | Composer or zip download | Composer |
+| Third-party packages needed | **None** | Many (in `vendor/`) | Many (in `vendor/`) | Few | Several |
+| Size of a fresh project | **≈ 170 KB zipped** | Tens of MB with `vendor/` | Tens of MB with `vendor/` | A few MB | A few MB with `vendor/` |
+| Read the whole framework yourself | **Yes, ~13,000 lines** | Not realistic | Not realistic | Possible but large | Yes (but much less built in) |
+| ORM and migrations | Built in | Built in | Built in (Doctrine) | Built in | Add a package |
+| Auth, validation, mail, queues, scheduler | Built in | Built in | Built in or packages | Partly built in | Add packages |
+| WebSockets / live updates | Built in (pure PHP) | Separate package or service | Separate package or service | Not built in | Not built in |
+| Security audit command | `php bongo security:check` | Community packages | Community packages | Not built in | Not built in |
+| Bangla built in | **Yes** | Via language packs | Via translations | Via language packs | No |
+| Ecosystem, jobs, tutorials | Small, new | **Very large** | **Very large** | Large | Medium |
+| Long-term support, big teams | Early (0.x) | Mature | Mature, LTS versions | Mature | Mature |
+
+**In short:**
+- **Choose BongoMVC** when you want a complete framework you can fully read, own and deploy anywhere by copying files, especially on shared hosting, for teaching, or for teams that want no dependency churn.
+- **Choose Laravel or Symfony** when you need a huge ecosystem, many ready-made packages, easy hiring and long-term support for large teams.
+- **Choose CodeIgniter** when you want a light, mature framework with a large community.
+- **Choose Slim** when you only need a small API router and will pick every other part yourself.
+
+BongoMVC is written from scratch. It shares common MVC ideas (routes, controllers, models, migrations) with these frameworks, but no code.
 
 ---
 
