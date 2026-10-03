@@ -74,7 +74,11 @@ if (!function_exists('env')) {
 // ---------------------------
 require_once BASE_PATH . '/system/Support/helpers.php';
 require_once BASE_PATH . '/system/View/helpers.php';
-require_once BASE_PATH . '/app/Helpers/commonHelper.php';
+// Your own helper functions: every app/Helpers/*.php file (none is fine)
+foreach (glob(BASE_PATH . '/app/Helpers/*.php') ?: [] as $helperFile) {
+    require_once $helperFile;
+}
+unset($helperFile);
 
 // ---------------------------
 // Load every config/*.php (except this file) into config('<file>.<key>')

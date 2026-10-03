@@ -1669,6 +1669,25 @@ public function testOrderConfirmation(): void
 
 ---
 
+## 13b. Starting a new project
+
+This repository also holds an e-commerce demo app, which the framework's tests use. To start your own project without it:
+
+```bash
+php bongo release:build ../my-app
+cd ../my-app
+cp .env.example .env
+php bongo key:generate && php bongo migrate && php bongo serve
+```
+
+The new project has:
+- the whole framework (`system/`, `bongo`, `config/`, `lang/`, `public/index.php`);
+- the core app files: the base `Controller`, the auth, guest and CSRF middleware, error pages, `<x-alert>` and the flash partial;
+- the framework's migrations: users, login throttling, JWT revocations, password resets, jobs, remember me and email verification;
+- starter files from `release/skeleton/`: a welcome page with its `HomeController` and route, `/api/health`, a `User` model, an empty seeder, two example tests and a README.
+
+The new project runs as built: `php bongo test` passes and its views compile. A folder that isn't empty, or one inside this repository, is refused. `php bongo about` shows the framework version.
+
 ## 14. The e-commerce test application
 
 The e-commerce app is how BongoMVC is tested the way a real project would use it. It stays in the repository for now, and will be removed later so the framework ships fresh. A copy is also on the `demo/ecommerce` branch.

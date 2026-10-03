@@ -24,6 +24,17 @@ try {
             echo 'BongoMVC ' . System\Framework::version() . PHP_EOL;
             break;
 
+        case 'release:build':
+            $target = $options[0] ?? '';
+            if ($target === '' || str_starts_with($target, '--')) {
+                echo "Usage: php bongo release:build <folder>   e.g. php bongo release:build ../my-app\n";
+                exit(1);
+            }
+            $count = (new System\Console\ReleaseBuilder(BASE_PATH))->build($target);
+            echo "Built a fresh BongoMVC " . System\Framework::version() . " project in $target ($count files)." . PHP_EOL;
+            echo "Next: cd $target, copy .env.example to .env, then php bongo key:generate, php bongo migrate, php bongo serve" . PHP_EOL;
+            break;
+
         case 'about':
             $size = System\Framework::size();
             $rows = [
@@ -335,6 +346,7 @@ try {
         default:
             echo 'BongoMVC ' . System\Framework::version() . " commands:\n";
             echo "  about                                    Version, PHP, environment, drivers and framework size\n";
+            echo "  release:build <folder>                   Build a fresh project (framework + starter files, no demo app)\n";
             echo "  serve [--port=8000] [--host=127.0.0.1]  Start the development server\n";
             echo "  migrate                                  Run pending database/migrations/*.php\n";
             echo "  migrate:status                           Show which migrations have run (and their batch)\n";
