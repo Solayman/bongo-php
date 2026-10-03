@@ -325,7 +325,7 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $products = Product::query()->where('status', 'active')->orderBy('id', 'DESC')->paginate(10);
-        return $this->view('products.index', ['products' => $products, 'q' => $request->query('q')]);
+        return $this->view('products.index', ['products' => $products, 'q' => $request->q]);
     }
 
     public function store(Request $request)
@@ -357,6 +357,12 @@ Ask for the request as a parameter, and it's passed in. Route parameters can com
 ```php
 use System\Http\Request;
 
+public function index(Request $request)
+{
+    $search = $request->q;                      // ?q=mug → "mug"; missing or "" → null
+    $perPage = (int) ($request->per_page ?? 15); // a default with ??
+}
+
 public function store(Request $request)
 {
     $data = $request->validate(['name' => 'required|string|max:100']);   // back with errors on failure
@@ -366,8 +372,11 @@ public function store(Request $request)
 public function update(Request $request, $id) { ... }
 ```
 
+**Fields are properties:** `$request->name` reads a field from the query string, form or JSON body, or an uploaded file of that name. On `/categories/{id}`, `$request->id` is the id in the URL. A route parameter always wins over a field with the same name, so a client can't swap the record by sending `?id=9`.
+
 | Method | |
 | --- | --- |
+| `$request->name` · `isset($request->name)` | A field (or upload, or route parameter); `null` when missing or `""` |
 | `$request->validate($rules, $messages, $attributes)` | The validated fields; failure goes back with errors (422 JSON for APIs) |
 | `$request->all()` · `input('name', $default)` · `only([...])` · `except([...])` · `query('page')` | Input: query string, form and JSON body. Strings are trimmed, and `input()` treats `""` as missing. |
 | `$request->has('name')` · `has(['a', 'b'])` · `filled('name')` · `missing('name')` | Sent at all · sent with a value · not sent |

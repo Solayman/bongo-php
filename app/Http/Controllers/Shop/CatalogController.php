@@ -14,11 +14,11 @@ class CatalogController extends Controller
     {
         $query = Product::query()->where('status', 'active')->orderBy('name');
 
-        if ($q = $request->query('q')) {
+        if ($q = $request->q) {
             $query->whereRaw('name LIKE ? OR description LIKE ?', ["%$q%", "%$q%"]);
         }
         $category = null;
-        if ($slug = $request->query('category')) {
+        if ($slug = $request->category) {
             $category = Category::where('slug', $slug)->first();
             $query->where('category_id', $category->id ?? 0);
         }

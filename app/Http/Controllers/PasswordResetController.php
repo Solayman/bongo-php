@@ -34,7 +34,7 @@ class PasswordResetController extends Controller
     /** GET /reset-password/{token}?email=... */
     public function showReset(Request $request, string $token)
     {
-        $email = (string) $request->query('email', '');
+        $email = (string) $request->email;
         return $this->view('auth.reset-password', [
             'token' => $token,
             'email' => $email,

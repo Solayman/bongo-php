@@ -36,6 +36,25 @@ class RequestTest extends TestCase
         $this->assertSame('Books', $name, 'instance calls work like Request::input()');
     }
 
+    public function testFieldsAsProperties(): void
+    {
+        Request::setRouteParameters(['id' => '4']);
+        $request = new Request();
+
+        $this->assertSame('all', $request->tab, 'query string');
+        $this->assertSame('Books', $request->name, 'form field, trimmed');
+        $this->assertSame(null, $request->note, '"" counts as missing');
+        $this->assertSame(null, $request->nothing);
+        $this->assertSame('4', $request->id, 'route parameter');
+        $this->assertTrue(isset($request->name));
+        $this->assertFalse(isset($request->note));
+        $this->assertSame(15, (int) ($request->per_page ?? 15), 'defaults with ??');
+
+        // A client can't swap the record: the route's {id} wins over a sent "id"
+        $_POST['id'] = '9';
+        $this->assertSame('4', $request->id, 'the id in the URL wins');
+    }
+
     public function testInputHelpers(): void
     {
         $request = new Request();

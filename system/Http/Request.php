@@ -6,8 +6,9 @@ namespace System\Http;
  *
  *   public function store(Request $request)         // type-hinted in an action (recommended)
  *   {
+ *       $request->name;           // a field: query string, form or JSON body ("" counts as null)
+ *       $request->photo;          // or an uploaded file, or a route parameter ($request->id)
  *       $data = $request->validate(['name' => 'required|string|max:100']);
- *       $request->input('name');  $request->boolean('active');  $request->file('photo');
  *   }
  *
  *   Request::input('name');                          // or statically, anywhere
@@ -16,6 +17,29 @@ class Request
 {
     /** Parameters of the matched route, e.g. ['product' => '20'] for /products/{product} */
     protected static array $routeParameters = [];
+
+    /**
+     * $request->q → the "q" field (query string, form or JSON body), or an upload of that name.
+     * A route parameter wins over input with the same name: on /categories/{id}, $request->id is
+     * the id in the URL even if the client also sends ?id=9. Missing or "" → null.
+     */
+    public function __get(string $name)
+    {
+        if (array_key_exists($name, self::$routeParameters)) {
+            return self::$routeParameters[$name];
+        }
+        $input = self::all();
+        if (array_key_exists($name, $input)) {
+            return $input[$name] === '' ? null : $input[$name];
+        }
+        return self::files()[$name] ?? null;
+    }
+
+    /** isset($request->q): sent with a value */
+    public function __isset(string $name): bool
+    {
+        return $this->__get($name) !== null;
+    }
 
     /**
      * Validate the input and return only the validated fields. On failure the browser goes
