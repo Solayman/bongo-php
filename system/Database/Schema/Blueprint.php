@@ -123,6 +123,12 @@ class Blueprint
         $this->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
     }
 
+    /** deleted_at, for a model with protected static bool $softDeletes = true */
+    public function softDeletes(): void
+    {
+        $this->dateTime('deleted_at')->nullable();
+    }
+
     // ------------------------------------------------------------------
     // Indexes and changes
     // ------------------------------------------------------------------

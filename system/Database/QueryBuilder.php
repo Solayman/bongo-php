@@ -31,6 +31,9 @@ class QueryBuilder
     /** Model class whose instances get() returns (set by Model::query()) */
     protected ?string $model = null;
     protected array $eager = [];
+    /** Soft deletes: "products.deleted_at" when the model uses them; trashed rows are without / with / only */
+    protected ?string $softDeleteColumn = null;
+    protected string $trashed = 'without';
 
     protected const OPERATORS = ['=', '!=', '<>', '<', '>', '<=', '>=', 'LIKE', 'NOT LIKE'];
 
@@ -59,7 +62,42 @@ class QueryBuilder
     public function setModel(?string $class): self
     {
         $this->model = $class;
+        if ($class !== null && method_exists($class, 'usesSoftDeletes') && $class::usesSoftDeletes()) {
+            $this->softDeleteColumn = "{$this->table}.deleted_at";
+        }
         return $this;
+    }
+
+    /** Include soft-deleted rows */
+    public function withTrashed(): self
+    {
+        $this->trashed = 'with';
+        return $this;
+    }
+
+    /** Only soft-deleted rows */
+    public function onlyTrashed(): self
+    {
+        $this->trashed = 'only';
+        return $this;
+    }
+
+    /** Really DELETE the rows, even for a model with soft deletes */
+    public function forceDelete(bool $all = false): bool
+    {
+        $column = $this->softDeleteColumn;
+        $this->softDeleteColumn = null;
+        try {
+            return $this->delete($all);
+        } finally {
+            $this->softDeleteColumn = $column;
+        }
+    }
+
+    /** Bring soft-deleted rows back */
+    public function restore(): bool
+    {
+        return $this->onlyTrashed()->update([$this->softDeleteColumn ?? 'deleted_at' => null]);
     }
 
     /** Eager-load relations on the returned models: ->with('items', 'user') */
@@ -297,12 +335,17 @@ class QueryBuilder
 
     protected function compileWheres(bool $withKeyword = true): string
     {
-        if (!$this->wheres) {
-            return '';
-        }
         $sql = '';
         foreach ($this->wheres as $i => [$boolean, $clause]) {
             $sql .= ($i === 0 ? '' : " $boolean ") . $clause;
+        }
+        // Soft deletes (top level only; wraps the rest so an OR can't bring trashed rows back)
+        if ($withKeyword && $this->softDeleteColumn !== null && $this->trashed !== 'with') {
+            $trashed = $this->softDeleteColumn . ($this->trashed === 'only' ? ' IS NOT NULL' : ' IS NULL');
+            $sql = $sql === '' ? $trashed : "($sql) AND $trashed";
+        }
+        if ($sql === '') {
+            return '';
         }
         return ($withKeyword ? ' WHERE ' : '') . $sql;
     }
@@ -557,6 +600,10 @@ class QueryBuilder
     public function delete(bool $all = false): bool
     {
         $this->assertHasWhere($all, 'delete');
+        if ($this->softDeleteColumn !== null) {
+            // A model with soft deletes: mark the rows instead of removing them
+            return $this->update([$this->softDeleteColumn => date('Y-m-d H:i:s')], $all);
+        }
         $this->run("DELETE FROM {$this->table}" . $this->compileWheres(), $this->bindings);
         return true;
     }
