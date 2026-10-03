@@ -1152,6 +1152,27 @@ $broker->sendResetLink($email);                       // RESET_LINK_SENT or THRO
 $broker->reset($email, $token, $newPassword);         // PASSWORD_RESET or INVALID_TOKEN
 ```
 
+### Email verification and signed links
+
+New shop customers get an email with a link. Until they click it, checkout and their orders show a **"Verify your email address"** page with a **Send the link again** button.
+
+```php
+$user->sendEmailVerification();     // in AccountController::register
+$user->hasVerifiedEmail();          // users.email_verified_at is set
+$user->markEmailAsVerified();
+
+Route::middleware('verified:customer,shop.verification.notice')->group(...);   // guard, notice page
+```
+
+The link is a **signed URL**: any change, or using it after 60 minutes, gives a 403. Use signed URLs for any link that must not be edited:
+
+```php
+$link = signed_route('shop.verification.verify', ['id' => $user->id, 'hash' => sha1($user->email)], 60);
+Route::get('/email/verify/{id}', ...)->middleware('signed');
+```
+
+The signature is an HMAC of the path and query, under a key derived from `APP_KEY`. Run `php bongo migrate` once: it adds `users.email_verified_at`, and marks the accounts that already exist as verified.
+
 ### Remember me
 
 Both login pages have a **Remember me** checkbox. When it's ticked, the user stays signed in after closing the browser, for 30 days (`AUTH_REMEMBER_DAYS`):

@@ -32,6 +32,8 @@ return [
         'throttle' => System\Http\Middleware\ThrottleRequests::class,
         'locale'   => System\Http\Middleware\SetLocale::class,
         'can'      => System\Http\Middleware\Authorize::class,   // can:ability[,routeParam]
+        'signed'   => System\Http\Middleware\ValidateSignature::class,
+        'verified' => System\Http\Middleware\EnsureEmailIsVerified::class,   // verified:guard,noticeRoute
     ],
 
     // Named sets of middleware

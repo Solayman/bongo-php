@@ -12,6 +12,7 @@ use App\Http\Controllers\Shop\AccountController;
 use App\Http\Controllers\Shop\CartController;
 use App\Http\Controllers\Shop\CatalogController;
 use App\Http\Controllers\Shop\CheckoutController;
+use App\Http\Controllers\Shop\VerifyEmailController;
 use App\Http\Controllers\SystemController;
 use System\Routing\Route;
 
@@ -99,11 +100,20 @@ Route::prefix('/shop')->name('shop.')->group(function () {
         Route::post('/register', [AccountController::class, 'register'])->middleware('throttle:10,1');
     });
 
+    // The link from the verification email: works even when signed out, as long as it is unchanged and fresh
+    Route::get('/email/verify/{id}', [VerifyEmailController::class, 'verify'])->name('verification.verify')->where('id', '\d+')->middleware('signed');
+
     Route::middleware('auth:customer')->group(function () {
         Route::post('/logout', [AccountController::class, 'logout'])->name('logout');
-        Route::get('/checkout', [CheckoutController::class, 'show'])->name('checkout');
-        Route::post('/checkout', [CheckoutController::class, 'place'])->name('checkout.place');
-        Route::get('/orders', [AccountController::class, 'orders'])->name('orders');
-        Route::get('/orders/{order}', [AccountController::class, 'order'])->name('orders.show')->where('order', '\d+');
+        Route::get('/email/verify', [VerifyEmailController::class, 'notice'])->name('verification.notice');
+        Route::post('/email/verify', [VerifyEmailController::class, 'resend'])->name('verification.send')->middleware('throttle:3,1');
+
+        // Checkout and orders need a verified email address
+        Route::middleware('verified:customer,shop.verification.notice')->group(function () {
+            Route::get('/checkout', [CheckoutController::class, 'show'])->name('checkout');
+            Route::post('/checkout', [CheckoutController::class, 'place'])->name('checkout.place');
+            Route::get('/orders', [AccountController::class, 'orders'])->name('orders');
+            Route::get('/orders/{order}', [AccountController::class, 'order'])->name('orders.show')->where('order', '\d+');
+        });
     });
 });

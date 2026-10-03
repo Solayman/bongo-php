@@ -74,6 +74,13 @@ if (!function_exists('route')) {
     }
 }
 
+if (!function_exists('signed_route')) {
+    /** A route URL that can't be changed and stops working after $minutes (check it with ->middleware('signed')) */
+    function signed_route(string $name, array $params = [], int $minutes = 60): string {
+        return \System\Security\SignedUrl::make(route($name, $params), $minutes);
+    }
+}
+
 if (!function_exists('asset')) {
     function asset($path) {
         return url($path);
