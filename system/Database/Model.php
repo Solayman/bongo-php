@@ -362,6 +362,33 @@ class Model implements \JsonSerializable
         return $this->toArray();
     }
 
+    /**
+     * What dd($model) / dump($model) shows: the columns first (hidden ones as "***"),
+     * then loaded relations, then unsaved changes. The model's settings ($fillable,
+     * $casts ...) are left out: they are in the class, not in the data.
+     */
+    public function __debugInfo(): array
+    {
+        $info = [];
+        foreach ($this->attributes as $key => $value) {
+            $info[$key] = in_array($key, $this->hidden, true) ? '***' : $this->castGet($key, $value);
+        }
+        foreach ($this->relations as $key => $value) {
+            $info[$key] = $value;
+        }
+        if (!$this->exists) {
+            $info['(not saved yet)'] = true;
+        } elseif ($dirty = $this->getDirty()) {
+            $changes = [];
+            foreach ($dirty as $key => $value) {
+                $old = $this->original[$key] ?? null;
+                $changes[$key] = in_array($key, $this->hidden, true) ? 'changed' : var_export($old, true) . ' → ' . var_export($value, true);
+            }
+            $info['(unsaved changes)'] = $changes;
+        }
+        return $info;
+    }
+
     public function toJson(int $flags = 0): string
     {
         return json_encode($this->toArray(), $flags);
