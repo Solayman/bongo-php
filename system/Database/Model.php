@@ -26,6 +26,24 @@ class Model implements \JsonSerializable
 {
     protected static $table = null;
     protected static string $primaryKey = 'id';
+    /** true: delete() sets deleted_at instead of removing the row, and queries skip those rows */
+    protected static bool $softDeletes = false;
+
+    public static function usesSoftDeletes(): bool
+    {
+        return static::$softDeletes;
+    }
+
+    /** Model::withTrashed()->get(), Model::onlyTrashed()->get() */
+    public static function withTrashed(): QueryBuilder
+    {
+        return static::query()->withTrashed();
+    }
+
+    public static function onlyTrashed(): QueryBuilder
+    {
+        return static::query()->onlyTrashed();
+    }
 
     /** Columns create()/fill() may set. Empty = every column not in $guarded */
     protected array $fillable = [];
@@ -266,7 +284,25 @@ class Model implements \JsonSerializable
         return $this->fill($attributes)->save();
     }
 
+    /** Delete the row (with $softDeletes: only mark it, see restore()) */
     public function delete(): bool
+    {
+        if (!$this->exists) {
+            return false;
+        }
+        if (static::$softDeletes) {
+            $now = date('Y-m-d H:i:s');
+            (new QueryBuilder(static::tableName()))->where(static::$primaryKey, $this->getKey())->update(['deleted_at' => $now]);
+            $this->attributes['deleted_at'] = $this->original['deleted_at'] = $now;
+            return true;
+        }
+        (new QueryBuilder(static::tableName()))->where(static::$primaryKey, $this->getKey())->delete();
+        $this->exists = false;
+        return true;
+    }
+
+    /** Really remove the row, also for a model with soft deletes */
+    public function forceDelete(): bool
     {
         if (!$this->exists) {
             return false;
@@ -274,6 +310,20 @@ class Model implements \JsonSerializable
         (new QueryBuilder(static::tableName()))->where(static::$primaryKey, $this->getKey())->delete();
         $this->exists = false;
         return true;
+    }
+
+    /** Undo a soft delete */
+    public function restore(): bool
+    {
+        (new QueryBuilder(static::tableName()))->where(static::$primaryKey, $this->getKey())->update(['deleted_at' => null]);
+        $this->attributes['deleted_at'] = $this->original['deleted_at'] = null;
+        return true;
+    }
+
+    /** Was this model soft-deleted? */
+    public function trashed(): bool
+    {
+        return static::$softDeletes && !empty($this->attributes['deleted_at']);
     }
 
     /** Reload columns from the database (relations are cleared) */

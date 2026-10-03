@@ -911,6 +911,28 @@ $order->delete();
 
 $order = Order::create(['user_id' => 3, 'status' => 'pending', 'total' => 0]);   // returns the saved model
 Order::destroy([7, 8]);
+```
+
+**Soft deletes:** keep deleted rows, hidden from queries, so they can be restored. Add a `deleted_at` column (`$table->softDeletes();` in the migration), then:
+
+```php
+class Note extends Model
+{
+    protected static bool $softDeletes = true;
+}
+
+$note->delete();                  // sets deleted_at; Note::all(), find(), where() ... skip it
+$note->trashed();                 // true
+$note->restore();                 // back again
+$note->forceDelete();             // really removed
+Note::withTrashed()->get();       // include deleted rows
+Note::onlyTrashed()->get();       // only deleted rows
+Note::onlyTrashed()->where('title', 'A')->restore();
+```
+
+`Note::destroy([...])` and `->delete()` on a query soft-delete too. An `orWhere()` can't bring deleted rows back.
+
+```php
 
 Order::where('status', 'paid')->latest()->get();   // every query-builder method works, returning models
 Order::all();
