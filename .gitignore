@@ -9,7 +9,3 @@ public/files/*
 /dist/
 /database/*.sqlite
 
-# AI reviews and local agent notes (internal company use only)
-CLAUDE.md
-*claude*review*
-
