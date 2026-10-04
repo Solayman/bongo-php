@@ -87,10 +87,7 @@ class BelongsToMany extends Relation
         $grouped = [];
         if ($ids) {
             $table = ($this->related)::tableName();
-            $query = ($this->related)::query();
-            if ($this->query->getConnection() !== null && ($this->related)::getConnectionName() === null) {
-                $query->setConnection($this->query->getConnection());
-            }
+            $query = $this->newRelatedQuery();
             $rows = $query
                 ->select("$table.*", "{$this->pivot}.{$this->parentKey} AS __pivot_parent")
                 ->join($this->pivot, "{$this->pivot}.{$this->relatedKey}", '=', "$table." . ($this->related)::primaryKey())

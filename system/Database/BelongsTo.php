@@ -21,10 +21,7 @@ class BelongsTo extends Relation
         $keys = self::keysOf($models, $this->foreignKey);
         $owners = [];
         if ($keys) {
-            $query = ($this->related)::query();
-            if ($this->query->getConnection() !== null && ($this->related)::getConnectionName() === null) {
-                $query->setConnection($this->query->getConnection());
-            }
+            $query = $this->newRelatedQuery();
             foreach ($query->whereIn($this->otherKey, $keys)->get() as $owner) {
                 $owners[$owner->getAttribute($this->otherKey)] = $owner;
             }

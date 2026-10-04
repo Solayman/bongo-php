@@ -101,14 +101,9 @@ class Migrator
     {
         $ran = $this->ran();
         $batch = ($ran ? max($ran) : 0) + 1;
-        $done = [];
 
-        $prevDefault = Connection::getDefaultConnection();
-        if ($this->connection !== null) {
-            Connection::setDefaultConnection($this->connection);
-        }
-
-        try {
+        return $this->withConnectionScope(function () use ($ran, $batch, $log) {
+            $done = [];
             foreach ($this->files() as $name => $file) {
                 if (isset($ran[$name])) {
                     continue;
@@ -123,13 +118,8 @@ class Migrator
                 Log::info('Migrated {migration} (batch {batch})', ['migration' => $name, 'batch' => $batch, 'connection' => $this->connection]);
                 if ($log) $log($name);
             }
-        } finally {
-            if ($this->connection !== null) {
-                Connection::setDefaultConnection($prevDefault);
-            }
-        }
-
-        return $done;
+            return $done;
+        });
     }
 
     /**
@@ -150,14 +140,9 @@ class Migrator
         $stmt->execute($batches);
 
         $files = $this->files();
-        $done = [];
 
-        $prevDefault = Connection::getDefaultConnection();
-        if ($this->connection !== null) {
-            Connection::setDefaultConnection($this->connection);
-        }
-
-        try {
+        return $this->withConnectionScope(function () use ($stmt, $files, $log) {
+            $done = [];
             foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $name) {
                 if (!isset($files[$name])) {
                     throw new RuntimeException("Cannot roll back [$name]: its file is missing from database/migrations");
@@ -170,13 +155,25 @@ class Migrator
                 $done[] = $name;
                 if ($log) $log($name);
             }
+            return $done;
+        });
+    }
+
+    /** Run a callback scoped to this migrator's target connection */
+    protected function withConnectionScope(callable $callback)
+    {
+        $prevDefault = Connection::getDefaultConnection();
+        if ($this->connection !== null) {
+            Connection::setDefaultConnection($this->connection);
+        }
+
+        try {
+            return $callback();
         } finally {
             if ($this->connection !== null) {
                 Connection::setDefaultConnection($prevDefault);
             }
         }
-
-        return $done;
     }
 
     /**

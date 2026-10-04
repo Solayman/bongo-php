@@ -122,33 +122,9 @@ class Printable
             }
         }
 
-        // Customer block
-        $customerHtml = '';
-        if (!empty($this->customer)) {
-            $customerHtml .= '<div style="flex: 1; min-width: 200px;"><div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6b7280; letter-spacing: 0.05em; margin-bottom: 6px;">BILL TO / গ্রাহক</div>';
-            foreach ($this->customer as $key => $val) {
-                if ($key === 'name') {
-                    $customerHtml .= '<div style="font-weight: 600; color: #111827; font-size: 14px;">' . htmlspecialchars($val, ENT_QUOTES, 'UTF-8') . '</div>';
-                } else {
-                    $customerHtml .= '<div style="color: #4b5563; font-size: 13px;">' . htmlspecialchars($val, ENT_QUOTES, 'UTF-8') . '</div>';
-                }
-            }
-            $customerHtml .= '</div>';
-        }
-
-        // Shipping block
-        $shippingHtml = '';
-        if (!empty($this->shipping)) {
-            $shippingHtml .= '<div style="flex: 1; min-width: 200px;"><div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6b7280; letter-spacing: 0.05em; margin-bottom: 6px;">SHIP TO / গন্তব্য</div>';
-            foreach ($this->shipping as $key => $val) {
-                if ($key === 'name') {
-                    $shippingHtml .= '<div style="font-weight: 600; color: #111827; font-size: 14px;">' . htmlspecialchars($val, ENT_QUOTES, 'UTF-8') . '</div>';
-                } else {
-                    $shippingHtml .= '<div style="color: #4b5563; font-size: 13px;">' . htmlspecialchars($val, ENT_QUOTES, 'UTF-8') . '</div>';
-                }
-            }
-            $shippingHtml .= '</div>';
-        }
+        // Customer and Shipping blocks
+        $customerHtml = $this->renderAddressBlock('BILL TO / গ্রাহক', $this->customer);
+        $shippingHtml = $this->renderAddressBlock('SHIP TO / গন্তব্য', $this->shipping);
 
         // Meta block
         $metaHtml = '';
@@ -395,5 +371,21 @@ HTML;
         }
 
         return null;
+    }
+
+    /** Render a labeled address block (e.g. customer bill-to or shipping) */
+    protected function renderAddressBlock(string $label, array $details): string
+    {
+        if (empty($details)) {
+            return '';
+        }
+        $html = '<div style="flex: 1; min-width: 200px;"><div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6b7280; letter-spacing: 0.05em; margin-bottom: 6px;">' . $label . '</div>';
+        foreach ($details as $key => $val) {
+            $safe = htmlspecialchars((string) $val, ENT_QUOTES, 'UTF-8');
+            $html .= ($key === 'name')
+                ? '<div style="font-weight: 600; color: #111827; font-size: 14px;">' . $safe . '</div>'
+                : '<div style="color: #4b5563; font-size: 13px;">' . $safe . '</div>';
+        }
+        return $html . '</div>';
     }
 }

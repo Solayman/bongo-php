@@ -170,12 +170,7 @@ class Model implements \JsonSerializable
     /** Insert a row (only fillable columns) and return the saved model */
     public static function create(array $attributes): static
     {
-        $model = new static($attributes);
-        if (static::$connection !== null) {
-            $model->setConnection(static::$connection);
-        }
-        $model->save();
-        return $model;
+        return static::query()->create($attributes);
     }
 
     /** Delete by primary key(s); returns how many existed */
