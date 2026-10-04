@@ -216,6 +216,9 @@ class Logger
             return json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR) . "\n";
         }
 
+        // Entries start at the beginning of a line with "[date]": indent a message's extra lines,
+        // so text such as "x\n[2026-01-01 ...] production.EMERGENCY: fake" can't fake an entry
+        $message = str_replace(["\r\n", "\r", "\n"], "\n    ", $message);
         $line = sprintf('[%s] %s.%s: %s', date('Y-m-d H:i:s'), $this->environment, strtoupper($level), $message);
 
         if ($context) {
@@ -231,10 +234,18 @@ class Logger
         return $line . "\n";
     }
 
+    /** password, new_password, api_key, access_token, client_secret, X-Api-Key, Authorization, ... */
+    protected static function isSecretKey(string $key): bool
+    {
+        $key = strtolower($key);
+        return in_array($key, self::SECRET_KEYS, true)
+            || (bool) preg_match('/pass(word|wd|phrase)?$|password|secret|token|api[_-]?key|private[_-]?key|app[_-]?key|authorization|cookie|credential/', $key);
+    }
+
     protected function mask(array $context): array
     {
         foreach ($context as $key => $value) {
-            if (is_string($key) && in_array(strtolower($key), self::SECRET_KEYS, true)) {
+            if (is_string($key) && self::isSecretKey($key)) {
                 $context[$key] = '********';
             } elseif (is_array($value)) {
                 $context[$key] = $this->mask($value);

@@ -163,11 +163,15 @@ class Disk
         }
         $it = new \RecursiveDirectoryIterator($dir, \RecursiveDirectoryIterator::SKIP_DOTS);
         $files = new \RecursiveIteratorIterator($it, \RecursiveIteratorIterator::CHILD_FIRST);
+        // Remove links themselves, never what they point to (a link may lead outside the disk)
         foreach ($files as $file) {
-            if ($file->isDir()) {
-                @rmdir($file->getRealPath());
+            $path = $file->getPathname();
+            if ($file->isLink()) {
+                @unlink($path) || @rmdir($path);   // Windows directory links need rmdir
+            } elseif ($file->isDir()) {
+                @rmdir($path);
             } else {
-                @unlink($file->getRealPath());
+                @unlink($path);
             }
         }
         return @rmdir($dir);
