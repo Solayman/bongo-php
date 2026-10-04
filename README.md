@@ -4,7 +4,7 @@
 
 ### A high-performance, zero-dependency PHP MVC framework engineered for speed, simplicity, and full-source auditability.
 
-A full-stack, enterprise-capable web framework crafted in ~570 KB of clean, readable PHP.  
+A full-stack, enterprise-capable web framework crafted in ~580 KB of clean, readable PHP.  
 **No Composer required. No `vendor/` tree. No Node.js runtime. No build steps.**
 
 [![PHP Version](https://img.shields.io/badge/PHP-8.0%2B-777bb4?style=flat-square&logo=php&logoColor=white)](https://www.php.net)
@@ -28,8 +28,8 @@ Most modern web frameworks demand significant operational and architectural over
 **Bongo takes an intentional, first-principles path:**
 
 * **Zero Mandatory Dependencies:** Clone the repository, configure your database, and run. No Composer dependency resolver to wait for, no package breaking on minor updates, and no third-party supply-chain vulnerabilities.
-* **100% Auditable Codebase:** Total framework code is ~16,000 lines across 122 structured files (~570 KB). Every routine—from the request pipeline and ORM to authentication and WebSockets—can be read and audited in an afternoon.
-* **Predictable, Blazing Performance:** Runs in **0.45–0.65 MB of RAM** per request and answers in **about 8–19 ms** (measured without OpCache: JSON API to a full page with queries). Loads only 20–28 files per lifecycle.
+* **Fully Auditable Codebase:** Total framework code is ~16,000 lines across 124 structured files (~580 KB). Every routine—from the request pipeline and ORM to authentication and WebSockets—can be read and audited in an afternoon.
+* **Predictable, Measured Performance:** About **0.7–0.85 MB of RAM** per request and **7–13 ms** per page with OpCache (Windows dev machine, built-in server). Loads 24–45 files per request with the caches on. Measure your own app with `php bongo benchmark`.
 * **Deploy Anywhere:** Runs seamlessly on basic shared hosting (cPanel), minimalist VPS instances, Docker containers, or high-density serverless environments without requiring root access or Composer.
 
 ---
@@ -173,7 +173,7 @@ $this->get('/products')
     ->assertSee('Yoga Mat');
 ```
 ```bash
-php bongo test              # Runs 349 unit and HTTP integration tests on isolated DB
+php bongo test              # Runs 353 unit and HTTP integration tests on isolated DB
 ```
 
 ---
@@ -202,16 +202,15 @@ Bongo includes an exhaustive set of full-stack batteries out of the box:
 
 ## 📊 Performance & Benchmarks
 
-*Empirically measured on a clean environment with PHP 8.3 on Windows.*
+*Measured with `php bongo benchmark` (PHP 8.3, Windows, built-in server, PostgreSQL, `config:cache` + `route:cache` + `view:cache`, median of 200 requests).*
 
-| Route / Benchmark | Description | Files Loaded | Peak RAM | Response Latency |
-|---|---|---:|---:|---:|
-| `GET /api/health` | Plain JSON API (no DB) | 39 | 0.45 MB | **8.5 ms** |
-| `GET /login` | HTML response, layout & CSRF | 47 | 0.53 MB | **9.1 ms** |
-| `GET /api/products` | REST endpoint with JWT auth | 40 | 0.45 MB | **9.4 ms** |
-| `GET /shop` | Complex relational catalog | 56 | 0.65 MB | **18.9 ms** |
+| Route | Description | Files Loaded | Peak RAM | OpCache off | OpCache on |
+|---|---|---:|---:|---:|---:|
+| `GET /login` | HTML page, session & CSRF | 34 | 0.69 MB | 28.3 ms | **6.8 ms** |
+| `GET /api/health` | JSON API with rate limiter | 24 | 0.67 MB | 26.2 ms | **13.0 ms** |
+| `GET /shop` | Product catalog, 3 queries | 45 | 0.83 MB | 119.7 ms | 85.7 ms, **13.4 ms** with `DB_PERSISTENT=true` |
 
-*Note: Latency tested with OpCache disabled (worst-case baseline). With OpCache enabled on production servers, response times are even faster. Running `php bongo config:cache` improves bootstrap time by **36%**, and `php bongo route:cache` precompiles route dispatching into zero-overhead static lookups.*
+*`/shop` is dominated by opening a PostgreSQL connection (about 60 ms on Windows); persistent connections remove it. On Linux production servers add OpCache preloading (`system/preload.php`). See DOCUMENTATION.md, "Performance".*
 
 ---
 
@@ -232,6 +231,7 @@ php bongo schedule:work     # Run scheduled tasks locally
 php bongo config:cache      # Cache configuration for production
 php bongo route:cache       # Precompile registered routes for faster dispatching
 php bongo view:cache        # Precompile and lint all templates ahead of time
+php bongo benchmark         # Measure request time and memory (OpCache off vs on)
 php bongo upgrade           # Safely upgrade framework with auto-backup & rollback
 ```
 

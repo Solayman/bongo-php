@@ -8,9 +8,9 @@ This document is prepared for **Claude AI** (and other internal reviewers and ag
 
 **Bongo PHP Framework** is a lightweight, high-performance PHP MVC framework built from first principles with **zero required external dependencies**.
 
-* **Size & Footprint:** ~16,000 lines across 122 modular files in `system/` (~570 KB total footprint).
+* **Size & Footprint:** ~16,000 lines across 124 modular files in `system/` (~580 KB total footprint).
 * **Starter Skeleton:** ~800 KB across 183 files on the `release` branch (clean blank slate for direct end-users; zero demo clutter).
-* **Resource Utilization:** Peak memory usage is **0.45 MB – 0.65 MB per request** and **about 8–19 ms per request** (measured without OpCache).
+* **Resource Utilization:** About **0.67–0.83 MB per request** and **7–13 ms per page with OpCache** (`php bongo benchmark`, Windows, built-in server; see DOCUMENTATION.md "Performance").
 * **Zero Dependencies:** No mandatory Composer packages, no Node.js runtime, no asset compilation steps. Pure PHP 8.0+.
 * **Auditable Architecture:** Written in readable, single-responsibility PHP modules averaging about 130 lines per file (largest modules 500–900 lines).
 * **Batteries Included:** Routing, @-directive templates, Active Record ORM (MySQL, PostgreSQL & SQLite), Multi-guard Auth (Session & JWT), Multi-disk Storage, Queues (Sync, Database & Redis), In-process Scheduler, pure-PHP WebSockets, SMTP Mailer & Mailbox UI, Notifications, and automated security auditing.
@@ -104,7 +104,16 @@ The following high-priority features and optimizations were recently implemented
   * **Relationship Inheritance (`System\Database\Relation`):** Child relationships (`hasOne`, `hasMany`, `belongsTo`, `belongsToMany`) automatically inherit the parent model's connection when the related model does not specify its own connection.
   * **Connection-Scoped Schema (`System\Database\Schema\SchemaBuilder` & `Schema`):** `Schema::connection('tenant')->create(...)`, `table()`, `drop()`, `hasTable()`, and `withoutForeignKeyChecks()`.
   * **Migration CLI Flag:** `php bongo migrate --database=tenant`, `migrate:status`, `migrate:rollback`, `migrate:fresh`, and `db:seed`.
-  * **Unit Testing:** 7 unit tests in `tests/Unit/MultiDatabaseTest.php` (30 assertions). Full test suite: **349 passed (1,780 assertions)**.
+  * **Unit Testing:** 7 unit tests in `tests/Unit/MultiDatabaseTest.php` (30 assertions). Full test suite at the time: **349 passed (1,780 assertions)**.
+
+### K. Performance Tools (Claude, 2026-10-04; tested on MySQL, PostgreSQL, SQLite: 353 pass)
+* `php bongo benchmark` (`System\Console\Benchmark`): measures median/p95/req/s/memory/status per URL, OpCache off vs on. **Use it for every performance number in the docs.** Git Bash: prefix `MSYS_NO_PATHCONV=1`.
+* `system/preload.php`: OpCache preloading (Linux/macOS only; Windows PHP has none, so its gain is unmeasured).
+* `DB_PERSISTENT=true` (`Connection::options()`/`cleanPersistent()`): persistent MySQL/PostgreSQL connections; leftover transactions are rolled back. Measured: `/shop` on PostgreSQL 85.7 → 13.4 ms (PostgreSQL connect is ~60 ms on Windows).
+* N+1 warning: `debug_stats()['repeated']` (same SQL 3+ times) in the debug footer, and logged at shutdown for pages without a footer (debug mode only).
+* `cache_for($seconds, etag:, public:)` helper: `Cache-Control`, ETag, 304 on match; private by default, adds `Vary: Cookie`.
+* `ThrottleRequests` skips the session-guard user lookup when no session is started (API routes).
+* Known, not a framework bug: on Windows, Defender scanning adds ~10 ms to each file-cache write (rate limiter). Documented; Linux is unaffected.
 
 ---
 
@@ -150,6 +159,7 @@ Whenever ANY code change, feature, optimization, or bug fix is made to Bongo:
 php bongo config:cache     # Compiles config/ and .env into storage/cache/config.php
 php bongo route:cache      # Compiles routes into storage/cache/routes.php
 php bongo view:cache       # Precompiles and lints all template views
+php bongo benchmark        # Measures request time/memory, OpCache off vs on
 
 # Cache Clearing
 php bongo config:clear     # Clears config cache
@@ -172,7 +182,7 @@ php bongo make:command <X> # Generates custom CLI command in app/Commands/
 ## 6. Development Guidelines for AI Agents
 
 1. **Maintain Zero-Dependency Architecture:** Never install or introduce mandatory third-party Composer packages or npm dependencies.
-2. **Minimal Size Principle:** Keep `system/` file count low (~122 files) and footprint ~570 KB (~16,000 lines). Do not create excessive abstraction layers.
+2. **Minimal Size Principle:** Keep `system/` file count low (~124 files) and footprint ~580 KB (~16,000 lines). Do not create excessive abstraction layers.
 3. **PHP 8.0+ Compatibility:** Use strict types, constructor property promotion, union types, and match expressions. Avoid PHP 8.1+ features that break PHP 8.0 support (e.g., `never` return type).
 4. **Update Documentation:** Always update `DOCUMENTATION.md`, `README.md`, `WHY_BONGO.md`, and `GEMINI.md` when introducing new features or commands.
 5. **PSR-12:** run `php phpcs.phar` (rules in `phpcs.xml`); every PR must have 0 errors.
@@ -203,7 +213,7 @@ Claude reviewed **every feature from PRs #78–#94** line by line and ran the fu
 ### Rules learned from this review (apply to all future work)
 1. **Test on every database a change touches:** `DB_CONNECTION=pgsql DB_PORT=5432 DB_USERNAME=postgres DB_PASSWORD=... php -d extension=pdo_pgsql bongo test`, plus SQLite (`DB_CONNECTION=sqlite php -d extension=pdo_sqlite bongo test`) and MySQL. Grammar-only unit tests are not enough.
 2. **PSR-12 with 0 errors** (`php phpcs.phar`) before every PR.
-3. **Only measured numbers in docs.** No "100%", "<15ms" or "pixel-perfect" without a reproducible measurement. Recount files, lines and tests after changes. Current: 122 files, ~16,000 lines, ~570 KB in `system/`; 349 tests.
+3. **Only measured numbers in docs.** No "100%", "<15ms" or "pixel-perfect" without a reproducible measurement. Recount files, lines and tests after changes. Current: 124 files, ~16,200 lines, ~580 KB in `system/`; 353 tests.
 4. **Never describe Bongo with Laravel or Blade terms** ("Blade-compatible" etc.). Comparison tables that *name* other frameworks are fine.
 5. **Security defaults for new code:**
    - escape or whitelist everything that reaches HTML/CSS/shell/headers;

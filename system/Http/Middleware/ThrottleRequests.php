@@ -44,7 +44,11 @@ class ThrottleRequests
     {
         $who = null;
         try {
-            $who = Auth::id();
+            // A session guard without a started session (API routes) has no user: skip the lookup
+            $driver = config('auth.guards.' . Auth::defaultGuard() . '.driver', 'session');
+            if ($driver !== 'session' || session_status() === PHP_SESSION_ACTIVE) {
+                $who = Auth::id();
+            }
         } catch (\Throwable $e) {
             // no auth configured for this request
         }

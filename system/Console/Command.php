@@ -22,7 +22,7 @@ abstract class Command
     /** The command name/signature, e.g. "reports:generate" */
     protected string $name = '';
 
-    /** Optional alias for name (familiar to Laravel developers) */
+    /** Optional alias for name */
     protected string $signature = '';
 
     /** The command description displayed in php bongo help */

@@ -160,6 +160,14 @@ if (is_file(BASE_PATH . '/app/bootstrap.php')) {
 define('BONGO_START', $_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true));
 if (config('app.debug') && PHP_SAPI !== 'cli') {
     System\Database\DB::enableQueryLog();
+    // Pages without the debug footer (JSON, API) still get the N+1 warning, in the log
+    register_shutdown_function(function () {
+        foreach (debug_stats()['repeated'] as $sql => $times) {
+            System\Log\Logger::instance()->warning("Possible N+1: the same query ran {$times}× on {path}. Load the relation up front: Model::with('relation')", [
+                'path' => System\Http\Request::path(), 'sql' => $sql,
+            ]);
+        }
+    });
 }
 
 // The session is started by the "session" middleware (web routes only), so API routes stay stateless

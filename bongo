@@ -518,6 +518,11 @@ try {
 ";
             break;
 
+        case 'benchmark':
+            $urls = array_values(array_filter($options, fn($o) => str_starts_with($o, '--url=')));
+            $urls = $urls ? array_map(fn($o) => '/' . ltrim(substr($o, 6), '/'), $urls) : ['/', '/api/health'];
+            exit(System\Console\Benchmark::run($urls, max(10, (int) $optionValue('requests', 200)), (string) $optionValue('opcache', 'both')));
+
         case 'test':
             exit(System\Testing\Runner::run(base_path('tests'), $options[0] ?? null));
 
@@ -533,6 +538,7 @@ try {
             }
             $help = [
                 'about' => 'Version, PHP, environment, drivers and framework size',
+                'benchmark [--url=/] [--requests=200] [--opcache=both|on|off]' => 'Measure request time and memory (OpCache off vs on)',
                 'serve [--port=8000] [--host=127.0.0.1]' => 'Start the development server',
                 'down [--message=] [--retry=60] [--secret=]' => 'Maintenance mode: visitors see "back soon" (503)',
                 'up' => 'Leave maintenance mode',
