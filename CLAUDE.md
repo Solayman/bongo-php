@@ -8,7 +8,7 @@ This document is prepared for **Claude AI** (and other internal reviewers and ag
 
 **Bongo PHP Framework** is a lightweight, high-performance PHP MVC framework built from first principles with **zero required external dependencies**.
 
-* **Size & Footprint:** ~13,500 lines across 117 modular files in `system/` (~495 KB total footprint).
+* **Size & Footprint:** ~15,000 lines across 122 modular files in `system/` (~554 KB total footprint).
 * **Resource Utilization:** Peak memory usage is **0.45 MB – 0.65 MB per request** with **<15ms execution latency** (even with OpCache disabled).
 * **Zero Dependencies:** No mandatory Composer packages, no Node.js runtime, no asset compilation steps. Pure PHP 8.0+.
 * **Auditable Architecture:** Written in readable, single-responsibility PHP modules averaging 200–600 lines each.
@@ -171,7 +171,7 @@ php bongo make:command <X> # Generates custom CLI command in app/Commands/
 ## 6. Development Guidelines for AI Agents
 
 1. **Maintain Zero-Dependency Architecture:** Never install or introduce mandatory third-party Composer packages or npm dependencies.
-2. **Minimal Size Principle:** Keep `system/` file count low (~117 files) and footprint ~495 KB. Do not create excessive abstraction layers.
+2. **Minimal Size Principle:** Keep `system/` file count low (~122 files) and footprint ~554 KB (~15,000 lines). Do not create excessive abstraction layers.
 3. **PHP 8.0+ Compatibility:** Use strict types, constructor property promotion, union types, and match expressions. Avoid PHP 8.1+ features that break PHP 8.0 support (e.g., `never` return type).
 4. **Update Documentation:** Always update `DOCUMENTATION.md`, `README.md`, `WHY_BONGO.md`, and `GEMINI.md` when introducing new features or commands.
 5. **Testing Stage Memory:** Maintain `CLAUDE.md` up-to-date across all development cycles during the pre-release testing phase.
