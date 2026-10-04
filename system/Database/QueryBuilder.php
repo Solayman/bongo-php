@@ -633,14 +633,38 @@ class QueryBuilder
             $target = $uniqueBy ? '(' . implode(', ', (array) $uniqueBy) . ')' : '';
             $sql .= " ON CONFLICT $target DO UPDATE SET " . implode(', ', array_map(fn($c) => "$c = excluded.$c", $update ?? $columns));
         } elseif ($this->isPgsql()) {
-            $candidates = array_values(array_diff($columns, $update ?? []));
-            $targetCols = $uniqueBy ? (array) $uniqueBy : (in_array('id', $columns, true) ? ['id'] : ($candidates ?: [$columns[0]]));
-            $target = '(' . implode(', ', array_map(fn($c) => '"' . str_replace('"', '""', $c) . '"', $targetCols)) . ')';
-            $sql .= " ON CONFLICT $target DO UPDATE SET " . implode(', ', array_map(fn($c) => "\"$c\" = EXCLUDED.\"$c\"", $update ?? $columns));
+            // PostgreSQL needs the conflict columns: use $uniqueBy, or find the table's unique index they fill
+            $targetCols = $uniqueBy ? (array) $uniqueBy : $this->pgsqlUniqueKey($columns);
+            // Same (unquoted) names as the INSERT list, so both fold to the same case
+            $sql .= ' ON CONFLICT (' . implode(', ', $targetCols) . ') DO UPDATE SET '
+                . implode(', ', array_map(fn($c) => "$c = EXCLUDED.$c", $update ?? $columns));
         } else {
             $sql .= ' ON DUPLICATE KEY UPDATE ' . implode(', ', array_map(fn($c) => "$c = VALUES($c)", $update ?? $columns));
         }
         return $this->run($sql, $bindings)->rowCount();
+    }
+
+    /** The columns of a unique index (or primary key) of this table that $columns all fill */
+    protected function pgsqlUniqueKey(array $columns): array
+    {
+        $indexes = $this->run(
+            'SELECT array_to_string(array_agg(a.attname ORDER BY k.n), \',\') AS cols
+             FROM pg_index i
+             JOIN LATERAL unnest(i.indkey) WITH ORDINALITY AS k(attnum, n) ON true
+             JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = k.attnum
+             WHERE i.indrelid = ?::regclass AND i.indisunique
+             GROUP BY i.indexrelid, i.indisprimary ORDER BY i.indisprimary',
+            [$this->table]
+        )->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($indexes as $index) {
+            $keys = explode(',', (string) $index);
+            if (!array_diff($keys, $columns)) {
+                return $keys;
+            }
+        }
+        throw new InvalidArgumentException(
+            "upsert() on {$this->table}: none of its unique keys is among the given columns. Pass them as the third argument: upsert(\$rows, \$update, ['sku'])"
+        );
     }
 
     /**

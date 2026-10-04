@@ -186,7 +186,7 @@ class Migrator
 
         $schema->withoutForeignKeyChecks(function () use ($tables, $schema) {
             foreach ($tables as $table) {
-                $schema->drop($table);
+                $schema->drop($table, cascade: true);
             }
         });
 
