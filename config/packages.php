@@ -22,4 +22,5 @@ return [
     // 'sms',            // Bangladeshi SMS gateways + OTP
     // 's3',             // S3 / Spaces / R2 storage disk
     // 'social-login',   // Google / Facebook / GitHub login
+    // 'stripe',         // Stripe international payments (cards, Apple Pay, webhooks)
 ];

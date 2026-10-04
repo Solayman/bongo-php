@@ -2419,7 +2419,7 @@ The admin and customer logins are separate guards, so one browser can be signed 
 
 ## 15. Official Package Subsystem
 
-Bongo includes an integrated, zero-dependency package manager and runtime loader designed for optional first-party and community extensions (e.g. `sslcommerz`, `bkash`, `nagad`, `sms`, `s3`, `social-login`).
+Bongo includes an integrated, zero-dependency package manager and runtime loader designed for optional first-party and community extensions (e.g. `sslcommerz`, `bkash`, `nagad`, `stripe`, `sms`, `s3`, `social-login`).
 
 ### Core Design & Principles
 - **Zero Required Dependencies:** No Composer or Node.js runtime required. The package installer is pure PHP using native HTTP streams, JSON parsing, and `hash_file('sha256', ...)`.
@@ -2671,5 +2671,48 @@ Direct Nagad Mobile Financial Service (MFS) payment gateway integration using na
   * Partial: `@include('nagad::checkout-button')`
   * Routes: `/nagad/initiate` (POST), `/nagad/callback` (GET)
 * **CLI Health Check:** `php bongo nagad:check`
+
+#### 7. `stripe` — Stripe International Payments, Checkout & Webhooks
+Zero-dependency official Stripe payment gateway client enabling global credit/debit card processing, Apple Pay, Google Pay, hosted Stripe Checkout Sessions, Payment Intents, refunds, and HMAC-SHA256 cryptographically verified webhooks via pure PHP without external Composer libraries.
+* **Install:** `php bongo add stripe`
+* **Run Migration:** `php bongo migrate` (creates `stripe_payments` table for session/intent audit)
+* **Configuration (`.env`):**
+  ```ini
+  STRIPE_KEY=pk_test_...
+  STRIPE_SECRET=sk_test_...
+  STRIPE_WEBHOOK_SECRET=whsec_...
+  STRIPE_CURRENCY=usd
+  ```
+* **API Usage:**
+  ```php
+  use Bongo\Packages\Stripe\Stripe;
+
+  // 1. Create Checkout Session (Hosted Redirect)
+  $session = Stripe::checkout([
+      'amount'         => 49.99,
+      'currency'       => 'usd',
+      'name'           => 'Pro Subscription',
+      'customer_email' => 'customer@example.com',
+  ]);
+  header('Location: ' . $session['url']);
+
+  // 2. Create Payment Intent (Stripe Elements)
+  $intent = Stripe::paymentIntent([
+      'amount'   => 25.00,
+      'currency' => 'usd',
+  ]);
+  $clientSecret = $intent['client_secret'];
+
+  // 3. Issue Full or Partial Refund
+  $refund = Stripe::issueRefund('pi_...', 15.00, 'requested_by_customer');
+
+  // 4. Verify Incoming Webhook
+  $event = Stripe::verify($rawPayload, $_SERVER['HTTP_STRIPE_SIGNATURE']);
+  ```
+* **Template Components & Routes:**
+  * Component: `<x-stripe::checkout-button :amount="49.99" :currency="'usd'" :name="'Pro Plan'" />`
+  * Partial: `@include('stripe::checkout')`
+  * Routes: `/stripe/checkout` (POST), `/stripe/success` (GET), `/stripe/cancel` (GET), `/stripe/webhook` (POST)
+* **CLI Health Check:** `php bongo stripe:check`
 
 
