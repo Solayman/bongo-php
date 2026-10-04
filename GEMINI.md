@@ -4,12 +4,20 @@
 - **Main Branch**: `master` (production-ready code).
 - **Working / Push Branch**: `solayman` (all development code must be pushed to the `solayman` branch).
 - **Release Branch (`release`)**: The clean, production-ready starter skeleton branch for direct end-users to clone and start fresh projects (contains core framework, migrations, starter skeleton, no demo store, no test fixtures). Never commit development work directly to `release`. Update it using `php bongo release:branch` and push via `git push origin release` when publishing framework updates.
-- **Merge Requests / Pull Requests**:
-  1. Commit code to `solayman`.
-  2. Push to `origin/solayman`.
-  3. Create PR/MR targeting `master` (`gh pr create --base master --head solayman`).
-  4. Merge PR/MR into `master` (`gh pr merge <number> --merge`).
-  5. Sync local `master` and `solayman` branches.
+- **Merge Requests / Pull Requests (Core & Package Repositories)**:
+  - **Framework Repo (`Solayman/bongo-php`)**:
+    1. Commit code to `solayman`.
+    2. Push to `origin/solayman`.
+    3. Create PR/MR targeting `master` (`gh pr create --base master --head solayman`).
+    4. Merge PR/MR into `master` (`gh pr merge <number> --merge`).
+    5. Sync local `master` and `solayman` branches.
+  - **Official Packages Repo (`Solayman/bongo-php-packages`)**:
+    - **Always follow Pull Requests in the package repository**: Never push directly to `master`.
+    1. Create a dedicated feature or working branch (e.g. `solayman` or `feat/<package-name>`).
+    2. Commit and push to origin (`git push origin <branch>`).
+    3. Create PR targeting `master` (`gh pr create --repo Solayman/bongo-php-packages --base master --head <branch>`).
+    4. Merge PR into `master` (`gh pr merge <number> --merge`).
+    5. Sync local `master` and working branches.
 
 ## Core Architecture & Principles
 - **Zero Required Dependencies**: The framework must remain self-contained (no mandatory Composer packages, no Node.js runtime, no build step).

@@ -13,7 +13,8 @@ class MigrationHint
     public static function pending(): array
     {
         try {
-            $status = (new Migrator(BASE_PATH . '/database/migrations'))->status();
+            $paths = array_merge([BASE_PATH . '/database/migrations'], \System\Package\PackageManager::migrationPaths());
+            $status = (new Migrator($paths))->status();
             return array_values(array_map(fn($m) => $m['migration'], array_filter($status, fn($m) => !$m['ran'])));
         } catch (Throwable $e) {
             return [];

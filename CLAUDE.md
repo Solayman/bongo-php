@@ -138,12 +138,21 @@ When interacting with this codebase, you **must adhere to these rules**:
 | **`release`** | Clean starter skeleton branch for end-users to clone. Built via `php bongo release:branch` and pushed via `git push origin release`. Never commit development code directly to it. |
 
 ### Development & PR Workflow:
-1. Make changes on the local `solayman` branch.
-2. Push to `origin/solayman`.
-3. Open a Pull Request targeting `master`: `gh pr create --base master --head solayman`.
-4. Merge the Pull Request: `gh pr merge <number> --merge`.
-5. Synchronize local `master` and `solayman` branches.
-6. When updating the fresh starter skeleton for end users, build and update `release` via `php bongo release:branch` and `git push origin release`.
+* **Framework Repository (`Solayman/bongo-php`)**:
+  1. Make changes on the local `solayman` branch.
+  2. Push to `origin/solayman`.
+  3. Open a Pull Request targeting `master`: `gh pr create --base master --head solayman`.
+  4. Merge the Pull Request: `gh pr merge <number> --merge`.
+  5. Synchronize local `master` and `solayman` branches.
+  6. When updating the fresh starter skeleton for end users, build and update `release` via `php bongo release:branch` and `git push origin release`.
+
+* **Official Packages Repository (`Solayman/bongo-php-packages`)**:
+  - **Always follow Pull Requests in the package repository**: Never commit/push directly to `master`.
+  1. Create a dedicated feature or working branch (e.g. `solayman` or `feat/<package-name>`).
+  2. Commit and push to origin (`git push origin <branch>`).
+  3. Open a Pull Request targeting `master`: `gh pr create --repo Solayman/bongo-php-packages --base master --head <branch>`.
+  4. Merge the Pull Request: `gh pr merge <number> --merge`.
+  5. Synchronize local `master` and working branches.
 
 ---
 

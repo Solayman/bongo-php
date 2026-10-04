@@ -40,6 +40,10 @@ class PackageTest extends TestCase
             $this->mockRepo . '/dummy/database/migrations/2026_10_04_000000_create_dummy_table.php',
             "<?php\nuse System\\Database\\Migration;\nuse System\\Database\\Schema\\Blueprint;\nreturn new class extends Migration { public function up(): void {} public function down(): void {} };"
         );
+        file_put_contents(
+            $this->mockRepo . '/dummy/routes.php',
+            "<?php\nuse System\\Routing\\Route;\nRoute::get('/dummy-route', fn() => 'dummy ok')->name('dummy.test');"
+        );
         file_put_contents($this->mockRepo . '/dummy/README.md', "# Dummy\n\n```env\nDUMMY_API_KEY=test\n```\n");
 
         // Mock catalog index
@@ -273,6 +277,37 @@ class PackageTest extends TestCase
         // config/packages.php should have commented out 'dummy'
         $configContent = (string) file_get_contents($this->appDir . '/config/packages.php');
         $this->assertContains("// 'dummy'", $configContent);
+    }
+
+    public function testPackageRoutesLoadedByRouter(): void
+    {
+        $installer = new Installer($this->appDir);
+        $installer->install('dummy', '1.0.0');
+
+        $router = new \System\Routing\Router();
+        $this->assertFalse($router->has('dummy.test'));
+
+        PackageManager::loadRoutes($router);
+        $this->assertTrue($router->has('dummy.test'));
+        $this->assertSame('/dummy-route', $router->url('dummy.test'));
+    }
+
+    public function testPackageMigrationsAndMigratorMultiPath(): void
+    {
+        $installer = new Installer($this->appDir);
+        $installer->install('dummy', '1.0.0');
+
+        $paths = PackageManager::migrationPaths();
+        $this->assertCount(1, $paths);
+        $expectedDir = str_replace('\\', '/', $this->appDir . '/packages/dummy/database/migrations');
+        $normalizedPaths = array_map(fn($p) => str_replace('\\', '/', $p), $paths);
+        $this->assertTrue(in_array($expectedDir, $normalizedPaths, true));
+
+        $allPaths = array_merge([$this->appDir . '/database/migrations'], $paths);
+        $migrator = new \System\Database\Migrator($allPaths);
+        $files = $migrator->files();
+
+        $this->assertTrue(isset($files['2026_10_04_000000_create_dummy_table']));
     }
 
     protected function deleteTree(string $path): void

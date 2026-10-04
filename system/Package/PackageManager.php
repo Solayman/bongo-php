@@ -49,13 +49,48 @@ class PackageManager
             if (is_dir($langDir)) {
                 Translator::addNamespace($name, $langDir);
             }
+        }
+    }
 
-            // Load package routes if present
-            $routesFile = $pkgDir . '/routes.php';
+    /**
+     * Load routes defined by installed packages into the router.
+     */
+    public static function loadRoutes(\System\Routing\Router $router): void
+    {
+        if (!is_file(self::$lockFile)) {
+            return;
+        }
+
+        $packagesDir = dirname(self::$lockFile);
+        foreach (self::installed() as $name => $meta) {
+            $routesFile = $packagesDir . '/' . $name . '/routes.php';
             if (is_file($routesFile)) {
-                require $routesFile;
+                $router->loadFile($routesFile);
             }
         }
+    }
+
+    /**
+     * Get migration directories for all installed packages.
+     *
+     * @return string[]
+     */
+    public static function migrationPaths(): array
+    {
+        if (!is_file(self::$lockFile)) {
+            return [];
+        }
+
+        $paths = [];
+        $packagesDir = dirname(self::$lockFile);
+        foreach (self::installed() as $name => $meta) {
+            $dir = $packagesDir . '/' . $name . '/database/migrations';
+            if (is_dir($dir)) {
+                $paths[] = $dir;
+            }
+        }
+
+        return $paths;
     }
 
     /**
