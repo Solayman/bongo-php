@@ -115,7 +115,7 @@ When interacting with this codebase, you **must adhere to these rules**:
 |---|---|
 | **`master`** | Production-ready code. Pull requests target this branch. |
 | **`solayman`** | Active development branch. All commits and pushes must go to `solayman`. |
-| **`release`** | **STRICTLY PROTECTED (DO NOT TOUCH):** Never modify, checkout, rebase, or push to `release`. |
+| **`release`** | Clean starter skeleton branch for end-users to clone. Built via `php bongo release:branch` and pushed via `git push origin release`. Never commit development code directly to it. |
 
 ### Development & PR Workflow:
 1. Make changes on the local `solayman` branch.
@@ -123,6 +123,7 @@ When interacting with this codebase, you **must adhere to these rules**:
 3. Open a Pull Request targeting `master`: `gh pr create --base master --head solayman`.
 4. Merge the Pull Request: `gh pr merge <number> --merge`.
 5. Synchronize local `master` and `solayman` branches.
+6. When updating the fresh starter skeleton for end users, build and update `release` via `php bongo release:branch` and `git push origin release`.
 
 ---
 

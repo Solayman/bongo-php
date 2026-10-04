@@ -3,7 +3,7 @@
 ## Git & Branching Strategy
 - **Main Branch**: `master` (production-ready code).
 - **Working / Push Branch**: `solayman` (all development code must be pushed to the `solayman` branch).
-- **Protected Branch (STRICT - DO NOT TOUCH)**: `release` (NEVER touch, modify, checkout, rebase, or push to the `release` branch under any circumstances).
+- **Release Branch (`release`)**: The clean, production-ready starter skeleton branch for direct end-users to clone and start fresh projects (contains core framework, migrations, starter skeleton, no demo store, no test fixtures). Never commit development work directly to `release`. Update it using `php bongo release:branch` and push via `git push origin release` when publishing framework updates.
 - **Merge Requests / Pull Requests**:
   1. Commit code to `solayman`.
   2. Push to `origin/solayman`.
