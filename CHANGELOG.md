@@ -21,6 +21,7 @@ Every notable change to the Bongo PHP Framework. Versions follow [semantic versi
   - `s3` (1.0.0): Pure-PHP AWS Signature Version 4 (SigV4) object storage disk for Amazon S3, DigitalOcean Spaces, Cloudflare R2, and MinIO with presigned temporary URLs and `php bongo s3:check`.
   - `social-login` (1.0.0): Google, GitHub, and Facebook OAuth 2.0 social login with CSRF state protection, private email resolution, user model auto-creation, SVG button partials, and natural Bengali localization.
   - `nagad` (1.0.0): Direct Nagad Mobile Financial Service (MFS) payment gateway with native OpenSSL RSA-2048 encryption, SHA256withRSA signatures, two-step checkout flow, verification, refund, CLI key generator (`php bongo nagad:keys --save`), and `php bongo nagad:check`.
+  - `stripe` (1.0.0): Zero-dependency Stripe international payment gateway with Checkout Sessions, Payment Intents, full/partial refunds, HMAC-SHA256 webhook signature verification, UI components, and `php bongo stripe:check`.
 - **Storage Driver Extensibility & Presigned URLs**:
   - `Storage::extend($driver, $callback)`: register custom filesystem disk drivers at runtime.
   - `Storage::set($name, $disk)`: inject or mock disk instances in unit testing.

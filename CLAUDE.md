@@ -124,7 +124,7 @@ The following high-priority features and optimizations were recently implemented
   * **Application Overrides:** `resources/views/vendor/<name>/` and `lang/vendor/<name>/` take precedence over package assets, surviving updates.
   * **CLI Commands:** `add`, `package:install`, `package:update`, `package:remove`, `package:list`, `package:publish`, `package:diff`, and `package:test`.
   * **Storage Extensibility & Bootstrapping:** Package `bootstrap.php` runner on framework boot; `Storage::extend()`, `Storage::set()`, and `Storage::temporaryUrl()`.
-  * **Official Packages Suite (`Solayman/bongo-php-packages`):** 6 packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`, `nagad`) with 42 passing package tests.
+  * **Official Packages Suite (`Solayman/bongo-php-packages`):** 7 packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`, `nagad`, `stripe`) with 53 passing package tests.
   * **Testing:** 11 unit tests in `tests/Unit/PackageTest.php` (43 assertions), 6 tests in `tests/Unit/StorageTest.php` (31 assertions). Full core test suite: **368 tests passing (1845 assertions) across MySQL, PostgreSQL 18, and SQLite**.
 
 ---

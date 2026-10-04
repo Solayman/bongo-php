@@ -48,7 +48,7 @@
   - `System\Data\Printable`: Responsive, print-ready document and vector PDF engine with `@media print` CSS, native browser print/PDF trigger, and headless browser PDF compilation bridge (Chrome/Edge/Chromium/wkhtmltopdf) so Bengali and other Indic scripts keep their ligatures and vowel signs (a real browser engine shapes the text).
 - **Official Package Subsystem & Ecosystem**:
   - `System\Package`: Zero-dependency package manager and runtime loader (`Installer` and `PackageManager`), SHA-256 integrity verification, safe publishing with app override priority (`resources/views/vendor/<name>/`, `lang/vendor/<name>/`), developer safety net (`--backup`, `--force`), package migration management, CLI command auto-discovery, runtime `bootstrap.php` execution, and full CLI suite (`php bongo add / package:*`).
-  - **Official Packages Suite (`Solayman/bongo-php-packages`)**: 6 production packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`, `nagad`) with 42 passing package tests.
+  - **Official Packages Suite (`Solayman/bongo-php-packages`)**: 7 production packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`, `nagad`, `stripe`) with 53 passing package tests.
 
 ## Review & Documentation Tracking Policy
 - **Testing & Pre-Release Tracking**: During the active testing stage prior to public production release, `CLAUDE.md` is tracked in the repository to maintain memory continuity across AI agents and internal developers.

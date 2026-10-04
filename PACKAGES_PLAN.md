@@ -190,12 +190,12 @@ Later: GitHub Actions runs every package's tests on each push and on each core c
    - Payment packages share one small interface (`pay`, `verify`, `refund`, events `payment.success/failed`) so later gateways (stripe, paypal) plug in the same way.
 
 **Phase C**
-6. `s3`  7. `social-login`  8. `nagad` (Direct MFS Gateway with RSA-2048 and signatures) → then release **Bongo 1.0**.
+6. `s3`  7. `social-login`  8. `nagad` (Direct MFS Gateway with RSA-2048 and signatures)  9. `stripe` (International payments, Checkout & Webhooks) → then release **Bongo 1.0**.
 
 **Phase D (after 1.0)**
-stripe/paypal, admin-panel, api-tools, two-factor, backup, image, docker.
+paypal, admin-panel, api-tools, two-factor, backup, image, docker.
 
-### Completed Official Packages (6 Packages, 42 Tests Passing)
+### Completed Official Packages (7 Packages, 53 Tests Passing)
 | Package | Description | Status |
 |---|---|---|
 | `sslcommerz` | SSLCommerz payment gateway | ✔ Done (v1.0.0, 6 tests) |
@@ -204,11 +204,12 @@ stripe/paypal, admin-panel, api-tools, two-factor, backup, image, docker.
 | `s3` | AWS S3 & SigV4 object storage | ✔ Done (v1.0.0, 7 tests) |
 | `social-login` | OAuth 2.0 Google, GitHub, Facebook | ✔ Done (v1.0.0, 6 tests) |
 | `nagad` | Direct Nagad MFS payment gateway | ✔ Done (v1.0.0, 9 tests) |
+| `stripe` | Stripe international payments & webhooks | ✔ Done (v1.0.0, 11 tests) |
 
 ### Not needed now — candidates for next packages
 | Package | Why it waits |
 |---|---|
-| `stripe`, `paypal` | International payments (Stripe pure-PHP client + webhooks) |
+| `paypal` | International payments |
 | `admin-panel` | Large; needs a stable 1.0 API first |
 | `api-tools` (resources, versioning, docs) | Nice to have; core JSON responses are enough for now |
 | `two-factor` | Useful, but no current project needs it |
