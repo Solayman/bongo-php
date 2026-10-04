@@ -4,7 +4,7 @@
 
 ### High-performance, zero-dependency PHP MVC framework engineered for simplicity, auditability, and speed.
 
-A complete full-stack web framework contained in ~570 KB of clean, readable code.  
+A complete full-stack web framework contained in ~580 KB of clean, readable code.  
 **Zero external dependencies. No Composer required. No Node.js runtime. No build steps.**
 
 [![PHP Version](https://img.shields.io/badge/PHP-8.0%2B-777bb4?style=flat-square&logo=php&logoColor=white)](https://www.php.net)
@@ -29,7 +29,7 @@ Modern web development frameworks increasingly carry substantial cognitive, oper
 * **Opaque Abstractions:** Troubleshooting unexpected behavior often leads through deep call stacks and nested packages.
 * **Deployment Friction:** Heavy memory footprints and rigid environment prerequisites complicate hosting on cost-effective infrastructure.
 
-**Bongo takes an intentional, first-principles approach.** Everything required to build, secure, and scale modern web applications is built directly into a compact, unified codebase of approximately **15,000 lines across 122 files** (~570 KB). You can read, audit, and understand the entire framework in an afternoon.
+**Bongo takes an intentional, first-principles approach.** Everything required to build, secure, and scale modern web applications is built directly into a compact, unified codebase of approximately **16,000 lines across 124 files** (~580 KB). You can read, audit, and understand the entire framework in an afternoon.
 
 ---
 
@@ -154,7 +154,7 @@ $this->get('/products')
     ->assertSee('Yoga Mat');
 ```
 ```bash
-php bongo test              # Runs 349 unit & feature tests with isolated SQLite/MySQL runner
+php bongo test              # Runs 353 unit & feature tests with isolated SQLite/MySQL runner
 ```
 
 ---
@@ -162,7 +162,7 @@ php bongo test              # Runs 349 unit & feature tests with isolated SQLite
 ## Architectural Pillars
 
 ### 1. Full-Source Auditability
-The core framework consists of approximately **16,000 lines of code across 122 files** (~570 KB). Components are modular and focused, averaging about 130 lines per file (largest modules 500–900 lines). Engineers can inspect any internal routine—from the request pipeline to the database grammar—in minutes without navigating third-party repositories.
+The core framework consists of approximately **16,000 lines of code across 124 files** (~580 KB). Components are modular and focused, averaging about 130 lines per file (largest modules 500–900 lines). Engineers can inspect any internal routine—from the request pipeline to the database grammar—in minutes without navigating third-party repositories.
 
 ### 2. Zero-Dependency Resilience
 With zero mandatory external dependencies, Bongo shields applications from supply-chain compromises, unintended automated breakage, and dependency conflicts. Deploy smoothly to shared hosting, minimal VPS instances, or bare containers. Composer integration remains fully optional: if `vendor/autoload.php` is present, it is seamlessly loaded.
@@ -172,10 +172,11 @@ Engineered for efficient memory usage and rapid execution cycles:
 
 | Metric | Measured Value |
 |---|---|
-| **Peak Memory per Request** | **0.45 MB – 0.65 MB** |
-| **Response Latency (Worst-Case, OpCache Disabled)** | **8.5 ms** (JSON API) to **18.9 ms** (Full DB page) |
-| **Framework Files Loaded per Request** | **20 – 28 files** |
-| **Boot & Route Optimization** | **`config:cache` (36% startup speedup)** & **`route:cache` (zero-regex dispatch)** |
+| **Peak Memory per Request** | **0.67 MB – 0.83 MB** |
+| **Response Time with OpCache** | **6.8 ms** (HTML page) to **13.4 ms** (DB page, persistent connection) |
+| **Framework Files Loaded per Request** | **24 – 45 files** (with config and route cache) |
+| **Boot & Route Optimization** | **`config:cache` (36% startup speedup)**, **`route:cache` (zero-regex dispatch)**, OpCache preloading |
+| **Measure it yourself** | `php bongo benchmark` |
 
 ### 4. Comprehensive Security by Default
 Security mechanisms are embedded directly into the framework foundation:
@@ -222,7 +223,7 @@ Architectural trade-offs compared objectively across common PHP ecosystems:
 | **Architecture** | **Full-Stack, Zero-Dep** | Full-Stack | Component-Based | Full-Stack, Lightweight | Micro-Framework |
 | **Required Dependencies** | **0** | ~50+ packages | ~40+ packages | Minimal | Several |
 | **Fresh Skeleton Footprint** | **~800 KB** (183 files) | 30 MB+ | 25 MB+ | ~2 MB | ~1 MB |
-| **Total Core Code** | **~16k lines (122 files · ~570 KB)** | ~300k+ lines | ~500k+ lines | ~80k lines | Minimal router only |
+| **Total Core Code** | **~16k lines (124 files · ~580 KB)** | ~300k+ lines | ~500k+ lines | ~80k lines | Minimal router only |
 | **ORM, Auth, Queues, Mail** | **Integrated** | Integrated | Integrated / Bundles | Partially Integrated | External Packages Required |
 | **Native WebSockets** | **Integrated (Pure PHP)** | Separate Service / Reverb | Third-Party Bundle | Not Included | Not Included |
 | **Built-in Security Auditor** | **`security:check`** | External package | External package | Not Included | Not Included |
@@ -255,7 +256,7 @@ Architectural trade-offs compared objectively across common PHP ecosystems:
 Yes. Bongo does not require Composer, but it remains fully compatible with it. If `vendor/autoload.php` exists, the framework automatically registers the autoloader.
 
 **Is Bongo suitable for production workloads?**  
-Bongo includes 349 automated test cases, strict type hinting, regression suites, and production security verification (`php bongo security:check`). As a v0.9.x release, core interfaces are stable while feature expansion continues.
+Bongo includes 353 automated test cases, strict type hinting, regression suites, and production security verification (`php bongo security:check`). As a v0.9.x release, core interfaces are stable while feature expansion continues.
 
 **How does framework maintenance and upgrading work?**  
 The framework provides an isolated upgrade utility (`php bongo upgrade`) that verifies cryptographic SHA-256 checksums, creates an automated pre-upgrade backup, and patches core `system/` components without touching application files. Upgrades can be reversed using `php bongo upgrade --rollback`.
@@ -272,8 +273,8 @@ All benchmarks recorded on a clean reference environment using PHP 8.3 on Window
 
 **Codebase Size** (Excluding application and demo layer):
 ```bash
-find system -name "*.php" | wc -l                     # 122 files
-find system -name "*.php" -exec cat {} + | wc -l      # ~16,000 lines (~570 KB)
+find system -name "*.php" | wc -l                     # 124 files
+find system -name "*.php" -exec cat {} + | wc -l      # ~16,000 lines (~580 KB)
 ```
 
 **Fresh Starter Skeleton Footprint (`release` branch)**:
@@ -282,14 +283,13 @@ find system -name "*.php" -exec cat {} + | wc -l      # ~16,000 lines (~570 KB)
 - Zero `vendor/` directory, zero required external dependencies, zero build steps
 
 **Per-Request Resource Utilization**:  
-Executed against `public/index.php` in isolated PHP processes under production configuration with compiled views. Memory represents `memory_get_peak_usage()`; latency represents the median of 6 runs with OpCache disabled (worst-case baseline). Under standard production OpCache, response times are faster.
+Measured with `php bongo benchmark` on Windows (PHP 8.3, built-in server, PostgreSQL) with `config:cache`, `route:cache` and `view:cache`; median of 200 requests. Memory is `memory_get_peak_usage()` of one request.
 
-| Route | Execution Type | Loaded Files | Peak Memory | Latency |
-|---|---|---:|---:|---:|
-| `GET /api/health` | Plain JSON, zero DB queries | 39 | 0.45 MB | 8.5 ms |
-| `GET /login` | HTML response, layout, CSRF initialization | 47 | 0.53 MB | 9.1 ms |
-| `GET /api/products` | REST endpoint with JWT validation | 40 | 0.45 MB | 9.4 ms |
-| `GET /shop` | Product catalog with relational queries & i18n | 56 | 0.65 MB | 18.9 ms |
+| Route | Execution Type | Loaded Files | Peak Memory | OpCache off | OpCache on |
+|---|---|---:|---:|---:|---:|
+| `GET /login` | HTML page, session, CSRF | 34 | 0.69 MB | 28.3 ms | 6.8 ms |
+| `GET /api/health` | JSON with rate limiter | 24 | 0.67 MB | 26.2 ms | 13.0 ms |
+| `GET /shop` | Product catalog, 3 queries | 45 | 0.83 MB | 119.7 ms | 85.7 ms (13.4 ms with `DB_PERSISTENT=true`) |
 
 **Configuration Cache Benchmark (`php bongo config:cache`)**:  
 Bootstrap compilation reduced framework initialization latency from 17.3 ms to 11.1 ms across 15 median test cycles.
