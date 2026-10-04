@@ -3171,11 +3171,12 @@ UniSharp-style web file manager and embedded professional code editor with **zer
 
 * **Install:** `php bongo add file-manager`
 * **Features:**
-  * **UniSharp File Manager Compatible UI:** Dark slate navigation header, responsive sidebar with collapsible directory tree, breadcrumb navigation, and live search.
-  * **Thumbnails & List Views:** Instant toggle between card grid (with sky-blue SVG folder icons, crisp image previews, and distinct teal selection highlight) and detailed data table (Name, Size, Type, Date Modified, Actions).
+  * **UniSharp File Manager Compatible UI:** Dark slate `#2b3d51` navigation header, responsive sidebar with active directory highlighted, collapsible directory tree, breadcrumb navigation, live search, and sliding mobile control drawer.
+  * **Thumbnails & List Views:** Instant toggle between card grid (with sky-blue SVG folder icons, crisp image preview cards, and teal `#16a085` selection highlight) and detailed data table (Name, Size, Type, Date Modified, Actions).
+  * **High-Speed Cached Thumbnails (`/filemanager/thumb`):** Dynamic image thumbnails generated via GD `imagecopyresampled()`, cached under `storage/cache/filemanager_thumbs/` as WebP (or JPEG fallback), preserving PNG/WebP alpha transparency with HTTP 304 and ETag caching headers.
   * **Floating Action Button (FAB) Speed Dial:** Quick action dial in the bottom right corner for one-click multi-file uploads (with full-workspace drag & drop overlay) and subfolder creation.
   * **Embedded Professional Code Editor:** In-browser CodeMirror editor supporting syntax highlighting for PHP, JavaScript, CSS, HTML, SQL, Markdown, YAML, JSON, and XML. Includes Dracula dark and Eclipse light themes, bracket matching, line counts, and `Ctrl+S` / `Cmd+S` keyboard shortcuts.
-  * **High-Resolution Lightbox:** Pixel-perfect image preview modal with natural dimensions (`width × height`), file size display, and direct download.
+  * **High-Resolution Lightbox:** Image preview modal with natural dimensions (`width × height`), file size display, and direct download.
   * **WYSIWYG & Form Input Integration:** Standalone JavaScript connector for form input file pickers, image previews, TinyMCE, CKEditor, and Summernote.
   * **Enterprise Security:** Path traversal sanitization (`..` stripping, null-byte poisoning mitigation), extension whitelisting, MIME verification, and optional read-only mode.
 
