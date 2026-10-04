@@ -39,9 +39,10 @@
   - `System\Data\Spreadsheet`: Unified CSV and OpenXML Excel (`.xlsx`) import and export engine with UTF-8 BOM, automatic format detection, and streaming downloads.
   - `System\Data\Printable`: Responsive, print-ready document and vector PDF engine with `@media print` CSS, native browser print/PDF trigger, and headless browser PDF compilation bridge (Chrome/Edge/Chromium/wkhtmltopdf) ensuring 100% pixel-perfect Bengali and Indic font ligatures and vowel rendering.
 
-## Review & Privacy Policy
-- **Gitignore Review Files**: Files created specifically for AI/internal reviews (e.g. `CLAUDE.md`, `*claude*review*`) MUST remain in `.gitignore` and untracked from Git to protect company privacy and avoid exposing internal review artifacts publicly on GitHub.
+## Review & Documentation Tracking Policy
+- **Testing & Pre-Release Tracking**: During the active testing stage prior to public production release, `CLAUDE.md` is tracked in the repository to maintain memory continuity across AI agents and internal developers.
 
-## Documentation & Memory Policy (CRITICAL - HIGH PRIORITY)
+## Documentation & Configuration Policy (CRITICAL - HIGH PRIORITY)
 - **Always Synchronize Docs**: Whenever ANY code change, feature, optimization, or bug fix is made, updating all relevant documentation files (`DOCUMENTATION.md`, `README.md`, `WHY_BONGO.md`, `CHANGELOG.md`, `CLAUDE.md`, and `GEMINI.md`) is **MANDATORY AND HIGH PRIORITY**.
+- **Always Maintain `.env.example`**: Whenever any configuration option, environment variable, driver, or system setting is introduced or updated, `.env.example` MUST be updated immediately with clear comments and sensible defaults so users and developers understand how to configure every framework capability.
 - **Cross-Agent Memory Continuity**: Keeping markdown memory files synchronized ensures other AI agents and human developers immediately inherit accurate architecture, rules, and implementation status.
