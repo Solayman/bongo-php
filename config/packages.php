@@ -23,4 +23,7 @@ return [
     // 's3',             // S3 / Spaces / R2 storage disk
     // 'social-login',   // Google / Facebook / GitHub login
     // 'stripe',         // Stripe international payments (cards, Apple Pay, webhooks)
+    // 'two-factor',     // RFC 6238 TOTP two-factor auth + pure-PHP SVG QR codes
+    // 'image',          // Pure-PHP image manipulation, cropping, filters, and WebP
+    // 'backup',         // Zero-dependency database and asset backup engine
 ];
