@@ -22,10 +22,11 @@
   - `sync`: Executes jobs immediately inline.
   - `database`: Uses `jobs` table with row locking.
   - `redis`: High-throughput Redis lists and delayed sorted sets (`QUEUE_DRIVER=redis`).
-- **Supported Database Drivers**:
+- **Supported Database Drivers & Multi-Database Architecture**:
   - `mysql`: Default enterprise MySQL/MariaDB driver.
   - `sqlite`: Zero-configuration file database (`database.sqlite`).
   - `pgsql`: Native PostgreSQL driver with `PostgresGrammar` DDL, `BIGSERIAL`, `JSONB`, `BOOLEAN`, schema search paths, double-quote identifier escaping, atomic `RETURNING "id"`, and `ON CONFLICT` upsert.
+  - **Simultaneous Multi-Database & Multi-Tenancy**: Full support for concurrent querying of multiple named connections in the same request via `DB::connection('name')`, isolated per-connection transaction lifecycles and savepoints (`$conn->transaction(fn() => ...)`), model routing (`protected static ?string $connection = 'name';` and `Model::on('name')`), cross-database relationships, connection-scoped schemas (`Schema::connection('name')`), dynamic runtime connection registration (`Connection::addConnection()`), and migration CLI targeting (`php bongo migrate --database=name`).
 - **Storage Subsystem**:
   - Multi-disk isolation (`config/storage.php`): `'public'` (`public/storage`) and private `'local'` (`storage/app`).
   - Safe streaming downloads via `Storage::download()` and `System\Storage\DownloadResponse`.

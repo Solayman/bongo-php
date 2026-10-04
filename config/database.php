@@ -33,6 +33,13 @@ return [
             'schema' => env('DB_SCHEMA', 'public'),
             'sslmode' => env('DB_SSLMODE', 'prefer'),
         ],
+
+        // Simultaneous Multi-Database: Add any number of named connections here
+        // Query them via DB::connection('name'), Model::on('name'), or Schema::connection('name')
+        'secondary' => [
+            'driver' => 'sqlite',
+            'database' => env('DB_SECONDARY_PATH', BASE_PATH . '/database/secondary.sqlite'),
+        ],
     ],
 
     // Used by CACHE_DRIVER=redis and SESSION_DRIVER=redis (needs the "redis" PHP extension)

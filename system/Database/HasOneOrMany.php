@@ -18,6 +18,9 @@ abstract class HasOneOrMany extends Relation
     public function create(array $attributes): Model
     {
         $model = new $this->related($attributes);
+        if ($this->query->getConnection() !== null) {
+            $model->setConnection($this->query->getConnection());
+        }
         $model->setAttribute($this->foreignKey, $this->parent->getAttribute($this->otherKey));
         $model->save();
         return $model;
@@ -27,7 +30,11 @@ abstract class HasOneOrMany extends Relation
     {
         $byParent = [];
         if ($keys = self::keysOf($models, $this->otherKey)) {
-            foreach (($this->related)::query()->whereIn($this->foreignKey, $keys)->get() as $child) {
+            $query = ($this->related)::query();
+            if ($this->query->getConnection() !== null && ($this->related)::getConnectionName() === null) {
+                $query->setConnection($this->query->getConnection());
+            }
+            foreach ($query->whereIn($this->foreignKey, $keys)->get() as $child) {
                 $key = $child->getAttribute($this->foreignKey);
                 if ($this->one) $byParent[$key] ??= $child;
                 else $byParent[$key][] = $child;

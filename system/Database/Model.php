@@ -26,12 +26,30 @@ class Model implements \JsonSerializable
 {
     protected static $table = null;
     protected static string $primaryKey = 'id';
+    /** Name of the database connection from config/database.php (null = default) */
+    protected static ?string $connection = null;
     /** true: delete() sets deleted_at instead of removing the row, and queries skip those rows */
     protected static bool $softDeletes = false;
 
     public static function usesSoftDeletes(): bool
     {
         return static::$softDeletes;
+    }
+
+    /** Target a specific database connection for queries: Model::on('tenant')->get() */
+    public static function on(?string $connection): QueryBuilder
+    {
+        return static::query()->setConnection($connection);
+    }
+
+    public static function getConnectionName(): ?string
+    {
+        return static::$connection;
+    }
+
+    public static function setConnectionName(?string $name): void
+    {
+        static::$connection = $name;
     }
 
     /** Model::withTrashed()->get(), Model::onlyTrashed()->get() */
@@ -58,6 +76,7 @@ class Model implements \JsonSerializable
     protected array $fillable = [];
     /** Columns create()/fill() must never set */
     protected array $guarded = ['id'];
+    protected ?string $connectionName = null;
     /** Columns left out of toArray()/JSON (e.g. password) */
     protected array $hidden = [];
     /** column => int|float|bool|string|array|json */
@@ -101,7 +120,11 @@ class Model implements \JsonSerializable
     /** A query builder that returns instances of this model */
     public static function query(): QueryBuilder
     {
-        return (new QueryBuilder(static::tableName()))->setModel(static::class);
+        $builder = (new QueryBuilder(static::tableName()))->setModel(static::class);
+        if (static::$connection !== null) {
+            $builder->setConnection(static::$connection);
+        }
+        return $builder;
     }
 
     public static function where($column, $operator = null, $value = null): QueryBuilder
@@ -148,6 +171,9 @@ class Model implements \JsonSerializable
     public static function create(array $attributes): static
     {
         $model = new static($attributes);
+        if (static::$connection !== null) {
+            $model->setConnection(static::$connection);
+        }
         $model->save();
         return $model;
     }
@@ -244,6 +270,18 @@ class Model implements \JsonSerializable
         return $this->attributes[static::$primaryKey] ?? null;
     }
 
+    /** Connection used by this specific model instance (null = class static $connection or default) */
+    public function getConnection(): ?string
+    {
+        return $this->connectionName ?? static::$connection;
+    }
+
+    public function setConnection(?string $name): static
+    {
+        $this->connectionName = $name;
+        return $this;
+    }
+
     /** Changed columns since the model was loaded or saved */
     public function getDirty(): array
     {
@@ -274,7 +312,11 @@ class Model implements \JsonSerializable
     /** A plain query for this row only (no model hydration, no soft-delete filter) */
     protected function keyQuery(): QueryBuilder
     {
-        return (new QueryBuilder(static::tableName()))->where(static::$primaryKey, $this->getKey());
+        $builder = (new QueryBuilder(static::tableName()))->where(static::$primaryKey, $this->getKey());
+        if ($this->getConnection() !== null) {
+            $builder->setConnection($this->getConnection());
+        }
+        return $builder;
     }
 
     /**
@@ -302,7 +344,11 @@ class Model implements \JsonSerializable
             if ($this->fireEvent('creating') === false) {
                 return false;
             }
-            $id = (new QueryBuilder(static::tableName()))->insertGetId($this->attributes, static::$primaryKey);
+            $builder = new QueryBuilder(static::tableName());
+            if ($this->getConnection() !== null) {
+                $builder->setConnection($this->getConnection());
+            }
+            $id = $builder->insertGetId($this->attributes, static::$primaryKey);
             if ($id && !isset($this->attributes[static::$primaryKey])) {
                 $this->attributes[static::$primaryKey] = $id;
             }
