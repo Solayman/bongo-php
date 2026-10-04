@@ -26,4 +26,9 @@ return [
     // 'two-factor',     // RFC 6238 TOTP two-factor auth + pure-PHP SVG QR codes
     // 'image',          // Pure-PHP image manipulation, cropping, filters, and WebP
     // 'backup',         // Zero-dependency database and asset backup engine
+    // 'permission',     // Role-Based Access Control (RBAC) and permissions management
+    // 'zip',            // Pure-PHP ZIP compression, extraction, and streaming download
+    // 'ftp',            // Zero-dependency FTP and FTPS driver for Storage facade
+    // 'paypal',         // PayPal REST API v2 Checkout, orders, refunds, and webhooks
+    // 'api-tools',      // API Resources (JSON transformers), OpenAPI 3.0 docs, rate limiting
 ];

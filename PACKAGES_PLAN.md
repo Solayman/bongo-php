@@ -195,7 +195,7 @@ Later: GitHub Actions runs every package's tests on each push and on each core c
 **Phase D (after 1.0)**
 paypal, admin-panel, api-tools, two-factor, backup, image, docker.
 
-### Completed Official Packages (10 Packages, 85 Tests Passing)
+### Completed Official Packages (15 Packages, 125 Tests Passing)
 | Package | Description | Status |
 |---|---|---|
 | `sslcommerz` | SSLCommerz payment gateway | ✔ Done (v1.0.0, 4 tests) |
@@ -208,13 +208,16 @@ paypal, admin-panel, api-tools, two-factor, backup, image, docker.
 | `two-factor` | RFC 6238 TOTP 2FA + SVG QR codes & recovery | ✔ Done (v1.0.0, 9 tests) |
 | `image` | Pure-PHP GD image manipulation, cropping, WebP | ✔ Done (v1.0.0, 17 tests) |
 | `backup` | Zero-dependency database & asset backup engine | ✔ Done (v1.0.0, 6 tests) |
+| `permission` | Role-Based Access Control (RBAC) & permissions | ✔ Done (v1.0.0, 8 tests) |
+| `zip` | Pure-PHP ZIP compression, extraction & inspection | ✔ Done (v1.0.0, 7 tests) |
+| `ftp` | Zero-dependency FTP & FTPS storage disk | ✔ Done (v1.0.0, 4 tests) |
+| `paypal` | PayPal REST API v2 Checkout, orders, refunds & webhooks | ✔ Done (v1.0.0, 10 tests) |
+| `api-tools` | API Resources, OpenAPI 3.0 docs & rate limiting | ✔ Done (v1.0.0, 11 tests) |
 
 ### Candidates for future packages
 | Package | Why it waits |
 |---|---|
-| `paypal` | International payment gateway |
 | `admin-panel` | Large; needs a stable 1.0 API first |
-| `api-tools` (resources, versioning, docs) | Nice to have; core JSON responses are enough for now |
 | `docker` | Most target users deploy on shared hosting |
 
 ### Never packages
