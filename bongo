@@ -541,7 +541,12 @@ try {
                 'test [filter]' => 'Run the tests in tests/',
                 'help' => 'Show this help',
             ];
+            $builtIn = array_map(fn($usage) => strtok($usage, ' '), array_keys($help));
             foreach (loadCustomCommands() as $customName => $customCmd) {
+                if (in_array($customName, $builtIn, true)) {
+                    fwrite(STDERR, "app/Commands: \"$customName\" has the name of a built-in command and never runs. Rename it." . PHP_EOL);
+                    continue;
+                }
                 $help[$customName] = $customCmd->getDescription() ?: 'Custom application command';
             }
             if (is_file(BASE_PATH . '/release/tools/commands.php')) {
@@ -587,17 +592,19 @@ function loadCustomCommands(): array
         return [];
     }
     foreach (glob($dir . '/*.php') ?: [] as $file) {
-        require_once $file;
-        $class = 'App\\Commands\\' . basename($file, '.php');
-        if (class_exists($class) && is_subclass_of($class, System\Console\Command::class)) {
-            $ref = new ReflectionClass($class);
-            if (!$ref->isAbstract()) {
+        // One broken command file must not break every other command
+        try {
+            require_once $file;
+            $class = 'App\\Commands\\' . basename($file, '.php');
+            if (class_exists($class) && is_subclass_of($class, System\Console\Command::class) && !(new ReflectionClass($class))->isAbstract()) {
                 /** @var System\Console\Command $instance */
                 $instance = new $class();
                 if ($instance->getName() !== '') {
                     $commands[$instance->getName()] = $instance;
                 }
             }
+        } catch (Throwable $e) {
+            fwrite(STDERR, "Skipped app/Commands/" . basename($file) . ': ' . get_class($e) . ': ' . $e->getMessage() . PHP_EOL);
         }
     }
     return $commands;
