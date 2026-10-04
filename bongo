@@ -1,7 +1,13 @@
 #!/usr/bin/env php
 <?php
-// BongoMVC command line tool: php bongo <command>
+// Bongo command line tool: php bongo <command>
 
+// Tests and config:* always read config/*.php, never a cached copy (a cached
+// DB_DATABASE would point the tests at the real database)
+if (in_array($_SERVER['argv'][1] ?? '', ['test', 'config:cache', 'config:clear', 'route:cache', 'route:clear'], true)) {
+    putenv('BONGO_CONFIG_CACHE=0');
+    putenv('BONGO_ROUTE_CACHE=0');
+}
 require __DIR__ . '/config/bootstrap.php';
 
 use System\Database\Migrator;
@@ -17,24 +23,31 @@ $optionValue = function (string $name, $default = null) use ($options) {
     return $default;
 };
 
+$databaseOption = $optionValue('database');
+$migrator = fn(?string $conn = null) => new Migrator(base_path('database/migrations'), $conn ?? $databaseOption);
+
 try {
     switch ($command) {
         case '--version':
         case '-V':
-            echo 'BongoMVC ' . System\Framework::version() . PHP_EOL;
+            echo 'Bongo ' . System\Framework::version() . PHP_EOL;
             break;
 
         case 'release:package':
-            $path = (new System\Console\Upgrader(BASE_PATH))->package((string) $optionValue('out', BASE_PATH . '/dist'));
-            echo 'Package: ' . relativePath($path) . PHP_EOL . 'Checksum: ' . relativePath($path) . '.sha256' . PHP_EOL;
-            echo 'Attach both files to a GitHub release tagged v' . System\Framework::version() . ', e.g.:' . PHP_EOL;
-            echo '  gh release create v' . System\Framework::version() . ' ' . relativePath($path) . ' ' . relativePath($path) . '.sha256 --notes "What changed"' . PHP_EOL;
+        case 'release:branch':
+        case 'release:build':
+            // Maintainer tools: only in the framework repository, not in projects
+            if (!is_file(BASE_PATH . '/release/tools/commands.php')) {
+                throw new RuntimeException("$command is a maintainer tool of the Bongo repository; projects don't include it.");
+            }
+            require_once BASE_PATH . '/release/tools/commands.php';
+            runReleaseCommand($command, $options, $optionValue);
             break;
 
         case 'upgrade':
             $upgrader = new System\Console\Upgrader(BASE_PATH);
             if ($hasOption('rollback')) {
-                echo 'Restored BongoMVC ' . $upgrader->rollback() . ' from the backup.' . PHP_EOL;
+                echo 'Restored Bongo ' . $upgrader->rollback() . ' from the backup.' . PHP_EOL;
                 break;
             }
             $sha = null;
@@ -66,29 +79,30 @@ try {
                 $sha = strtok($upgrader->download($shaUrl), ' ');
             }
             $result = $upgrader->apply($package, $sha);
-            echo "Upgraded BongoMVC {$result['from']} → {$result['to']} ({$result['files']} framework files)." . PHP_EOL;
-            echo 'Backup: ' . relativePath($result['backup']) . '   (undo with: php bongo upgrade --rollback)' . PHP_EOL;
+            echo "Upgraded Bongo {$result['from']} → {$result['to']} ({$result['files']} framework files)." . PHP_EOL;
+            echo 'Backup: ' . relative_path($result['backup']) . '   (undo with: php bongo upgrade --rollback)' . PHP_EOL;
             foreach ($result['newConfig'] as $file => $keys) {
                 echo "New settings in config/$file: " . implode(', ', $keys) . ' (copy them from the release, or keep the defaults)' . PHP_EOL;
             }
             echo 'Next: php bongo migrate, then php bongo test' . PHP_EOL;
             break;
 
-        case 'release:build':
-            $target = $options[0] ?? '';
-            if ($target === '' || str_starts_with($target, '--')) {
-                echo "Usage: php bongo release:build <folder>   e.g. php bongo release:build ../my-app\n";
-                exit(1);
-            }
-            $count = (new System\Console\ReleaseBuilder(BASE_PATH))->build($target);
-            echo "Built a fresh BongoMVC " . System\Framework::version() . " project in $target ($count files)." . PHP_EOL;
-            echo "Next: cd $target, copy .env.example to .env, then php bongo key:generate, php bongo migrate, php bongo serve" . PHP_EOL;
+        case 'down':
+            $secret = $optionValue('secret');
+            System\Http\Maintenance::down((string) $optionValue('message', ''), (int) $optionValue('retry', 60), $secret);
+            echo "The site is in maintenance mode: visitors see \"We'll be back soon\" (HTTP 503)." . PHP_EOL;
+            if ($secret) echo 'Visit ' . url('/' . trim($secret, '/')) . ' once to keep using the site in your browser.' . PHP_EOL;
+            echo 'Turn it off with: php bongo up' . PHP_EOL;
+            break;
+
+        case 'up':
+            echo System\Http\Maintenance::up() ? 'The site is live again.' . PHP_EOL : 'The site was not in maintenance mode.' . PHP_EOL;
             break;
 
         case 'about':
             $size = System\Framework::size();
             $rows = [
-                'BongoMVC'      => System\Framework::version(),
+                'Bongo'      => System\Framework::version(),
                 'PHP'           => PHP_VERSION,
                 'Environment'   => (string) config('app.env') . (config('app.debug') ? ' (debug on)' : ''),
                 'URL'           => (string) config('app.url'),
@@ -121,12 +135,12 @@ try {
             break;
 
         case 'migrate':
-            $done = (new Migrator(base_path('database/migrations')))->migrate(fn($name) => print("Migrated: $name\n"));
+            $done = $migrator()->migrate(fn($name) => print("Migrated: $name\n"));
             echo $done ? "Done.\n" : "Nothing to migrate.\n";
             break;
 
         case 'migrate:status':
-            $rows = (new Migrator(base_path('database/migrations')))->status();
+            $rows = $migrator()->status();
             if (!$rows) {
                 echo "No migrations found.\n";
                 break;
@@ -144,7 +158,7 @@ try {
 
         case 'migrate:rollback':
             $steps = (int) $optionValue('step', 1);
-            $done = (new Migrator(base_path('database/migrations')))->rollback($steps, fn($name) => print("Rolled back: $name\n"));
+            $done = $migrator()->rollback($steps, fn($name) => print("Rolled back: $name\n"));
             echo $done ? "Done.\n" : "Nothing to roll back.\n";
             break;
 
@@ -153,29 +167,30 @@ try {
                 echo "Usage: php bongo make:migration create_posts_table\n";
                 exit(1);
             }
-            $file = (new Migrator(base_path('database/migrations')))->make($options[0]);
-            echo 'Created: ' . relativePath($file) . PHP_EOL;
+            $file = $migrator()->make($options[0]);
+            echo 'Created: ' . relative_path($file) . PHP_EOL;
             break;
 
         case 'migrate:fresh':
-            $database = config('database.connections.' . config('database.default') . '.database');
+            $targetConn = $databaseOption ?? config('database.default');
+            $database = config("database.connections.{$targetConn}.database");
             if (!$hasOption('force')) {
-                echo "This drops ALL tables in database [$database]. Type the database name to continue: ";
-                if (trim((string) fgets(STDIN)) !== $database) {
+                echo "This drops ALL tables in database [$database] (connection: $targetConn). Type the database name to continue: ";
+                if (trim((string) fgets(STDIN)) !== (string) $database) {
                     echo "Cancelled.\n";
                     exit(1);
                 }
             }
-            $migrator = new Migrator(base_path('database/migrations'));
-            foreach ($migrator->dropAllTables() as $table) echo "Dropped: $table\n";
-            $migrator->migrate(fn($name) => print("Migrated: $name\n"));
+            $freshMigrator = $migrator($targetConn);
+            foreach ($freshMigrator->dropAllTables() as $table) echo "Dropped: $table\n";
+            $freshMigrator->migrate(fn($name) => print("Migrated: $name\n"));
             if ($hasOption('seed')) {
-                runSeeder();
+                runSeeder($targetConn);
             }
             break;
 
         case 'db:seed':
-            runSeeder();
+            runSeeder($databaseOption);
             break;
 
         case 'key:generate':
@@ -229,7 +244,7 @@ try {
             break;
 
         case 'tinker':
-            echo "BongoMVC tinker. The app is loaded: try DB::table('users')->count(), config('app'), Hash::make('x').\n";
+            echo "Bongo tinker. The app is loaded: try DB::table('users')->count(), config('app'), Hash::make('x').\n";
             echo "Type exit to quit.\n";
             foreach (['DB' => System\Database\DB::class, 'Schema' => System\Database\Schema\Schema::class, 'Log' => System\Log\Log::class,
                       'Hash' => System\Security\Hash::class, 'Crypt' => System\Security\Crypt::class, 'Auth' => System\Auth\Auth::class] as $alias => $class) {
@@ -257,6 +272,13 @@ try {
         case 'make:middleware':
         case 'make:request':
         case 'make:test':
+        case 'make:policy':
+        case 'make:job':
+        case 'make:component':
+        case 'make:seeder':
+        case 'make:notification':
+        case 'make:mail':
+        case 'make:command':
             $name = $options[0] ?? '';
             if ($name === '' || str_starts_with($name, '--')) {
                 $flags = ['make:controller' => ' [--api]', 'make:model' => ' [--migration]', 'make:test' => ' [--unit]'];
@@ -270,12 +292,19 @@ try {
                 'make:middleware' => $generator->middleware($name),
                 'make:request'    => $generator->request($name),
                 'make:test'       => $generator->test($name, $hasOption('unit')),
+                'make:policy'     => $generator->policy($name),
+                'make:job'        => $generator->job($name),
+                'make:component'  => $generator->component($name),
+                'make:seeder'     => $generator->seeder($name),
+                'make:notification' => $generator->notification($name),
+                'make:mail'       => $generator->mail($name),
+                'make:command'    => $generator->command($name),
             };
             echo "Created: $created" . PHP_EOL;
             if ($command === 'make:model' && $hasOption('migration')) {
                 $table = $generator->tableName(basename(strtr($name, '\\', '/')));
-                $file = (new Migrator(base_path('database/migrations')))->make("create_{$table}_table");
-                echo 'Created: ' . relativePath($file) . PHP_EOL;
+                $file = $migrator()->make("create_{$table}_table");
+                echo 'Created: ' . relative_path($file) . PHP_EOL;
             }
             break;
 
@@ -349,8 +378,32 @@ try {
             }
             exit($failed ? 1 : 0);
 
+        case 'schedule:work':
+            // For development: no cron needed. Each minute runs "schedule:run" in a fresh process,
+            // so code changes are picked up and a crashing task can't stop the loop.
+            echo 'Running the scheduler every minute. Press Ctrl+C to stop.' . PHP_EOL;
+            $minutes = (int) $optionValue('minutes', 0);   // --minutes=N: stop after N runs (0 = forever)
+            for ($run = 1; $minutes === 0 || $run <= $minutes; $run++) {
+                $wait = 60 - (int) date('s');
+                if ($run > 1 || $hasOption('wait')) sleep($wait);
+                passthru(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(__FILE__) . ' schedule:run');
+            }
+            break;
+
+        case 'websocket:serve':
+            // Live updates for open pages: Broadcast::to('orders')->send(...) arrives in the browser
+            $server = new System\Broadcasting\Server(
+                (string) $optionValue('host', config('broadcasting.host', '127.0.0.1')),
+                (int) $optionValue('port', config('broadcasting.port', 6001)),
+                (array) config('broadcasting.allowed_origins', [])
+            );
+            $server->listen();
+            echo 'Browsers connect to ' . System\Broadcasting\Broadcast::publicUrl() . '. Press Ctrl+C to stop.' . PHP_EOL;
+            $server->run();
+            break;
+
         case 'schedule:list':
-            $tasks = System\Scheduling\Schedule::load()->tasks();
+            $tasks =System\Scheduling\Schedule::load()->tasks();
             $now = new DateTimeImmutable();
             $width = max(array_map(fn($t) => strlen($t->getName()), $tasks)) + 2;
             printf("%-15s %-{$width}s %s%s", 'Cron', 'Task', 'Next run', PHP_EOL);
@@ -361,6 +414,46 @@ try {
 
         case 'cache:clear':
             echo 'Removed ' . System\Cache\Cache::flush() . ' cache file(s)' . PHP_EOL;
+            break;
+
+        case 'config:cache':
+            // One file instead of every config/*.php on each request. Values must be plain data.
+            $check = function ($value, string $path) use (&$check) {
+                if (is_array($value)) {
+                    foreach ($value as $key => $item) $check($item, "$path.$key");
+                } elseif (!is_scalar($value) && $value !== null) {
+                    throw new RuntimeException("config('$path') is not plain data (" . get_debug_type($value) . '), so the config cannot be cached.');
+                }
+            };
+            $config = load_config_files();
+            $check($config, 'config');
+            if (!is_dir(dirname(CONFIG_CACHE))) mkdir(dirname(CONFIG_CACHE), 0775, true);
+            $tmp = CONFIG_CACHE . '.' . bin2hex(random_bytes(4));
+            file_put_contents($tmp, "<?php\n// Made by php bongo config:cache. Run it again after changing config/ or .env (or: php bongo config:clear)\nreturn " . var_export($config, true) . ";\n");
+            rename($tmp, CONFIG_CACHE);
+            if (function_exists('opcache_invalidate')) @opcache_invalidate(CONFIG_CACHE, true);
+            echo 'Config cached in ' . relative_path(CONFIG_CACHE) . '. Run php bongo config:cache again after changing config/ or .env.' . PHP_EOL;
+            break;
+
+        case 'config:clear':
+            echo is_file(CONFIG_CACHE) && unlink(CONFIG_CACHE) ? 'Config cache removed: config/*.php is read on every request again.' : 'No config cache.';
+            echo PHP_EOL;
+            break;
+
+        case 'route:cache':
+            $router = System\Routing\Router::fromConfig();
+            $data = $router->toCache();
+            if (!is_dir(dirname(ROUTE_CACHE))) mkdir(dirname(ROUTE_CACHE), 0775, true);
+            $tmp = ROUTE_CACHE . '.' . bin2hex(random_bytes(4));
+            file_put_contents($tmp, "<?php\n// Made by php bongo route:cache. Run it again after changing routes/ (or: php bongo route:clear)\nreturn " . var_export($data, true) . ";\n");
+            rename($tmp, ROUTE_CACHE);
+            if (function_exists('opcache_invalidate')) @opcache_invalidate(ROUTE_CACHE, true);
+            echo 'Routes cached in ' . relative_path(ROUTE_CACHE) . ' (' . count($data['routes']) . ' routes). Run php bongo route:cache again after changing routes.' . PHP_EOL;
+            break;
+
+        case 'route:clear':
+            echo is_file(ROUTE_CACHE) && unlink(ROUTE_CACHE) ? 'Route cache removed: routes/ is read on every request again.' : 'No route cache.';
+            echo PHP_EOL;
             break;
 
         case 'view:cache':
@@ -394,71 +487,130 @@ try {
 
         case 'help':
         default:
-            echo 'BongoMVC ' . System\Framework::version() . " commands:\n";
-            echo "  about                                    Version, PHP, environment, drivers and framework size\n";
-            echo "  release:build <folder>                   Build a fresh project (framework + starter files, no demo app)\n";
-            echo "  release:package [--out=dist]             Build the framework package for a GitHub release\n";
-            echo "  upgrade [--check|--from=file|--rollback] Update the framework files only (backup first)\n";
-            echo "  serve [--port=8000] [--host=127.0.0.1]  Start the development server\n";
-            echo "  migrate                                  Run pending database/migrations/*.php\n";
-            echo "  migrate:status                           Show which migrations have run (and their batch)\n";
-            echo "  migrate:rollback [--step=1]              Undo the last batch(es) of migrations\n";
-            echo "  make:migration <name>                    Create a migration file, e.g. create_posts_table\n";
-            echo "  migrate:fresh [--force] [--seed]         Drop all tables, migrate (and seed)\n";
-            echo "  db:seed                                  Run database/seeders/DatabaseSeeder.php\n";
-            echo "  key:generate [--show] [--force]          Create APP_KEY in .env (password pepper + encryption)\n";
-            echo "  route:list [filter]                      Show every route with its name, action and middleware
-";
-            echo "  tinker                                   Interactive PHP shell with the app loaded
-";
-            echo "  make:controller <Name> [--api]           Create a controller in app/Http/Controllers
-";
-            echo "  make:model <Name> [--migration]          Create a model (and its migration)
-";
-            echo "  make:middleware <Name>                   Create a middleware class
-";
-            echo "  make:request <Name>                      Create a form request (rules + authorize) in app/Http/Requests" . PHP_EOL;
-            echo "  make:test <Name> [--unit]                Create a feature (or unit) test
-";
-            echo "  security:check                           Deployment security checklist (exit 1 on failures)
-";
-            echo "  queue:work [--once] [--stop-when-empty]   Run queued jobs (QUEUE_DRIVER=database)
-";
-            echo "  queue:failed / queue:retry <id|all>      List / retry failed jobs
-";
-            echo "  queue:flush                              Delete all failed jobs
-";
-            echo "  schedule:run                             Run due scheduled tasks (call it every minute)
-";
-            echo "  schedule:list                            Show scheduled tasks and their next run
-";
-            echo "  cache:clear                              Delete everything in the file cache
-";
-            echo "  view:cache                               Precompile and lint every template (run on deploy)" . PHP_EOL;
-            echo "  view:clear                               Delete compiled templates in storage/cache/views
-";
-            echo "  log:clear                                Delete the log files in storage/logs
-";
-            echo "  test [filter]                            Run the tests in tests/\n";
-            echo "  help                                     Show this help\n";
+            $custom = loadCustomCommands();
+            if ($command !== 'help' && isset($custom[$command])) {
+                $status = $custom[$command]->handle($options, parseCommandOptions($options));
+                exit((int) $status);
+            }
+            if ($command !== 'help') {
+                echo "Unknown command: $command\n\n";
+            }
+            $help = [
+                'about' => 'Version, PHP, environment, drivers and framework size',
+                'serve [--port=8000] [--host=127.0.0.1]' => 'Start the development server',
+                'down [--message=] [--retry=60] [--secret=]' => 'Maintenance mode: visitors see "back soon" (503)',
+                'up' => 'Leave maintenance mode',
+                'upgrade [--check|--from=file|--rollback]' => 'Update the framework files only (backup first)',
+                'migrate [--database=]' => 'Run pending database/migrations/*.php',
+                'migrate:status [--database=]' => 'Show which migrations have run (and their batch)',
+                'migrate:rollback [--step=1] [--database=]' => 'Undo the last batch(es) of migrations',
+                'migrate:fresh [--force] [--seed] [--database=]' => 'Drop all tables, migrate (and seed)',
+                'make:migration <name>' => 'Create a migration file, e.g. create_posts_table',
+                'db:seed [--database=]' => 'Run database/seeders/DatabaseSeeder.php',
+                'key:generate [--show] [--force]' => 'Create APP_KEY in .env (password pepper + encryption)',
+                'route:list [filter]' => 'Show every route with its name, action and middleware',
+                'tinker' => 'Interactive PHP shell with the app loaded',
+                'make:controller <Name> [--api]' => 'Create a controller in app/Http/Controllers',
+                'make:model <Name> [--migration]' => 'Create a model (and its migration)',
+                'make:middleware <Name>' => 'Create a middleware class',
+                'make:request <Name>' => 'Create a form request (rules + authorize) in app/Http/Requests',
+                'make:policy <Name>' => 'Create a policy in app/Policies (who may update/delete)',
+                'make:job <Name>' => 'Create a queued job in app/Jobs',
+                'make:component <name>' => 'Create a view component: resources/views/components (<x-name>)',
+                'make:seeder <Name>' => 'Create a seeder in database/seeders',
+                'make:notification <Name>' => 'Create a notification (mail/sms/slack) in app/Notifications',
+                'make:command <Name>' => 'Create a custom console command in app/Commands',
+                'make:mail <name>' => 'Create an email template in resources/views/emails',
+                'make:test <Name> [--unit]' => 'Create a feature (or unit) test',
+                'security:check' => 'Deployment security checklist (exit 1 on failures)',
+                'queue:work [--once] [--stop-when-empty]' => 'Run queued jobs (QUEUE_DRIVER=database)',
+                'queue:failed / queue:retry <id|all>' => 'List / retry failed jobs',
+                'queue:flush' => 'Delete all failed jobs',
+                'schedule:run' => 'Run due scheduled tasks (call it every minute)',
+                'schedule:work' => 'Run the scheduler every minute in this terminal (no cron needed)',
+                'schedule:list' => 'Show scheduled tasks and their next run',
+                'websocket:serve [--port=6001] [--host=]' => 'Live updates: push Broadcast::to(...)->send() to open pages',
+                'cache:clear' => 'Delete everything in the cache',
+                'config:cache' => 'Cache config/ and .env in one file for faster requests (run on deploy)',
+                'config:clear' => 'Remove the config cache',
+                'route:cache' => 'Cache routes into one file for faster dispatching (run on deploy)',
+                'route:clear' => 'Remove the route cache',
+                'view:cache' => 'Precompile and lint every template (run on deploy)',
+                'view:clear' => 'Delete compiled templates in storage/cache/views',
+                'log:clear' => 'Delete the log files in storage/logs',
+                'test [filter]' => 'Run the tests in tests/',
+                'help' => 'Show this help',
+            ];
+            foreach (loadCustomCommands() as $customName => $customCmd) {
+                $help[$customName] = $customCmd->getDescription() ?: 'Custom application command';
+            }
+            if (is_file(BASE_PATH . '/release/tools/commands.php')) {
+                require_once BASE_PATH . '/release/tools/commands.php';
+                $help += RELEASE_COMMANDS_HELP;
+            }
+            echo 'Bongo ' . System\Framework::version() . " commands:\n";
+            foreach ($help as $usage => $description) {
+                printf("  %-44s %s\n", $usage, $description);
+            }
             break;
+
+
     }
 } catch (Throwable $e) {
     fwrite(STDERR, get_class($e) . ': ' . $e->getMessage() . "\n");
     exit(1);
 }
 
-/** "D:\project/database\x.php" → "database/x.php" */
-function relativePath(string $file): string
-{
-    $file = str_replace('\\', '/', $file);
-    $base = str_replace('\\', '/', BASE_PATH) . '/';
-    return str_starts_with($file, $base) ? substr($file, strlen($base)) : $file;
-}
-
-function runSeeder(): void
+function runSeeder(?string $database = null): void
 {
     require_once base_path('database/seeders/DatabaseSeeder.php');
-    (new Database\Seeders\DatabaseSeeder())->run();
-    echo "Database seeded.\n";
+    $prev = System\Database\Connection::getDefaultConnection();
+    if ($database !== null) {
+        System\Database\Connection::setDefaultConnection($database);
+    }
+    try {
+        (new Database\Seeders\DatabaseSeeder())->run();
+        echo "Database seeded" . ($database ? " on connection [$database]" : "") . ".\n";
+    } finally {
+        if ($database !== null) {
+            System\Database\Connection::setDefaultConnection($prev);
+        }
+    }
+}
+
+/** @return array<string, System\Console\Command> */
+function loadCustomCommands(): array
+{
+    $commands = [];
+    $dir = BASE_PATH . '/app/Commands';
+    if (!is_dir($dir)) {
+        return [];
+    }
+    foreach (glob($dir . '/*.php') ?: [] as $file) {
+        require_once $file;
+        $class = 'App\\Commands\\' . basename($file, '.php');
+        if (class_exists($class) && is_subclass_of($class, System\Console\Command::class)) {
+            $ref = new ReflectionClass($class);
+            if (!$ref->isAbstract()) {
+                /** @var System\Console\Command $instance */
+                $instance = new $class();
+                if ($instance->getName() !== '') {
+                    $commands[$instance->getName()] = $instance;
+                }
+            }
+        }
+    }
+    return $commands;
+}
+
+function parseCommandOptions(array $rawOptions): array
+{
+    $options = [];
+    foreach ($rawOptions as $opt) {
+        if (str_starts_with($opt, '--')) {
+            $parts = explode('=', substr($opt, 2), 2);
+            $options[$parts[0]] = $parts[1] ?? true;
+        }
+    }
+    return $options;
 }

@@ -2,11 +2,14 @@
 namespace System\Database\Schema;
 
 /**
- * Describes a table's columns and indexes and compiles them to MySQL.
+ * Describes a table's columns and indexes and compiles them to MySQL or SQLite.
  * Used through Schema::create() and Schema::table().
  */
 class Blueprint
 {
+    use SqliteGrammar;
+    use PostgresGrammar;
+
     /** @var ColumnDefinition[] */
     protected array $columns = [];
     protected array $indexes = [];     // [type, columns[], name]
@@ -17,7 +20,8 @@ class Blueprint
     public string $charset = 'utf8mb4';
     public string $collation = 'utf8mb4_unicode_ci';
 
-    public function __construct(public string $table) {}
+    /** $driver: "mysql", "sqlite", or "pgsql" (Schema passes the current connection's driver) */
+    public function __construct(public string $table, public string $driver = 'mysql') {}
 
     // ------------------------------------------------------------------
     // Column types
@@ -167,6 +171,26 @@ class Blueprint
     // SQL
     // ------------------------------------------------------------------
 
+    /** Every statement Schema::create() runs, for the current driver */
+    public function toCreateStatements(): array
+    {
+        return match ($this->driver) {
+            'sqlite' => $this->sqliteCreate(),
+            'pgsql'  => $this->pgsqlCreate(),
+            default  => [$this->toCreateSql()],
+        };
+    }
+
+    /** Every statement Schema::table() runs, for the current driver */
+    public function toAlterStatements(): array
+    {
+        return match ($this->driver) {
+            'sqlite' => $this->sqliteAlter(),
+            'pgsql'  => $this->pgsqlAlter(),
+            default  => ($sql = $this->toAlterSql()) === null ? [] : [$sql],
+        };
+    }
+
     public function toCreateSql(): string
     {
         $lines = [];
@@ -267,8 +291,12 @@ class Blueprint
         return $definitions;
     }
 
-    public static function wrap(string $identifier): string
+    public static function wrap(string $identifier, ?string $driver = null): string
     {
+        $driver ??= \System\Database\Connection::driver();
+        if ($driver === 'pgsql') {
+            return '"' . str_replace('"', '""', $identifier) . '"';
+        }
         return '`' . str_replace('`', '``', $identifier) . '`';
     }
 

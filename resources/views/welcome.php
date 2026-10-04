@@ -18,7 +18,7 @@
 <body>
 <main>
     <div class="card">
-        <h1>BongoMVC</h1>
+        <h1>Bongo</h1>
         <p class="muted">Hello, {{ $name }}! Your new project is running.</p>
         <p>Next steps:</p>
         <ul>

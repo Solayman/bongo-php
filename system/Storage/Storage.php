@@ -1,85 +1,136 @@
 <?php
 namespace System\Storage;
 
+use System\Http\Response;
+
 /**
- * Public file storage in public/storage (served directly by the web server).
+ * Multi-disk file storage manager (facade).
  *
- *   Storage::put('reports/today.txt', $text);
- *   Storage::url('products/a1b2.jpg');   // http://.../storage/products/a1b2.jpg
- *   Storage::delete('products/a1b2.jpg');
+ *   Storage::disk('public')->put('products/photo.jpg', $data);
+ *   Storage::disk('local')->put('invoices/101.pdf', $pdf);     // private storage/app/
+ *   Storage::url('products/photo.jpg');                        // http://.../storage/products/photo.jpg
+ *   Storage::disk('local')->download('invoices/101.pdf');      // streaming response
  *
  * Paths are always relative and cannot leave the storage folder ("../" is rejected).
  */
 class Storage
 {
-    public static function root(): string
+    /** @var array<string, Disk> */
+    protected static array $disks = [];
+
+    /** Retrieve a disk instance by name (defaults to config('storage.default', 'public')) */
+    public static function disk(?string $name = null): Disk
     {
-        return (string) config('storage.root', BASE_PATH . '/public/storage');
+        $name ??= (string) config('storage.default', 'public');
+        if (isset(self::$disks[$name])) {
+            return self::$disks[$name];
+        }
+
+        $config = config('storage.disks.' . $name);
+        if ($config === null) {
+            if ($name === 'public') {
+                $config = [
+                    'driver' => 'local',
+                    'root' => (string) config('storage.root', BASE_PATH . '/public/storage'),
+                    'url' => asset('storage'),
+                    'visibility' => 'public',
+                ];
+            } elseif ($name === 'local') {
+                $config = [
+                    'driver' => 'local',
+                    'root' => BASE_PATH . '/storage/app',
+                    'visibility' => 'private',
+                ];
+            } else {
+                throw new \InvalidArgumentException("Storage disk [$name] is not configured.");
+            }
+        }
+
+        return self::$disks[$name] = new Disk($name, $config);
     }
 
-    /** Absolute path for a relative storage path */
+    public static function root(): string
+    {
+        return self::disk()->root();
+    }
+
     public static function path(string $relative): string
     {
-        $relative = str_replace('\\', '/', $relative);
-        if ($relative === '' || str_contains($relative, '..') || str_starts_with($relative, '/') || preg_match('/^[a-z]:/i', $relative)) {
-            throw new \InvalidArgumentException("Invalid storage path [$relative]");
-        }
-        return rtrim(self::root(), '/\\') . '/' . ltrim($relative, '/');
+        return self::disk()->path($relative);
     }
 
     public static function put(string $relative, string $contents): bool
     {
-        $file = self::path($relative);
-        self::ensureDirectory(dirname($file));
-        return file_put_contents($file, $contents) !== false;
+        return self::disk()->put($relative, $contents);
     }
 
-    /** Copy (or move, for real uploads) a local file into storage */
     public static function putFile(string $relative, string $source, bool $isUpload = false): void
     {
-        $file = self::path($relative);
-        self::ensureDirectory(dirname($file));
-        $ok = $isUpload ? move_uploaded_file($source, $file) : copy($source, $file);
-        if (!$ok) {
-            throw new \RuntimeException("Could not store the file at $relative");
-        }
+        self::disk()->putFile($relative, $source, $isUpload);
     }
 
     public static function get(string $relative): ?string
     {
-        $file = self::path($relative);
-        return is_file($file) ? file_get_contents($file) : null;
+        return self::disk()->get($relative);
     }
 
     public static function exists(string $relative): bool
     {
-        return is_file(self::path($relative));
+        return self::disk()->exists($relative);
     }
 
-    public static function delete(?string $relative): bool
+    public static function missing(string $relative): bool
     {
-        if ($relative === null || $relative === '') {
-            return false;
-        }
-        $file = self::path($relative);
-        return is_file($file) && @unlink($file);
+        return self::disk()->missing($relative);
+    }
+
+    public static function delete(string|array|null $relative): bool
+    {
+        return self::disk()->delete($relative);
     }
 
     public static function url(?string $relative): ?string
     {
-        return $relative ? asset('storage/' . ltrim(str_replace('\\', '/', $relative), '/')) : null;
+        return self::disk('public')->url($relative);
     }
 
-    protected static function ensureDirectory(string $dir): void
+    public static function download(string $relative, ?string $filename = null, array $headers = []): DownloadResponse
     {
-        if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
-            throw new \RuntimeException("Could not create storage directory $dir");
-        }
+        return self::disk()->download($relative, $filename, $headers);
+    }
 
-        // Apache: never execute scripts from the storage folder
-        $guard = rtrim(self::root(), '/\\') . '/.htaccess';
-        if (!is_file($guard)) {
-            @file_put_contents($guard, "# Uploaded files are data, never code\n<FilesMatch \"\\.(php|phtml|phar|pl|py|cgi|sh)$\">\n    Require all denied\n</FilesMatch>\nOptions -ExecCGI -Indexes\n");
-        }
+    public static function size(string $relative): int
+    {
+        return self::disk()->size($relative);
+    }
+
+    public static function lastModified(string $relative): int
+    {
+        return self::disk()->lastModified($relative);
+    }
+
+    public static function files(string $directory = ''): array
+    {
+        return self::disk()->files($directory);
+    }
+
+    public static function allFiles(string $directory = ''): array
+    {
+        return self::disk()->allFiles($directory);
+    }
+
+    public static function makeDirectory(string $directory): bool
+    {
+        return self::disk()->makeDirectory($directory);
+    }
+
+    public static function deleteDirectory(string $directory): bool
+    {
+        return self::disk()->deleteDirectory($directory);
+    }
+
+    public static function reset(): void
+    {
+        self::$disks = [];
     }
 }

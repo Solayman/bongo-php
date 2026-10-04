@@ -81,9 +81,39 @@ if (!function_exists('signed_route')) {
     }
 }
 
+if (!function_exists('relative_path')) {
+    /** "D:\project/database\x.php" → "database/x.php" (paths inside the project, for messages) */
+    function relative_path(string $file): string {
+        $file = str_replace('\\', '/', $file);
+        $base = str_replace('\\', '/', BASE_PATH) . '/';
+        return str_starts_with($file, $base) ? substr($file, strlen($base)) : $file;
+    }
+}
+
 if (!function_exists('asset')) {
     function asset($path) {
         return url($path);
+    }
+}
+
+if (!function_exists('broadcast')) {
+    /** Push a live update to open pages: broadcast('orders', 'order.created', ['id' => 5]) */
+    function broadcast(string $channel, string $event, array $data = []): int {
+        return \System\Broadcasting\Broadcast::to($channel)->send($event, $data);
+    }
+}
+
+if (!function_exists('websocket_url')) {
+    /** Where the browser connects: BongoSocket.connect('{{ websocket_url() }}') */
+    function websocket_url(): string {
+        return \System\Broadcasting\Broadcast::publicUrl();
+    }
+}
+
+if (!function_exists('channel_token')) {
+    /** Lets this page subscribe to a private- channel: socket.subscribe('private-user.5', '{{ channel_token('private-user.5') }}') */
+    function channel_token(string $channel, int $seconds = 3600): string {
+        return \System\Broadcasting\Broadcast::token($channel, $seconds);
     }
 }
 

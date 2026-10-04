@@ -1,6 +1,6 @@
-# BongoMVC Documentation
+# Bongo PHP Framework: Documentation
 
-BongoMVC is a lightweight PHP MVC framework with **zero required dependencies**. It needs no Composer and no `vendor/` folder: clone it, set `.env`, and run it. Composer packages and Node tooling are optional. If `vendor/autoload.php` exists, BongoMVC loads it; otherwise nothing changes.
+Bongo is a lightweight PHP MVC framework with **zero required dependencies**. It needs no Composer and no `vendor/` folder: clone it, set `.env`, and run it. Composer packages and Node tooling are optional. If `vendor/autoload.php` exists, Bongo loads it; otherwise nothing changes.
 
 Built in:
 
@@ -12,7 +12,8 @@ Built in:
 | Database | Query builder (row locks, grouped `orWhere`, joins, `groupBy/having`, aggregates, `pluck/value/exists`, `increment`, `chunk`, pagination), transactions with savepoints, query log, models with relations and eager loading |
 | Schema & migrations | PHP migrations with a schema builder; each run is tracked in the database; rollback |
 | Sessions | Flash messages, old input, CSRF tokens |
-| Validation & uploads | 35+ rules (dates, regex, files, `unique`, …), `items.*.field` wildcards, custom messages; safe uploads (`$file->store()`, `Storage::url()`) |
+| Validation & storage | 35+ rules (dates, regex, files, `unique`, …), `items.*.field` wildcards, custom messages; multi-disk storage (`Storage::disk('public')` vs `Storage::disk('local')`), streaming file downloads (`Storage::download()`), and safe uploads (`$file->store()`, `Storage::url()`) |
+| Spreadsheets & Documents | Unified import/export for CSV and Excel `.xlsx` (`Spreadsheet::read()`, `Spreadsheet::download()`) with UTF-8 BOM, and printable vector documents/PDFs (`Printable::invoice()`) with flawless Bangla and multilingual typography |
 | Hardening | Strict sessions with idle/absolute timeouts, trusted-proxy aware `Request::ip()`/`isSecure()`, optional CSP, `php bongo security:check` deployment checklist |
 | Auth & security | Multiple guards (session, JWT) and providers, `auth:api` middleware, own HS256 JWT with refresh and revocation, peppered Argon2id passwords, AES-256-GCM encryption, login throttling |
 | Testing | `php bongo test`: unit + HTTP tests on a separate test database |
@@ -21,9 +22,9 @@ Built in:
 | Localization | `__()`, `trans_choice()`, JSON + group translation files, `?lang=` / session / `Accept-Language`, translated validation messages; English and বাংলা included |
 | Cache & rate limits | File cache (`Cache::remember`), `throttle:60,1` middleware with rate-limit headers, `RateLimiter` |
 | Container & DI | Service container (`app()`, `bind/singleton/instance`, autowiring), controller method injection, route model binding (`edit(Product $product)` → 404 if missing) |
-| Generators | `make:controller [--api]`, `make:model [--migration]`, `make:middleware`, `make:request`, `make:test [--unit]`, `make:migration` |
-| Logging | Built-in daily log files in `storage/logs`, levels, secret masking; framework events logged automatically |
-| CLI | `php bongo serve / tinker / route:list / make:* / view:cache / view:clear / cache:clear / migrate / migrate:status / migrate:rollback / make:migration / db:seed / key:generate / log:clear / test` |
+| Generators | `make:command`, `make:controller [--api]`, `make:model [--migration]`, `make:middleware`, `make:request`, `make:policy`, `make:job`, `make:component`, `make:seeder`, `make:notification`, `make:mail`, `make:test [--unit]`, `make:migration` |
+| Logging | Built-in daily log files in `storage/logs`, text and structured JSON format (`LOG_FORMAT=json`), levels, secret masking; framework events logged automatically |
+| CLI | `php bongo serve / tinker / route:list / make:* / config:cache / config:clear / view:cache / view:clear / cache:clear / migrate / migrate:status / migrate:rollback / make:migration / db:seed / key:generate / log:clear / test`, plus custom console commands auto-discovery |
 
 The repository currently includes an **e-commerce admin panel** (products, categories, orders, customers). It is the test application used to exercise the framework end to end, and it will be removed later so the framework ships fresh.
 
@@ -43,7 +44,7 @@ The repository currently includes an **e-commerce admin panel** (products, categ
 ## 2. Quick start
 
 ```bash
-git clone <repo-url> BongoMVC && cd BongoMVC
+git clone https://github.com/Solayman/bongo-php.git && cd bongo-php
 cp .env.example .env              # Windows: copy .env.example .env
 # edit .env: APP_NAME, APP_URL, DB_* values
 php bongo key:generate          # writes APP_KEY to .env
@@ -58,7 +59,7 @@ Demo login (seeded): **admin@example.com / password**. Change it on the Profile 
 
 | Key | Purpose |
 | --- | --- |
-| `APP_NAME` | Shown in the UI (default `BongoMVC`) |
+| `APP_NAME` | Shown in the UI (default `Bongo`) |
 | `APP_ENV` | `local`, `testing`, `production` |
 | `APP_DEBUG` | `true` shows error details. Defaults to on unless `APP_ENV=production`. |
 | `APP_URL` | Base URL. The router strips its path from each request; `url()`/`asset()` build links from it. **Must match how you open the site.** |
@@ -107,8 +108,8 @@ lang/                    Translations: bn.json, bn/messages.php, ...
 storage/logs/            Log files (git-ignored)
 system/                  Framework core (namespace System\)
   Auth/                  Auth (guards), SessionGuard, JwtGuard, UserProvider, LoginThrottle, PasswordBroker
-  Database/              Connection, DB (transactions, query log), QueryBuilder, Model, HasMany, BelongsTo, Migration, Migrator
-  Database/Schema/       Schema, Blueprint, ColumnDefinition, Expression
+  Database/              Connection, DBConnection, DB (transactions, query log), QueryBuilder, Model, HasMany, BelongsTo, Migration, Migrator
+  Database/Schema/       Schema, SchemaBuilder, Blueprint, ColumnDefinition, Expression
   Cache/                 Cache, FileStore, RateLimiter
   Console/               Generator (make:*)
   Container/             Container (DI, autowiring, method injection, model binding)
@@ -572,20 +573,38 @@ On failure the result is the same as `$this->validate()`: the browser goes back 
 use System\Http\Request;
 use System\Storage\Storage;
 
+// Store to default 'public' disk (in public/storage)
 $data = $request->validate(['photo' => 'required|image|max:2048']);
-$path = $data['photo']->store('products');   // "products/3f9c…e1.jpg" (in public/storage)
+$path = $data['photo']->store('products');             // "products/3f9c…e1.jpg"
 $product->update(['image' => $path]);
 
-Storage::url($path);        // http://…/storage/products/3f9c…e1.jpg
-Storage::delete($old);      // when replacing
-$request->file('photo');    // UploadedFile or null; $request->hasFile('photo')
+// Store confidential documents to private 'local' disk (in storage/app, outside web root)
+$docPath = $request->file('tax_doc')->store('receipts', 'local');
+
+// URL & Download
+Storage::url($path);                                   // http://…/storage/products/3f9c…e1.jpg
+return Storage::disk('local')->download($docPath, 'my-tax-doc.pdf'); // Streams download with safe headers
+
+// File operations on any disk (default is 'public')
+Storage::disk('local')->put('reports/summary.csv', $csvContent);
+$content = Storage::disk('local')->get('reports/summary.csv');
+$exists  = Storage::disk('local')->exists('reports/summary.csv');
+$size    = Storage::disk('local')->size('reports/summary.csv');
+Storage::disk('local')->delete('reports/summary.csv');
+
+// Directory listing & cleanup
+$files = Storage::disk('public')->files('products');        // Immediate files
+$all   = Storage::disk('local')->allFiles('reports');       // Recursive files
+Storage::disk('local')->deleteDirectory('reports/temp');
 ```
 
-Uploads are safe by default:
+Uploads and storage are safe by default:
+- **Multi-disk isolation:** Configure disks in `config/storage.php`. By default, `'public'` mounts at `public/storage` (accessible via web URL), while `'local'` mounts at `storage/app` (strictly private, outside the web root).
 - **The real content type is checked** (with `fileinfo`), so a PHP script renamed to `cat.jpg` fails `image` and `mimes`.
 - **Stored names are random** (32 hex characters), and the extension comes from the content type, never from the browser's file name.
 - **Only known types are stored:** images, pdf, txt, csv, zip, json, docx and xlsx. Anything else is refused.
-- **Paths can't leave the storage folder,** and `public/storage/.htaccess` stops Apache from running scripts there.
+- **Paths can't leave the storage folder:** path traversal attempts (e.g. `../`) are rejected with an `InvalidArgumentException`, and `public/storage/.htaccess` stops Apache from running scripts there.
+- **Streaming downloads:** `Storage::download($path, $filename)` emits proper `Content-Disposition`, `Content-Length`, and `Content-Type` headers and streams the file chunked via `readfile()`.
 - Forms need `enctype="multipart/form-data"`.
 
 **Several files in one field:** `<input type="file" name="photos[]" multiple>`
@@ -612,6 +631,111 @@ foreach ($request->files('photos') as $photo) {   // a list of UploadedFile; emp
 | `dimensions:min_width=…,max_width=…,min_height=…,max_height=…,width=…,height=…,ratio=16/9` | Image size in pixels |
 
 **Try it:** **System status → Upload test** validates up to 5 images and reports each file's type, size and dimensions. Nothing is stored.
+
+---
+
+## 6. Spreadsheets & Documents
+
+Bongo provides a unified, zero-dependency data suite for daily business operations: import/export of spreadsheets (CSV and Excel `.xlsx`) and printable invoices/reports with **flawless Bengali and multilingual typography**.
+
+### Unified Spreadsheet Engine (`System\Data\Spreadsheet`)
+
+No more dealing with different classes or installing bloated 40MB packages like PhpSpreadsheet. `Spreadsheet` handles both **CSV and genuine Microsoft Excel (`.xlsx`)** workbooks using PHP's native `ZipArchive` and streams.
+
+#### 1. Unified Download / Export
+Specify `.xlsx` or `.csv` in the filename, and Bongo automatically generates the corresponding format:
+
+```php
+use System\Data\Spreadsheet;
+
+// Export as genuine styled Excel (.xlsx) workbook with bold headers
+return Spreadsheet::download(
+    rows: Product::all(),
+    filename: 'inventory-2026.xlsx',
+    columns: [
+        'sku'   => 'SKU Code',
+        'name'  => 'Product Name',
+        'price' => 'Unit Price ($)',
+        'stock' => 'Units in Stock',
+    ]
+);
+
+// Export as CSV (automatically injects UTF-8 BOM so Excel opens Bangla text without mojibake)
+return Spreadsheet::download($orders, 'sales.csv');
+```
+
+#### 2. Unified Read / Import
+Pass any uploaded file or path—Bongo inspects the file extension and magic bytes to parse rows into normalized associative arrays:
+
+```php
+// Handles BOTH .xlsx and .csv files transparently:
+$rows = Spreadsheet::read($request->file('import_file'));
+
+foreach ($rows as $row) {
+    Product::updateOrCreate(['sku' => $row['SKU Code']], [
+        'name'  => $row['Product Name'],
+        'price' => (float) $row['Unit Price ($)'],
+        'stock' => (int) $row['Units in Stock'],
+    ]);
+}
+```
+
+---
+
+### Printable Invoices & Vector PDFs (`System\Data\Printable`)
+
+Traditional PHP PDF libraries (DomPDF, FPDF) famously break Indic scripts (Bengali, Hindi, etc.) because they lack OpenType complex text shaping (conjuncts like `ক্ষ` split and vowel marks like `কি` appear backwards).
+
+Bongo solves this with `Printable`:
+- **Flawless Typography**: Emits print-ready HTML5 with standard `@media print` rules, rendering Bengali fonts (**Kalpurush, SolaimanLipi, Noto Sans Bengali**) with 100% pixel-perfect ligatures.
+- **One-Click Native PDF**: Displays an action bar with a **Print / Save as PDF** button (`window.print()`).
+- **Optional Headless PDF Bridge**: If Google Chrome, Microsoft Edge, Chromium, or `wkhtmltopdf` is installed on the server, Bongo compiles binary `.pdf` files automatically for email attachments (`$doc->toPdf($path)`).
+
+```php
+use System\Data\Printable;
+
+$invoice = Printable::invoice('INV-2026-001')
+    ->badge('PAID', '#10b981')
+    ->company([
+        'name'    => 'নোভা টেকনোলজিস (Nova Tech Ltd)',
+        'address' => 'গুলশান-২, ঢাকা-১২১২, বাংলাদেশ',
+        'phone'   => '+880 1700-123456',
+        'email'   => 'billing@novatech.xyz',
+    ])
+    ->customer([
+        'name'    => 'মোঃ সোলায়মান আলী',
+        'address' => 'মিরপুর, ঢাকা',
+    ])
+    ->meta([
+        'চালান তারিখ (Date)' => date('Y-m-d'),
+        'পেমেন্ট মেথড'        => 'bKash / কার্ড',
+    ])
+    ->table(
+        headers: ['বিবরণ (Item)', 'পরিমাণ (Qty)', 'দর (Price)', 'মোট (Total)'],
+        rows: [
+            ['ক্লাউড হোস্টিং (Cloud VPS)', '১', '৳ ২,৫০০', '৳ ২,৫০০'],
+            ['ডোমেইন রেজিস্ট্রেশন (Domain)', '১', '৳ ১,২০০', '৳ ১,২০০'],
+        ],
+        widths: [50, 15, 15, 20],
+        aligns: ['left', 'center', 'right', 'right']
+    )
+    ->totals([
+        'সর্বমোট (Subtotal)' => '৳ ৩,৭০০',
+        'ভ্যাট (VAT 5%)'     => '৳ ১৮৫',
+        'প্রদেয় (Grand Total)' => '৳ ৩,৮৮৫',
+    ])
+    ->notes([
+        'পণ্য ক্রয়ের জন্য ধন্যবাদ।',
+        'For inquiries, contact support@novatech.xyz',
+    ])
+    ->autoPrint(false);
+
+// Return in controller:
+return response($invoice->render());
+
+// Or compile directly to binary PDF on server:
+$invoice->toPdf(storage_path('app/invoices/inv-001.pdf'));
+```
 
 ---
 
@@ -784,11 +908,182 @@ The first render compiles a template to plain PHP in `storage/cache/views`. Late
 - `VIEW_CACHE=false` turns caching off (only useful when debugging the compiler).
 - User data is never compiled as template code: `{{ $name }}` with the value `{{ phpversion() }}` prints that text.
 
+### Faster requests in production: `config:cache` and `route:cache`
+
+Every request normally reads all `config/*.php` and route files. On a live server, compile and cache them for maximum throughput:
+
+```bash
+php bongo config:cache    # run on every deploy, after changing config/ or .env
+php bongo config:clear    # back to reading config/*.php (e.g. while developing)
+php bongo route:cache     # compile all registered routes into storage/cache/routes.php
+php bongo route:clear     # back to reading routes/ on each request
+php bongo view:cache      # precompile and lint all templates ahead of time
+```
+
+`config:cache` speeds up framework initialization by about **36%** (17.3 ms → 11.1 ms), while `route:cache` skips regex and route compilation for instant path dispatching.
+
+A typical deploy: `php bongo migrate`, `php bongo config:cache`, `php bongo route:cache`, `php bongo view:cache`.
+
 Custom error pages: `resources/views/errors/{404,405,419,...}.php`.
 
 ---
 
 ## 8. Database
+
+### MySQL, PostgreSQL, or SQLite
+
+MySQL is the default. PostgreSQL (`pgsql`) is supported natively for high-concurrency enterprise workloads. For a small app, a demo or tests without a database server, use SQLite: the whole database is one file.
+
+```ini
+# .env for PostgreSQL
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=bongo
+DB_USERNAME=postgres
+DB_PASSWORD=secret
+DB_SCHEMA=public      # optional, default is public
+DB_SSLMODE=prefer     # optional, prefer/require/disable
+
+# .env for SQLite
+DB_CONNECTION=sqlite
+DB_SQLITE_PATH=D:/projects/shop/database/database.sqlite   # optional, this is the default place
+```
+
+PHP needs the appropriate PDO driver enabled (`pdo_mysql`, `pdo_pgsql`, or `pdo_sqlite` in php.ini). Then run `php bongo migrate` as usual. Migrations, models and the query builder are identical across all three engines.
+
+| Feature | MySQL | PostgreSQL (`pgsql`) | SQLite |
+|---|---|---|---|
+| Auto-increment PK | `BIGINT UNSIGNED AUTO_INCREMENT` | `BIGSERIAL PRIMARY KEY` | `INTEGER PRIMARY KEY AUTOINCREMENT` |
+| Identifier Quoting | Backticks `` `col` `` | Double quotes `"col"` | Backticks / Quotes |
+| `->after('column')` | Places the new column | Ignored (columns append to table) | Ignored (new columns go last) |
+| `$table->dropForeign()` | Works | Works (`DROP CONSTRAINT`) | Not supported (copy table instead) |
+| `lockForUpdate()` / `sharedLock()` | `FOR UPDATE` / `LOCK IN SHARE MODE` | `FOR UPDATE` / `FOR SHARE` | Ignored (write locks whole database) |
+| `upsert()` | `ON DUPLICATE KEY UPDATE` | `ON CONFLICT (...) DO UPDATE` | `ON CONFLICT (...) DO UPDATE` |
+| Truncate Table | `TRUNCATE TABLE` | `TRUNCATE TABLE ... RESTART IDENTITY CASCADE` | `DELETE` + reset sequence |
+| Boolean Type | `TINYINT(1)` | Native `BOOLEAN` | `TINYINT(1)` |
+| JSON Type | `JSON` | Native `JSONB` | `TEXT` |
+
+`php bongo test` uses `storage/testing/database.sqlite` when `DB_CONNECTION=sqlite`, so your real database file is never touched.
+
+### Simultaneous Multi-Database & Multi-Tenancy
+
+Bongo supports querying and managing multiple databases simultaneously in the same request. Configure any number of named connections in `config/database.php`:
+
+```php
+'connections' => [
+    'mysql' => [
+        'driver'   => 'mysql',
+        'host'     => env('DB_HOST', '127.0.0.1'),
+        'database' => env('DB_DATABASE', 'bongo'),
+        // ...
+    ],
+    'analytics' => [
+        'driver'   => 'pgsql',
+        'host'     => env('DB_ANALYTICS_HOST', '127.0.0.1'),
+        'database' => 'bongo_analytics',
+        // ...
+    ],
+    'tenant_1' => [
+        'driver'   => 'sqlite',
+        'database' => storage_path('tenants/tenant_1.sqlite'),
+    ],
+],
+```
+
+#### Querying a Specific Connection
+```php
+use System\Database\DB;
+
+// Query builder on named connection
+$events = DB::connection('analytics')->table('events')->where('type', 'click')->get();
+
+// Raw queries on named connection
+$users = DB::connection('tenant_1')->raw('SELECT * FROM users WHERE active = ?', [1]);
+
+// Query logging tracks the exact connection name for every executed statement
+DB::enableQueryLog();
+// ...
+DB::getQueryLog(); // [['connection' => 'analytics', 'sql' => '...', 'bindings' => [...], 'ms' => 1.2], ...]
+```
+
+#### Isolated Transactions & Savepoints
+Each database connection maintains its own isolated transaction and savepoint lifecycle:
+```php
+$tenant = DB::connection('tenant_1');
+
+$tenant->transaction(function () use ($tenant) {
+    $tenant->table('invoices')->insert([...]);
+    $tenant->table('credits')->decrement('balance', 50);
+});
+
+// Or manual control on a specific connection
+$tenant->beginTransaction();
+$tenant->commit();
+$tenant->rollBack();
+```
+
+#### Model Connection Routing
+Models can target a dedicated connection statically, dynamically via `on()`, or on individual instances:
+```php
+class AuditLog extends Model
+{
+    // Every query on AuditLog automatically routes to the analytics database
+    protected static ?string $connection = 'analytics';
+}
+
+// Or dynamically target a connection on any model:
+$users = User::on('tenant_1')->where('status', 'active')->get();
+$user  = User::on('tenant_1')->create(['name' => 'Alice']);
+
+// Retrieved models remember their source connection for updates/deletes:
+$user->name = 'Alice Smith';
+$user->save();   // updates on tenant_1
+
+// Relationships across models inherit the parent connection automatically
+$orders = $user->orders; // queries orders on tenant_1
+```
+
+#### Schema Operations on Specific Connections
+```php
+use System\Database\Schema\Blueprint;
+use System\Database\Schema\Schema;
+
+Schema::connection('analytics')->create('reports', function (Blueprint $table) {
+    $table->id();
+    $table->string('report_name');
+    $table->timestamps();
+});
+
+Schema::connection('analytics')->hasTable('reports');
+Schema::connection('analytics')->dropIfExists('reports');
+```
+
+#### Dynamic Runtime Connections (Multi-Tenant SaaS)
+Register or remove tenant databases on the fly without changing config files:
+```php
+use System\Database\Connection;
+
+Connection::addConnection("tenant_{$id}", [
+    'driver'   => 'sqlite',
+    'database' => storage_path("tenants/{$id}.sqlite"),
+]);
+
+// Query immediately:
+$data = DB::connection("tenant_{$id}")->table('settings')->first();
+
+Connection::removeConnection("tenant_{$id}");
+```
+
+#### Migrations on Named Connections
+Target specific databases using the `--database` CLI flag:
+```bash
+php bongo migrate --database=analytics
+php bongo migrate:status --database=analytics
+php bongo migrate:rollback --database=analytics
+php bongo migrate:fresh --database=tenant_1 --seed
+php bongo db:seed --database=tenant_1
+```
 
 ### Query builder
 
@@ -911,6 +1206,23 @@ $order->delete();
 
 $order = Order::create(['user_id' => 3, 'status' => 'pending', 'total' => 0]);   // returns the saved model
 Order::destroy([7, 8]);
+```
+
+**Counting related rows:** `withCount` adds a `{relation}_count` column, with no SQL to write. It works for `hasMany`, `hasOne` and `belongsToMany`, and skips soft-deleted rows.
+
+```php
+$categories = Category::withCount('products')->orderBy('name')->get();
+$category->products_count;
+Product::withCount('tags', 'reviews')->where('status', 'active')->paginate(20);
+```
+
+**Insert or update in one query (`upsert`):** rows whose unique key already exists are updated, and new ones are inserted.
+
+```php
+DB::table('products')->upsert([
+    ['sku' => 'BG-1', 'price' => 9.5, 'stock' => 10],
+    ['sku' => 'BG-2', 'price' => 4.0, 'stock' => 3],
+], ['price', 'stock']);   // the columns to change on existing rows (default: all of them)
 ```
 
 **Model events:** define the method on your model and it runs at that moment. Return `false` from a `…ing` method to cancel.
@@ -1079,7 +1391,7 @@ Each guard can set `login_url` (where `auth:<guard>` sends guests) and `home` (w
 
 ### JWT for APIs
 
-The `api` guard uses JSON Web Tokens, implemented in BongoMVC itself (`System\Security\Jwt`), with no packages:
+The `api` guard uses JSON Web Tokens, implemented in Bongo itself (`System\Security\Jwt`), with no packages:
 - **Signing:** HS256 with `JWT_SECRET`, or, if that's empty, a key derived from `APP_KEY`.
 - **Rejected tokens:** a bad signature, any other algorithm (including `"alg": "none"`), expired, not valid yet, or from another issuer.
 - **Claims:** `sub` (user id), `guard`, `iss`, `iat`, `nbf`, `exp` and a random `jti` per token.
@@ -1402,11 +1714,135 @@ Unsupported codes are ignored. The admin top bar and the login page have a langu
 
 ---
 
+## 9b-2. Notifications (mail, SMS, Slack)
+
+One class says what to send and how:
+
+```php
+use System\Notifications\Notification;
+
+class OrderShipped extends Notification
+{
+    public function __construct(public object $order) {}
+
+    public function via(object $user): array { return ['mail', 'sms']; }   // also 'slack'
+
+    public function toMail(object $user): \System\Mail\Message
+    {
+        return Mail::message()->subject("Order {$this->order->order_number} shipped")->view('emails.shipped', ['order' => $this->order]);
+    }
+
+    public function toSms(object $user): string { return "Your order {$this->order->order_number} is on its way"; }
+}
+
+Notify::send($user, new OrderShipped($order));          // or a list of users
+```
+
+| Channel | Goes to | Set up in `config/notifications.php` / `.env` |
+| --- | --- | --- |
+| `mail` | `$user->email` | the mail settings |
+| `sms` | `$user->phone` | `SMS_URL` (your gateway's POST URL), `SMS_TOKEN`, and the gateway's field names and fixed fields |
+| `slack` | a channel | `SLACK_WEBHOOK_URL` |
+
+Without `SMS_URL` or `SLACK_WEBHOOK_URL`, messages are written to the log, which is handy while developing. SMS and Slack use the HTTP client, with 2 tries. In tests, `Notify::fake()` records instead of sending, and `Notify::sent()` returns the list.
+
+## 9b-3. Live updates (WebSockets)
+
+Push changes to pages that are already open (a new order on the dashboard, a chat message, a "paid" notice) without reloading. It's built in: pure PHP, with no Node and no extension.
+
+**1. Start the server** (in its own terminal; on a server, keep it running with systemd or Supervisor):
+
+```bash
+php bongo websocket:serve            # ws://127.0.0.1:6001
+```
+
+**2. Send from PHP**, anywhere (controller, job, model event):
+
+```php
+use System\Broadcasting\Broadcast;
+
+Broadcast::to('orders')->send('order.created', ['id' => $order->id, 'total' => $order->total]);
+broadcast('orders', 'order.created', [...]);            // the same, as a helper
+```
+
+If the server isn't running, the broadcast is logged and skipped. Your request never fails because of it.
+
+**3. Listen in the page:**
+
+```html
+<script src="{{ asset('asset/js/bongo-socket.js') }}"></script>
+<script>
+  const socket = BongoSocket.connect('{{ websocket_url() }}');
+  socket.on('orders', 'order.created', data => alert('New order #' + data.id));
+</script>
+```
+
+The script reconnects (and subscribes again) by itself when the server restarts.
+
+**Private channels.** A channel whose name starts with `private-` needs a token, and only your server can make one. Give it only to the right user:
+
+```html
+<script>
+  socket.subscribe('private-user.{{ auth()->id() }}', '{{ channel_token('private-user.' . auth()->id()) }}');
+  socket.on('private-user.{{ auth()->id() }}', 'notice', data => alert(data.text));
+</script>
+```
+
+```php
+Broadcast::to("private-user.{$order->user_id}")->send('notice', ['text' => 'Your order shipped']);
+```
+
+| `.env` | Default | |
+|---|---|---|
+| `BROADCAST_HOST` | `127.0.0.1` | where the server listens (`0.0.0.0` = every interface) |
+| `BROADCAST_PORT` | `6001` | |
+| `BROADCAST_PUBLIC_URL` | `ws://<APP_URL host>:6001` | what browsers connect to, e.g. `wss://shop.com/ws` behind nginx |
+| `BROADCAST_ALLOWED_ORIGINS` | `APP_URL` | pages allowed to connect (comma separated) |
+
+**Security:**
+- Broadcasts from the app are signed with `APP_KEY`, so nobody else can send to your users. The app and the server need the same `APP_KEY`.
+- Pages from other sites are refused.
+- Private channels need a token that expires (1 hour by default).
+- For HTTPS sites, put the server behind your web server's proxy as `wss://`.
+
+**Tests:** `Broadcast::fake()` records instead of sending, and `Broadcast::sent()` returns what was broadcast.
+
+## 9c. Calling other APIs (HTTP client)
+
+```php
+use System\Http\Http;
+
+$response = Http::withToken($apiKey)->post('https://sms.example.com/send', ['to' => $phone, 'text' => 'Code 1234']);
+$response->ok();              // 2xx
+$response->status();          // 201
+$response->json('data.id');   // a value in the JSON body (dots go deeper)
+$response->body();  $response->header('Content-Type');
+$response->throw();           // RequestException for 4xx/5xx
+
+Http::get($url, ['page' => 2]);                  // query string
+Http::asForm()->post($url, $data);               // form instead of JSON
+Http::withHeaders(['X-Shop' => '7'])->timeout(10)->retry(3, 200)->put($url, $data);   // 3 tries on 5xx or no connection
+```
+
+Bodies are JSON unless you call `asForm()`. A server that can't be reached throws `ConnectionException`. Only `http`/`https` URLs are allowed. It uses cURL when available, and PHP streams otherwise.
+
+**In tests**, nothing should leave the machine:
+
+```php
+Http::fake([
+    'sms.example.com/*' => Http::response(['id' => 'msg-7'], 201),
+    'pay.example.com/*' => fn($request) => Http::response(['ok' => true]),
+]);
+// ... code that calls the APIs ...
+$sent = Http::sent();     // [['method' => 'POST', 'url' => ..., 'headers' => ..., 'data' => ..., 'body' => ...], ...]
+Http::reset();
+```
+
 ## 10. Cache and rate limiting
 
 ### Cache
 
-A file cache in `storage/cache/data`. It needs no Redis or Memcached, and works anywhere PHP can write files.
+A file cache in `storage/cache/data` by default. It needs no Redis or Memcached, and works anywhere PHP can write files. Redis is optional (see below).
 
 ```php
 use System\Cache\Cache;
@@ -1420,6 +1856,24 @@ Cache::flush();                      // or: php bongo cache:clear
 ```
 
 Values are serialized PHP, so arrays and objects work. Each key is one file, written atomically.
+
+### Redis (optional): cache and sessions
+
+Files are fine on one server. When the app runs on **several servers** behind a load balancer, they must share the cache and the sessions, and Redis does that. It needs the `redis` PHP extension (`extension=redis`).
+
+```ini
+# .env
+CACHE_DRIVER=redis        # Cache:: and the rate limiter
+SESSION_DRIVER=redis      # logins are shared by every server
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_PREFIX=bongo:       # every key starts with this; give each app its own
+```
+
+Your code doesn't change, because `Cache::...`, `throttle` and `session()` work the same. Redis removes expired keys by itself. `Cache::flush()` / `php bongo cache:clear` only delete keys with this app's prefix, never the whole Redis database. `php bongo test` adds `testing:` to the prefix, so tests never touch the app's keys.
+
+For anything else, `System\Redis\Redis::connection()` returns the connected `\Redis` client.
 
 ### Rate limiting
 
@@ -1455,16 +1909,25 @@ logger('Quick debug line', ['x' => 1]);                            // debug leve
 logger()->warning('Disk almost full');
 ```
 
-Each entry is one line in `storage/logs/bongo-YYYY-MM-DD.log`:
+Each entry is one line in `storage/logs/bongo-YYYY-MM-DD.log`.
 
+**Default text format (`LOG_FORMAT=text`):**
 ```
 [2026-10-02 14:03:11] local.INFO: Order 42 shipped to Dhaka {"id":42,"city":"Dhaka"}
 [2026-10-02 14:05:40] local.WARNING: Failed login for admin@example.com {"email":"admin@example.com","ip":"127.0.0.1"}
 ```
 
+**Structured JSON format (`LOG_FORMAT=json`):**
+```json
+{"timestamp":"2026-10-04 06:45:00","env":"production","level":"info","message":"Order 42 shipped to Dhaka","context":{"id":42,"city":"Dhaka"}}
+{"timestamp":"2026-10-04 06:45:02","env":"production","level":"error","message":"Payment gateway timeout","exception":{"class":"RuntimeException","message":"Gateway timed out","code":504,"file":"app/Services/Payment.php","line":42,"trace":["..."]}}
+```
+
+- **Output formats:** `text` (human-readable bracketed lines) or `json` (single-line JSON objects ideal for Docker, Kubernetes, AWS CloudWatch, Datadog, and ELK stack). Configurable via `LOG_FORMAT` in `.env` and `config/logging.php`.
 - **Levels**, lowest to highest: `debug`, `info`, `notice`, `warning`, `error`, `critical`, `alert`, `emergency`. Anything below `LOG_LEVEL` is skipped.
-- **Placeholders:** `{key}` in a message is replaced from the context. The context itself is appended as JSON.
+- **Placeholders:** `{key}` in a message is replaced from the context. In text mode, the context itself is appended as JSON; in JSON mode, it becomes a structured `context` object.
 - **Secrets are masked:** context keys such as `password`, `token`, `secret`, `key` or `cookie` are written as `********`, at any depth.
+- **Exceptions are structured:** When logging an exception in context (`['exception' => $e]`), JSON mode serializes the error class, message, code, file, line, and trace array.
 - **Logging never breaks a request.** If the file can't be written, the line goes to PHP's own error log instead.
 - **Retention:** daily files older than `LOG_DAYS` are deleted automatically. `php bongo log:clear` removes them all.
 
@@ -1520,6 +1983,7 @@ Choose the driver in `.env` with `QUEUE_DRIVER`:
 |---|---|
 | `sync` (default) | Runs the job immediately, inside the request, with retries. No worker is needed. |
 | `database` | Stores the job in the `jobs` table. Run `php bongo migrate` once to create it, then keep a worker running. |
+| `redis` | Stores jobs in Redis lists with delayed jobs in sorted sets. High-throughput, low-latency, zero DB row locking. |
 
 | Command | What it does |
 |---|---|
@@ -1543,6 +2007,7 @@ $schedule->call(fn() => ...)->cron('30 2 * * 1-5');
 
 Run the scheduler once a minute:
 
+* While developing: `php bongo schedule:work` runs it every minute in a terminal, so no cron is needed. Each run is a fresh process, so code changes are picked up. Stop it with Ctrl+C.
 * Linux cron: `* * * * * cd /path/to/app && php bongo schedule:run`
 * Windows: a Task Scheduler entry that repeats every minute.
 
@@ -1552,11 +2017,10 @@ Run the scheduler once a minute:
 
 ### "Table doesn't exist" errors
 
-If a query fails because a table or column is missing and migrations are pending, BongoMVC says so in four places: the log line (`| HINT: ... Run: php bongo migrate`), the debug error page, `php bongo security:check`, and the `php bongo serve` startup output.
+If a query fails because a table or column is missing and migrations are pending, Bongo says so in four places: the log line (`| HINT: ... Run: php bongo migrate`), the debug error page, `php bongo security:check`, and the `php bongo serve` startup output.
 
 ---
 
-php bongo make:request StoreOrderRequest             # rules + authorize() in app/Http/Requests
 ## 11. Debugging
 
 ### `dump()` and `dd()`
@@ -1631,20 +2095,68 @@ An interactive PHP shell with the app loaded:
 
 ---
 
-### Code generators
+### Code generators & Custom Console Commands
 
 ```bash
-php bongo make:controller ProductController           # app/Http/Controllers/ProductController.php
-php bongo make:controller Admin/ReportController      # sub-folder + namespace App\Http\Controllers\Admin
-php bongo make:controller Api/OrderController --api   # JSON actions: index, show, store
-php bongo make:model Coupon --migration               # app/Models/Coupon.php (table "coupons") + migration
-php bongo make:middleware EnsureIsAdmin               # register it in config/app.php
-php bongo make:test CouponApi                         # tests/Feature/CouponApiTest.php
-php bongo make:test Price --unit                      # tests/Unit/PriceTest.php
+php bongo make:command SendWeeklyReport        # app/Commands/SendWeeklyReport.php (custom CLI command)
+php bongo make:controller ProductController    # app/Http/Controllers/ProductController.php
+php bongo make:controller Admin/ReportController # sub-folder + namespace App\Http\Controllers\Admin
+php bongo make:controller Api/OrderController --api # JSON actions: index, show, store
+php bongo make:model Coupon --migration        # app/Models/Coupon.php (table "coupons") + migration
+php bongo make:middleware EnsureIsAdmin        # register it in config/app.php
+php bongo make:request StoreOrderRequest       # form request validation in app/Http/Requests/
+php bongo make:policy ProductPolicy            # authorization policy in app/Policies/
+php bongo make:job ProcessPayment              # queue job in app/Jobs/
+php bongo make:component AlertBox              # view component in resources/views/components/
+php bongo make:seeder ProductSeeder            # database seeder in database/seeders/
+php bongo make:notification OrderShipped       # multi-channel notification in app/Notifications/
+php bongo make:mail OrderReceipt               # email template in resources/views/emails/
+php bongo make:test CouponApi                  # tests/Feature/CouponApiTest.php
+php bongo make:test Price --unit               # tests/Unit/PriceTest.php
 php bongo make:migration add_notes_to_orders
 ```
 
-Generators never overwrite an existing file. New migrations always sort after the existing ones, whatever the clock or timezone.
+Generators never overwrite an existing file. New migrations always sort after existing ones, whatever the clock or timezone.
+
+#### Creating Custom Console Commands
+
+You can build and register your own CLI commands in seconds:
+
+1. Generate a command:
+   ```bash
+   php bongo make:command SendWeeklyDigest
+   ```
+2. Edit `app/Commands/SendWeeklyDigest.php`:
+   ```php
+   namespace App\Commands;
+
+   use System\Console\Command;
+
+   class SendWeeklyDigest extends Command
+   {
+       protected string $name = 'digest:send';
+       protected string $description = 'Send weekly email digest to subscribers';
+
+       public function handle(array $args, array $options): int
+       {
+           $dryRun = isset($options['dry-run']);
+           $this->line('Preparing weekly digest...');
+
+           if ($dryRun) {
+               $this->warn('Running in dry-run mode: no emails will be sent.');
+           } else {
+               $this->info('Digest emails dispatched successfully.');
+           }
+
+           return 0; // Exit status code
+       }
+   }
+   ```
+3. Run it via the CLI:
+   ```bash
+   php bongo digest:send --dry-run
+   ```
+   Bongo automatically discovers all command classes in `app/Commands/`, adds them to `php bongo help`, and routes CLI flags and arguments directly to your command. Available terminal styling helpers: `$this->info()`, `$this->warn()`, `$this->error()`, and `$this->line()`.
 
 ---
 
@@ -1729,13 +2241,35 @@ public function testOrderConfirmation(): void
 
 ---
 
-## 13a. Upgrading the framework
+## 13. Maintenance mode
+
+```bash
+php bongo down                                       # every page: "We'll be back soon" (HTTP 503)
+php bongo down --message="Upgrading the shop" --retry=120 --secret=let-me-in
+php bongo up                                         # live again
+```
+
+- API requests get JSON, `{"message": "...", "retry_after": 120}`, and every response sends `Retry-After`.
+- With `--secret`, visit `/let-me-in` once and your browser keeps working for 12 hours, so you can test the deploy while visitors see the notice.
+- To design the page yourself, create `resources/views/errors/503.php`; it receives `$message`.
+- The state is the file `storage/framework/down.json`, so it also works on several servers that share that folder.
+
+## 13a. Branches and releases
+
+| Branch | Holds |
+| --- | --- |
+| `master` | Development: the framework plus the e-commerce test app and all tests. Every change is an MR into `master`. |
+| `release` | Only the clean framework: what `php bongo release:build` produces, without the demo app and without tests. One commit per version. |
+
+`php bongo release:branch` adds that commit ("Bongo X.Y.Z"), built from the current `master`, using a temporary worktree so your folder isn't touched. Nothing is tagged or published. Push it with `git push origin release`.
+
+## 13a-2. Upgrading the framework
 
 ```bash
 php bongo upgrade --check      # installed vs latest version, and the release notes
 php bongo upgrade              # download, check the SHA-256, back up, replace, list new settings
 php bongo upgrade --rollback   # put the previous version back
-php bongo upgrade --from=bongomvc-framework-1.0.0.json.gz   # offline, from a downloaded package
+php bongo upgrade --from=bongo-framework-1.0.0.json.gz   # offline, from a downloaded package
 ```
 
 Only the framework's own files are replaced: `system/`, `bongo`, `public/index.php` and `config/bootstrap.php`. Your code and settings are never touched, and a backup goes to `storage/upgrade-backup/`. A package whose checksum doesn't match, or which tries to write outside the framework, is refused before anything changes. See `UPGRADE.md`.
@@ -1743,8 +2277,8 @@ Only the framework's own files are replaced: `system/`, `bongo`, `public/index.p
 **Publishing a release** (for maintainers): set the new version in `system/VERSION`, then:
 
 ```bash
-php bongo release:package                       # dist/bongomvc-framework-X.Y.Z.json.gz + .sha256
-gh release create vX.Y.Z dist/bongomvc-framework-X.Y.Z.json.gz dist/bongomvc-framework-X.Y.Z.json.gz.sha256 --notes "..."
+php bongo release:package                       # dist/bongo-framework-X.Y.Z.json.gz + .sha256
+gh release create vX.Y.Z dist/bongo-framework-X.Y.Z.json.gz dist/bongo-framework-X.Y.Z.json.gz.sha256 --notes "..."
 ```
 
 `UPGRADE_URL` points to the releases API (GitHub by default). Set `UPGRADE_TOKEN` when the repository is private.
@@ -1770,7 +2304,7 @@ The new project runs as built: `php bongo test` passes and its views compile. A 
 
 ## 14. The e-commerce test application
 
-The e-commerce app is how BongoMVC is tested the way a real project would use it. It stays in the repository for now, and will be removed later so the framework ships fresh. A copy is also on the `demo/ecommerce` branch.
+The e-commerce app is how Bongo is tested the way a real project would use it. It stays in the repository for now, and will be removed later so the framework ships fresh. A copy is also on the `demo/ecommerce` branch.
 
 ### Admin panel (`/`, signed in with the `web` guard)
 

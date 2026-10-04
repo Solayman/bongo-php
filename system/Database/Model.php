@@ -26,12 +26,30 @@ class Model implements \JsonSerializable
 {
     protected static $table = null;
     protected static string $primaryKey = 'id';
+    /** Name of the database connection from config/database.php (null = default) */
+    protected static ?string $connection = null;
     /** true: delete() sets deleted_at instead of removing the row, and queries skip those rows */
     protected static bool $softDeletes = false;
 
     public static function usesSoftDeletes(): bool
     {
         return static::$softDeletes;
+    }
+
+    /** Target a specific database connection for queries: Model::on('tenant')->get() */
+    public static function on(?string $connection): QueryBuilder
+    {
+        return static::query()->setConnection($connection);
+    }
+
+    public static function getConnectionName(): ?string
+    {
+        return static::$connection;
+    }
+
+    public static function setConnectionName(?string $name): void
+    {
+        static::$connection = $name;
     }
 
     /** Model::withTrashed()->get(), Model::onlyTrashed()->get() */
@@ -58,6 +76,7 @@ class Model implements \JsonSerializable
     protected array $fillable = [];
     /** Columns create()/fill() must never set */
     protected array $guarded = ['id'];
+    protected ?string $connectionName = null;
     /** Columns left out of toArray()/JSON (e.g. password) */
     protected array $hidden = [];
     /** column => int|float|bool|string|array|json */
@@ -83,7 +102,14 @@ class Model implements \JsonSerializable
         if (static::$table) {
             return static::$table;
         }
-        return strtolower((new ReflectionClass(static::class))->getShortName()) . 's';
+        return self::baseName(static::class) . 's';
+    }
+
+    /** App\Models\OrderItem → "orderitem" (used for table and foreign key names) */
+    protected static function baseName(string $class): string
+    {
+        static $names = [];
+        return $names[$class] ??= strtolower(substr(strrchr('\\' . $class, '\\'), 1));
     }
 
     public static function primaryKey(): string
@@ -94,7 +120,11 @@ class Model implements \JsonSerializable
     /** A query builder that returns instances of this model */
     public static function query(): QueryBuilder
     {
-        return (new QueryBuilder(static::tableName()))->setModel(static::class);
+        $builder = (new QueryBuilder(static::tableName()))->setModel(static::class);
+        if (static::$connection !== null) {
+            $builder->setConnection(static::$connection);
+        }
+        return $builder;
     }
 
     public static function where($column, $operator = null, $value = null): QueryBuilder
@@ -141,6 +171,9 @@ class Model implements \JsonSerializable
     public static function create(array $attributes): static
     {
         $model = new static($attributes);
+        if (static::$connection !== null) {
+            $model->setConnection(static::$connection);
+        }
         $model->save();
         return $model;
     }
@@ -237,6 +270,18 @@ class Model implements \JsonSerializable
         return $this->attributes[static::$primaryKey] ?? null;
     }
 
+    /** Connection used by this specific model instance (null = class static $connection or default) */
+    public function getConnection(): ?string
+    {
+        return $this->connectionName ?? static::$connection;
+    }
+
+    public function setConnection(?string $name): static
+    {
+        $this->connectionName = $name;
+        return $this;
+    }
+
     /** Changed columns since the model was loaded or saved */
     public function getDirty(): array
     {
@@ -264,6 +309,16 @@ class Model implements \JsonSerializable
     // Persistence
     // ------------------------------------------------------------------
 
+    /** A plain query for this row only (no model hydration, no soft-delete filter) */
+    protected function keyQuery(): QueryBuilder
+    {
+        $builder = (new QueryBuilder(static::tableName()))->where(static::$primaryKey, $this->getKey());
+        if ($this->getConnection() !== null) {
+            $builder->setConnection($this->getConnection());
+        }
+        return $builder;
+    }
+
     /**
      * INSERT a new model, or UPDATE only the changed columns of an existing one.
      * Model events run around it: saving → creating/updating → (query) → created/updated → saved.
@@ -281,7 +336,7 @@ class Model implements \JsonSerializable
             $dirty = $this->getDirty();
             unset($dirty[static::$primaryKey]);
             if ($dirty) {
-                (new QueryBuilder(static::tableName()))->where(static::$primaryKey, $this->getKey())->update($dirty);
+                $this->keyQuery()->update($dirty);
             }
             $this->original = $this->attributes;
             $this->fireEvent('updated');
@@ -289,7 +344,11 @@ class Model implements \JsonSerializable
             if ($this->fireEvent('creating') === false) {
                 return false;
             }
-            $id = (new QueryBuilder(static::tableName()))->insertGetId($this->attributes);
+            $builder = new QueryBuilder(static::tableName());
+            if ($this->getConnection() !== null) {
+                $builder->setConnection($this->getConnection());
+            }
+            $id = $builder->insertGetId($this->attributes, static::$primaryKey);
             if ($id && !isset($this->attributes[static::$primaryKey])) {
                 $this->attributes[static::$primaryKey] = $id;
             }
@@ -332,10 +391,10 @@ class Model implements \JsonSerializable
         }
         if (static::$softDeletes) {
             $now = date('Y-m-d H:i:s');
-            (new QueryBuilder(static::tableName()))->where(static::$primaryKey, $this->getKey())->update(['deleted_at' => $now]);
+            $this->keyQuery()->update(['deleted_at' => $now]);
             $this->attributes['deleted_at'] = $this->original['deleted_at'] = $now;
         } else {
-            (new QueryBuilder(static::tableName()))->where(static::$primaryKey, $this->getKey())->delete();
+            $this->keyQuery()->delete();
             $this->exists = false;
         }
         $this->fireEvent('deleted');
@@ -348,7 +407,7 @@ class Model implements \JsonSerializable
         if (!$this->exists) {
             return false;
         }
-        (new QueryBuilder(static::tableName()))->where(static::$primaryKey, $this->getKey())->delete();
+        $this->keyQuery()->delete();
         $this->exists = false;
         return true;
     }
@@ -356,7 +415,7 @@ class Model implements \JsonSerializable
     /** Undo a soft delete */
     public function restore(): bool
     {
-        (new QueryBuilder(static::tableName()))->where(static::$primaryKey, $this->getKey())->update(['deleted_at' => null]);
+        $this->keyQuery()->update(['deleted_at' => null]);
         $this->attributes['deleted_at'] = $this->original['deleted_at'] = null;
         return true;
     }
@@ -370,7 +429,7 @@ class Model implements \JsonSerializable
     /** Reload columns from the database (relations are cleared) */
     public function refresh(): static
     {
-        $row = (new QueryBuilder(static::tableName()))->asArray()->where(static::$primaryKey, $this->getKey())->first();
+        $row = $this->keyQuery()->asArray()->first();
         if ($row) {
             $this->attributes = $row;
             $this->original = $row;
@@ -402,8 +461,8 @@ class Model implements \JsonSerializable
      */
     protected function belongsToMany(string $related, ?string $pivot = null, ?string $parentKey = null, ?string $relatedKey = null): BelongsToMany
     {
-        $mine = strtolower((new ReflectionClass(static::class))->getShortName());
-        $theirs = strtolower((new ReflectionClass($related))->getShortName());
+        $mine = self::baseName(static::class);
+        $theirs = self::baseName($related);
         if ($pivot === null) {
             $names = [$mine, $theirs];
             sort($names);
@@ -415,13 +474,13 @@ class Model implements \JsonSerializable
     /** Inverse: an OrderItem belongsTo an Order (order_items.order_id → orders.id) */
     protected function belongsTo(string $related, ?string $foreignKey = null, ?string $ownerKey = null): BelongsTo
     {
-        $foreignKey ??= strtolower((new ReflectionClass($related))->getShortName()) . '_id';
+        $foreignKey ??= self::baseName($related) . '_id';
         return new BelongsTo($this, $related, $foreignKey, $ownerKey ?? $related::primaryKey());
     }
 
     protected function defaultForeignKey(): string
     {
-        return strtolower((new ReflectionClass(static::class))->getShortName()) . '_id';
+        return self::baseName(static::class) . '_id';
     }
 
     public function setRelation(string $name, $value): void

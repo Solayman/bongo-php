@@ -15,6 +15,9 @@ class Router
 {
     /** @var RouteDefinition[] */
     protected array $routes = [];
+    /** name => route, rebuilt when routes are added (route() in views looks names up often) */
+    protected array $named = [];
+    protected int $namedCount = -1;
     protected array $groupStack = [];
     protected static ?Router $current = null;
 
@@ -47,6 +50,13 @@ class Router
      */
     public static function fromConfig(): self
     {
+        if (defined('ROUTE_CACHE') && getenv('BONGO_ROUTE_CACHE') !== '0' && is_file(ROUTE_CACHE)) {
+            $cached = require ROUTE_CACHE;
+            if (is_array($cached)) {
+                return self::fromCache($cached);
+            }
+        }
+
         $router = new self(
             [],
             (array) config('app.middleware', []),
@@ -59,6 +69,59 @@ class Router
         }
 
         return $router;
+    }
+
+    /**
+     * Restore router instance from cached route data
+     */
+    public static function fromCache(array $data): self
+    {
+        $router = new self(
+            [],
+            (array) ($data['middleware'] ?? []),
+            (array) ($data['groups'] ?? []),
+            (array) ($data['global'] ?? [])
+        );
+
+        foreach ($data['routes'] ?? [] as $r) {
+            $route = new RouteDefinition($r['methods'], $r['path'], $r['action']);
+            $route->name = $r['name'] ?? null;
+            $route->middleware = (array) ($r['middleware'] ?? []);
+            $route->withoutMiddleware = (array) ($r['withoutMiddleware'] ?? []);
+            $route->wheres = (array) ($r['wheres'] ?? []);
+            $router->routes[] = $route;
+        }
+
+        return $router;
+    }
+
+    /**
+     * Export serializable route data for caching
+     */
+    public function toCache(): array
+    {
+        $routes = [];
+        foreach ($this->routes as $route) {
+            if ($route->action instanceof \Closure) {
+                throw new RuntimeException("Route [{$route->path}] uses a Closure action and cannot be cached. Use a [Controller::class, 'method'] action instead.");
+            }
+            $routes[] = [
+                'methods'           => $route->methods,
+                'path'              => $route->path,
+                'action'            => $route->action,
+                'name'              => $route->name,
+                'middleware'        => $route->middleware,
+                'withoutMiddleware' => $route->withoutMiddleware,
+                'wheres'            => $route->wheres,
+            ];
+        }
+
+        return [
+            'routes'     => $routes,
+            'middleware' => $this->middleware,
+            'groups'     => $this->groups,
+            'global'     => $this->global,
+        ];
     }
 
     /**
@@ -150,20 +213,25 @@ class Router
     /** Path for a named route, e.g. url('products.edit', ['id' => 5]) → "/products/5/edit" */
     public function url(string $name, array $params = []): string
     {
-        foreach ($this->routes as $route) {
-            if ($route->name === $name) {
-                return $route->url($params);
-            }
-        }
-        throw new \InvalidArgumentException("Route [$name] is not defined");
+        $route = $this->named()[$name] ?? throw new \InvalidArgumentException("Route [$name] is not defined");
+        return $route->url($params);
     }
 
     public function has(string $name): bool
     {
-        foreach ($this->routes as $route) {
-            if ($route->name === $name) return true;
+        return isset($this->named()[$name]);
+    }
+
+    protected function named(): array
+    {
+        if ($this->namedCount !== count($this->routes)) {
+            $this->named = [];
+            foreach ($this->routes as $route) {
+                if ($route->name !== null && $route->name !== '') $this->named[$route->name] ??= $route;
+            }
+            $this->namedCount = count($this->routes);
         }
-        return false;
+        return $this->named;
     }
 
     // ------------------------------------------------------------------
@@ -264,28 +332,28 @@ class Router
         $resolved = [];
 
         foreach (array_unique($expanded) as $item) {
-            [$name, $argString] = array_pad(explode(':', $item, 2), 2, null);
-            if (in_array($name, $skip, true)) {
-                continue;
+            if (!in_array(explode(':', $item, 2)[0], $skip, true)) {
+                $resolved[] = $this->parseMiddleware($item);
             }
-            $class = $this->middleware[$name] ?? $name;
-            if (!class_exists($class)) {
-                throw new RuntimeException("Middleware [$name] is not registered in config/app.php");
-            }
-            $resolved[] = [$class, $argString === null ? [] : explode(',', $argString)];
         }
 
         return $resolved;
     }
 
-    protected function runMiddleware(string $item): void
+    /** "throttle:60,1" → [class, ['60', '1']] */
+    protected function parseMiddleware(string $item): array
     {
         [$name, $argString] = array_pad(explode(':', $item, 2), 2, null);
         $class = $this->middleware[$name] ?? $name;
         if (!class_exists($class)) {
             throw new RuntimeException("Middleware [$name] is not registered in config/app.php");
         }
-        $this->call($class, $argString === null ? [] : explode(',', $argString));
+        return [$class, $argString === null ? [] : explode(',', $argString)];
+    }
+
+    protected function runMiddleware(string $item): void
+    {
+        $this->call(...$this->parseMiddleware($item));
     }
 
     protected function call(string $class, array $args): void
@@ -323,9 +391,13 @@ class Router
         $this->send($container->call([$instance, $method], $params));
     }
 
-    /** Actions may echo, or return a string (HTML) or an array (JSON) */
+    /** Actions may echo, or return a string (HTML), an array (JSON), or a DownloadResponse */
     protected function send($result): void
     {
+        if ($result instanceof \System\Storage\DownloadResponse) {
+            $result->send();
+            return;
+        }
         if (is_array($result) || $result instanceof \JsonSerializable) {
             if (!headers_sent()) header('Content-Type: application/json');
             echo json_encode($result);

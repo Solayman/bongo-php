@@ -7,3 +7,5 @@ public/files/*
 /public/storage/*
 !/public/storage/.htaccess
 /dist/
+/database/*.sqlite
+

@@ -4,7 +4,7 @@ namespace System\Log;
 use Throwable;
 
 /**
- * BongoMVC's built-in logger.
+ * Bongo's built-in logger.
  *
  *   logger()->info('Order {id} shipped', ['id' => 42]);
  *   Log::error('Payment failed', ['exception' => $e]);
@@ -38,7 +38,8 @@ class Logger
         protected string $channel = 'daily',
         protected string $minLevel = 'debug',
         protected int $days = 14,
-        protected string $environment = 'local'
+        protected string $environment = 'local',
+        protected string $format = 'text'
     ) {}
 
     public static function instance(): self
@@ -48,8 +49,20 @@ class Logger
             (string) config('logging.channel', 'daily'),
             (string) config('logging.level', 'debug'),
             (int) config('logging.days', 14),
-            (string) config('app.env', 'local')
+            (string) config('app.env', 'local'),
+            (string) config('logging.format', env('LOG_FORMAT', 'text'))
         );
+    }
+
+    public function getFormat(): string
+    {
+        return $this->format;
+    }
+
+    public function setFormat(string $format): self
+    {
+        $this->format = $format;
+        return $this;
     }
 
     /** Replace the shared logger (used by tests) */
@@ -89,7 +102,7 @@ class Logger
             }
             $this->prune();
         } catch (Throwable $e) {
-            error_log('[BongoMVC logger] ' . $e->getMessage() . ' | ' . rtrim($line));
+            error_log('[Bongo logger] ' . $e->getMessage() . ' | ' . rtrim($line));
         }
     }
 
@@ -125,7 +138,33 @@ class Logger
         $current = null;
 
         foreach (preg_split('/\r?\n/', $text) as $line) {
-            if (preg_match('/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\] (\w+)\.([A-Z]+): (.*)$/', $line, $m)) {
+            $trimmed = trim($line);
+            if ($trimmed === '') {
+                continue;
+            }
+            if (str_starts_with($trimmed, '{') && ($json = json_decode($trimmed, true)) && isset($json['level'], $json['message'])) {
+                if ($current) $entries[] = $current;
+                $details = '';
+                if (!empty($json['exception'])) {
+                    if (is_array($json['exception'])) {
+                        $details = ($json['exception']['class'] ?? 'Exception') . ': ' . ($json['exception']['message'] ?? '') . "\n";
+                        if (!empty($json['exception']['trace'])) {
+                            $details .= is_array($json['exception']['trace']) ? implode("\n", $json['exception']['trace']) : (string) $json['exception']['trace'];
+                        }
+                    } else {
+                        $details = (string) $json['exception'];
+                    }
+                } elseif (!empty($json['context'])) {
+                    $details = json_encode($json['context'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                }
+                $current = [
+                    'time' => $json['timestamp'] ?? date('Y-m-d H:i:s'),
+                    'env' => $json['env'] ?? $this->environment,
+                    'level' => strtolower($json['level']),
+                    'message' => $json['message'],
+                    'details' => $details,
+                ];
+            } elseif (preg_match('/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\] (\w+)\.([A-Z]+): (.*)$/', $line, $m)) {
                 if ($current) $entries[] = $current;
                 $current = ['time' => $m[1], 'env' => $m[2], 'level' => strtolower($m[3]), 'message' => $m[4], 'details' => ''];
             } elseif ($current && $line !== '') {
@@ -150,6 +189,32 @@ class Logger
         $message = preg_replace_callback('/\{([\w.]+)\}/', function ($m) use ($context) {
             return array_key_exists($m[1], $context) ? $this->stringify($context[$m[1]]) : $m[0];
         }, $message);
+
+        if ($this->format === 'json') {
+            $payload = [
+                'timestamp' => date('Y-m-d H:i:s'),
+                'env'       => $this->environment,
+                'level'     => strtolower($level),
+                'message'   => $message,
+            ];
+
+            if (!empty($context)) {
+                $payload['context'] = $context;
+            }
+
+            if ($exception instanceof Throwable) {
+                $payload['exception'] = [
+                    'class'   => get_class($exception),
+                    'message' => $exception->getMessage(),
+                    'code'    => $exception->getCode(),
+                    'file'    => $exception->getFile(),
+                    'line'    => $exception->getLine(),
+                    'trace'   => explode("\n", $exception->getTraceAsString()),
+                ];
+            }
+
+            return json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR) . "\n";
+        }
 
         $line = sprintf('[%s] %s.%s: %s', date('Y-m-d H:i:s'), $this->environment, strtoupper($level), $message);
 

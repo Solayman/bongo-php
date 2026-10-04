@@ -8,18 +8,12 @@ define('BASE_PATH', dirname(__DIR__));
 // Autoloaders: App\ -> app/, System\ -> system/
 // ---------------------------
 spl_autoload_register(function ($class) {
-    $map = [
-        'App\\'    => BASE_PATH . '/app/',
-        'System\\' => BASE_PATH . '/system/',
-    ];
-    foreach ($map as $prefix => $baseDir) {
-        if (strncmp($prefix, $class, strlen($prefix)) === 0) {
-            $file = $baseDir . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
-            if (file_exists($file)) {
-                require_once $file;
-            }
-            return;
-        }
+    if (strncmp('App\\', $class, 4) === 0) {
+        $file = BASE_PATH . '/app/' . str_replace('\\', '/', substr($class, 4)) . '.php';
+        if (is_file($file)) require_once $file;
+    } elseif (strncmp('System\\', $class, 7) === 0) {
+        $file = BASE_PATH . '/system/' . str_replace('\\', '/', substr($class, 7)) . '.php';
+        if (is_file($file)) require_once $file;
     }
 });
 
@@ -81,15 +75,24 @@ foreach (glob(BASE_PATH . '/app/Helpers/*.php') ?: [] as $helperFile) {
 unset($helperFile);
 
 // ---------------------------
-// Load every config/*.php (except this file) into config('<file>.<key>')
+// Config: every config/*.php (except this file) as config('<file>.<key>'),
+// or one cached file made by `php bongo config:cache` (faster in production)
 // ---------------------------
-$GLOBALS['config'] = [];
-foreach (glob(__DIR__ . '/*.php') as $configFile) {
-    $name = basename($configFile, '.php');
-    if ($name !== 'bootstrap') {
-        $GLOBALS['config'][$name] = require $configFile;
+function load_config_files(): array
+{
+    $config = [];
+    foreach (glob(BASE_PATH . '/config/*.php') as $configFile) {
+        $name = basename($configFile, '.php');
+        if ($name !== 'bootstrap') {
+            $config[$name] = require $configFile;
+        }
     }
+    return $config;
 }
+
+define('CONFIG_CACHE', BASE_PATH . '/storage/cache/config.php');
+define('ROUTE_CACHE', BASE_PATH . '/storage/cache/routes.php');
+$GLOBALS['config'] = getenv('BONGO_CONFIG_CACHE') !== '0' && is_file(CONFIG_CACHE) ? require CONFIG_CACHE : load_config_files();
 
 // ---------------------------
 // Timezone (PHP and, on connect, MySQL use the same one)

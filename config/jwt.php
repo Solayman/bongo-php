@@ -10,7 +10,7 @@ return [
     'leeway' => 30,
 
     // "iss" claim; tokens from another issuer are rejected
-    'issuer' => env('JWT_ISSUER', env('APP_URL', 'bongomvc')),
+    'issuer' => env('JWT_ISSUER', env('APP_URL', 'bongo')),
 
     // Signing secret: JWT_SECRET in .env, or (if empty) a key derived from APP_KEY
 ];

@@ -5,7 +5,7 @@ namespace System\Cache;
  * Key/value cache in files (storage/cache/data). One file per key, written
  * atomically; values are PHP-serialized with their expiry time.
  */
-class FileStore
+class FileStore implements Store
 {
     /** Seconds after which an unused .lock file counts as stale */
     protected const LOCK_TTL = 3600;

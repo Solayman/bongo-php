@@ -173,7 +173,7 @@ class Request
      */
     public static function method(): string
     {
-        $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+        $method = self::realMethod();
 
         if ($method === 'POST') {
             $override = strtoupper((string) ($_POST['_method'] ?? $_SERVER['HTTP_X_HTTP_METHOD_OVERRIDE'] ?? ''));

@@ -37,18 +37,14 @@ class RouteDefinition
     /** Add middleware aliases, groups or classes ("auth", "auth:api", "throttle:60,1") */
     public function middleware(string|array ...$middleware): static
     {
-        foreach ($middleware as $item) {
-            foreach ((array) $item as $m) $this->middleware[] = $m;
-        }
+        $this->middleware = array_merge($this->middleware, ...array_map(fn($m) => (array) $m, $middleware));
         return $this;
     }
 
     /** Skip middleware that a group would add, e.g. ->withoutMiddleware('csrf') */
     public function withoutMiddleware(string|array ...$middleware): static
     {
-        foreach ($middleware as $item) {
-            foreach ((array) $item as $m) $this->withoutMiddleware[] = $m;
-        }
+        $this->withoutMiddleware = array_merge($this->withoutMiddleware, ...array_map(fn($m) => (array) $m, $middleware));
         return $this;
     }
 
@@ -63,6 +59,11 @@ class RouteDefinition
     /** Parameters as [name => value] when the path matches, otherwise null */
     public function match(string $path): ?array
     {
+        // Fast path for static routes without parameters
+        if (!str_contains($this->path, '{')) {
+            return $this->path === $path ? [] : null;
+        }
+
         if (!preg_match($this->regex(), $path, $m)) {
             return null;
         }

@@ -1,5 +1,8 @@
 <?php
 return [
+    // file (PHP's default) or redis (shared by every server; connection in config/database.php)
+    'driver' => env('SESSION_DRIVER', 'file'),
+
     // Cookie name (does not reveal the language like "PHPSESSID")
     'cookie' => env('SESSION_COOKIE', 'bongo_session'),
 
