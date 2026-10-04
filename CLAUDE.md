@@ -74,7 +74,21 @@ When interacting with this codebase, you **must adhere to these rules**:
 
 ---
 
-## 4. Codebase Navigation
+## 4. Documentation & Memory Policy (CRITICAL - HIGH PRIORITY)
+
+Whenever ANY code change, feature, optimization, or bug fix is made to Bongo:
+- **Updating documentation is MANDATORY AND HIGH PRIORITY.**
+- All relevant documentation files must be updated in tandem with code changes:
+  - `DOCUMENTATION.md`: Full technical reference, configuration, and syntax examples.
+  - `README.md`: Feature matrices, quick start guide, performance benchmarks, and system requirements.
+  - `WHY_BONGO.md`: Architectural boundaries, comparison tables, and design principles.
+  - `CHANGELOG.md`: Unreleased records following Keep a Changelog / SemVer.
+  - `CLAUDE.md`: Peer-agent briefing and architectural review notes.
+  - `GEMINI.md`: Core system instructions and agent memory.
+
+---
+
+## 5. Codebase Navigation
 
 ```
 d:\Laravel\BongoMvc\
