@@ -195,7 +195,7 @@ Later: GitHub Actions runs every package's tests on each push and on each core c
 **Phase D (after 1.0)**
 paypal, admin-panel, api-tools, two-factor, backup, image, docker.
 
-### Completed Official Packages (20 Packages, 167 Tests Passing)
+### Completed Official Packages (20 Packages, 171 Tests Passing)
 | Package | Description | Status |
 |---|---|---|
 | `sslcommerz` | SSLCommerz payment gateway | ✔ Done (v1.0.0, 4 tests) |
@@ -217,7 +217,7 @@ paypal, admin-panel, api-tools, two-factor, backup, image, docker.
 | `seo` | Search Engine Optimization, OpenGraph, JSON-LD & Sitemap | ✔ Done (v1.0.0, 9 tests) |
 | `activity-log` | Enterprise audit trail & model activity logger | ✔ Done (v1.0.0, 6 tests) |
 | `health` | Application health checks & production uptime monitoring | ✔ Done (v1.0.0, 9 tests) |
-| `file-manager` | Web file manager with tree navigation, image previews & embedded code editor | ✔ Done (v1.0.0, 9 tests) |
+| `file-manager` | Web file manager with tree navigation, image previews & embedded code editor | ✔ Done (v1.0.0, 12 tests) |
 
 ### Candidates for future packages
 | Package | Why it waits |
