@@ -62,6 +62,10 @@ class Worker
     /** Claim the next available job, or null */
     public function reserve(string $queue): ?object
     {
+        if (Queue::driver() === 'redis') {
+            return $this->reserveRedis($queue);
+        }
+
         $now = time();
         $retryAfter = (int) config('queue.retry_after', 90);
 
@@ -84,6 +88,46 @@ class Worker
         });
     }
 
+    protected function reserveRedis(string $queue): ?object
+    {
+        $redis = \System\Redis\Redis::connection();
+        $prefix = \System\Redis\Redis::prefix();
+        $queueKey = $prefix . 'queue:' . $queue;
+        $delayedKey = $queueKey . ':delayed';
+        $now = time();
+
+        // Migrate due delayed jobs into the main queue
+        $due = $redis->zRangeByScore($delayedKey, '-inf', (string) $now);
+        if ($due) {
+            foreach ($due as $item) {
+                if ($redis->zRem($delayedKey, $item)) {
+                    $redis->rPush($queueKey, $item);
+                }
+            }
+        }
+
+        $raw = $redis->lPop($queueKey);
+        if (!$raw) {
+            return null;
+        }
+
+        $data = json_decode($raw, true);
+        if (!is_array($data) || empty($data['job'])) {
+            return null;
+        }
+
+        return (object) [
+            'id'           => $data['id'] ?? bin2hex(random_bytes(8)),
+            'queue'        => $data['queue'] ?? $queue,
+            'payload'      => $data['job'],
+            'attempts'     => ((int) ($data['attempts'] ?? 0)) + 1,
+            'available_at' => (int) ($data['available_at'] ?? $now),
+            'created_at'   => (int) ($data['created_at'] ?? $now),
+            '_driver'      => 'redis',
+            '_raw'         => $data,
+        ];
+    }
+
     public function process(object $row): void
     {
         $job = @unserialize(base64_decode((string) $row->payload));
@@ -98,7 +142,9 @@ class Worker
 
         try {
             Container::getInstance()->call([$job, 'handle']);
-            DB::table('jobs')->where('id', $row->id)->delete();
+            if (($row->_driver ?? null) !== 'redis') {
+                DB::table('jobs')->where('id', $row->id)->delete();
+            }
             $this->say(sprintf('  done in %d ms', (microtime(true) - $start) * 1000));
             Log::info('Job {job} #{id} done', ['job' => $job->displayName(), 'id' => $row->id]);
         } catch (\Throwable $e) {
@@ -107,7 +153,16 @@ class Worker
                 return;
             }
             $delay = $job->backoffFor($job->attempt);
-            DB::table('jobs')->where('id', $row->id)->update(['reserved_at' => null, 'available_at' => time() + $delay]);
+            if (($row->_driver ?? null) === 'redis') {
+                $raw = $row->_raw ?? [];
+                $raw['attempts'] = $job->attempt;
+                $raw['available_at'] = time() + $delay;
+                $redis = \System\Redis\Redis::connection();
+                $prefix = \System\Redis\Redis::prefix();
+                $redis->zAdd($prefix . 'queue:' . $row->queue . ':delayed', time() + $delay, json_encode($raw));
+            } else {
+                DB::table('jobs')->where('id', $row->id)->update(['reserved_at' => null, 'available_at' => time() + $delay]);
+            }
             $this->say("  failed: {$e->getMessage()} (retry in {$delay}s)");
             Log::warning('Job {job} #{id} failed, retry {attempt}/{tries} in {delay}s: ' . $e->getMessage(), [
                 'job' => $job->displayName(), 'id' => $row->id, 'attempt' => $job->attempt, 'tries' => $job->tries, 'delay' => $delay,
@@ -122,7 +177,9 @@ class Worker
                 'queue' => $row->queue, 'payload' => $row->payload,
                 'exception' => get_class($e) . ': ' . $e->getMessage() . "\n" . $e->getTraceAsString(),
             ]);
-            DB::table('jobs')->where('id', $row->id)->delete();
+            if (($row->_driver ?? null) !== 'redis') {
+                DB::table('jobs')->where('id', $row->id)->delete();
+            }
         });
         try {
             $job?->failed($e);
@@ -140,8 +197,24 @@ class Worker
             $query->where('id', (int) $id);
         }
         $count = 0;
+        $isRedis = Queue::driver() === 'redis';
+        $redis = $isRedis ? \System\Redis\Redis::connection() : null;
+        $prefix = $isRedis ? \System\Redis\Redis::prefix() : '';
+
         foreach ($query->get() as $failed) {
-            DB::table('jobs')->insert(['queue' => $failed->queue, 'payload' => $failed->payload, 'attempts' => 0, 'available_at' => time(), 'created_at' => time()]);
+            if ($isRedis) {
+                $payload = json_encode([
+                    'id'           => bin2hex(random_bytes(8)),
+                    'queue'        => $failed->queue,
+                    'job'          => $failed->payload,
+                    'attempts'     => 0,
+                    'available_at' => time(),
+                    'created_at'   => time(),
+                ]);
+                $redis->rPush($prefix . 'queue:' . $failed->queue, $payload);
+            } else {
+                DB::table('jobs')->insert(['queue' => $failed->queue, 'payload' => $failed->payload, 'attempts' => 0, 'available_at' => time(), 'created_at' => time()]);
+            }
             DB::table('failed_jobs')->where('id', $failed->id)->delete();
             $count++;
         }

@@ -16,8 +16,8 @@ class Queue
         return (string) config('queue.driver', 'sync');
     }
 
-    /** Push a job; returns its id (database driver) or null (sync, run immediately) */
-    public static function push(Job $job, int $delaySeconds = 0, ?string $queue = null): ?int
+    /** Push a job; returns its id or null (sync, run immediately) */
+    public static function push(Job $job, int $delaySeconds = 0, ?string $queue = null): string|int|null
     {
         $queue ??= $job->queue;
 
@@ -27,6 +27,31 @@ class Queue
         }
 
         $now = time();
+
+        if (self::driver() === 'redis') {
+            $redis = \System\Redis\Redis::connection();
+            $prefix = \System\Redis\Redis::prefix();
+            $queueKey = $prefix . 'queue:' . $queue;
+            $id = bin2hex(random_bytes(8));
+            $payload = json_encode([
+                'id'           => $id,
+                'queue'        => $queue,
+                'job'          => base64_encode(serialize($job)),
+                'attempts'     => 0,
+                'available_at' => $now + max(0, $delaySeconds),
+                'created_at'   => $now,
+            ]);
+
+            if ($delaySeconds > 0) {
+                $redis->zAdd($queueKey . ':delayed', $now + $delaySeconds, $payload);
+            } else {
+                $redis->rPush($queueKey, $payload);
+            }
+
+            Log::debug('Queued {job} (#{id}) on Redis queue {queue}', ['job' => $job->displayName(), 'id' => $id, 'queue' => $queue]);
+            return $id;
+        }
+
         $id = DB::table('jobs')->insertGetId([
             'queue'        => $queue,
             'payload'      => base64_encode(serialize($job)),
@@ -38,7 +63,7 @@ class Queue
         return $id;
     }
 
-    public static function later(int $delaySeconds, Job $job): ?int
+    public static function later(int $delaySeconds, Job $job): string|int|null
     {
         return self::push($job, $delaySeconds);
     }
@@ -66,6 +91,20 @@ class Queue
     {
         try {
             $now = time();
+
+            if (self::driver() === 'redis') {
+                $redis = \System\Redis\Redis::connection();
+                $prefix = \System\Redis\Redis::prefix();
+                $q = $queue ?? 'default';
+                $queueKey = $prefix . 'queue:' . $q;
+                return [
+                    'pending'  => (int) $redis->lLen($queueKey),
+                    'delayed'  => (int) $redis->zCount($queueKey . ':delayed', (string) ($now + 1), '+inf'),
+                    'reserved' => 0,
+                    'failed'   => (int) DB::table('failed_jobs')->count(),
+                ];
+            }
+
             $base = fn() => $queue ? DB::table('jobs')->where('queue', $queue) : DB::table('jobs');
             return [
                 'pending'  => $base()->whereNull('reserved_at')->where('available_at', '<=', $now)->count(),

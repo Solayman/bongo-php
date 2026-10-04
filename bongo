@@ -4,8 +4,9 @@
 
 // Tests and config:* always read config/*.php, never a cached copy (a cached
 // DB_DATABASE would point the tests at the real database)
-if (in_array($_SERVER['argv'][1] ?? '', ['test', 'config:cache', 'config:clear'], true)) {
+if (in_array($_SERVER['argv'][1] ?? '', ['test', 'config:cache', 'config:clear', 'route:cache', 'route:clear'], true)) {
     putenv('BONGO_CONFIG_CACHE=0');
+    putenv('BONGO_ROUTE_CACHE=0');
 }
 require __DIR__ . '/config/bootstrap.php';
 
@@ -435,6 +436,22 @@ try {
             echo PHP_EOL;
             break;
 
+        case 'route:cache':
+            $router = System\Routing\Router::fromConfig();
+            $data = $router->toCache();
+            if (!is_dir(dirname(ROUTE_CACHE))) mkdir(dirname(ROUTE_CACHE), 0775, true);
+            $tmp = ROUTE_CACHE . '.' . bin2hex(random_bytes(4));
+            file_put_contents($tmp, "<?php\n// Made by php bongo route:cache. Run it again after changing routes/ (or: php bongo route:clear)\nreturn " . var_export($data, true) . ";\n");
+            rename($tmp, ROUTE_CACHE);
+            if (function_exists('opcache_invalidate')) @opcache_invalidate(ROUTE_CACHE, true);
+            echo 'Routes cached in ' . relative_path(ROUTE_CACHE) . ' (' . count($data['routes']) . ' routes). Run php bongo route:cache again after changing routes.' . PHP_EOL;
+            break;
+
+        case 'route:clear':
+            echo is_file(ROUTE_CACHE) && unlink(ROUTE_CACHE) ? 'Route cache removed: routes/ is read on every request again.' : 'No route cache.';
+            echo PHP_EOL;
+            break;
+
         case 'view:cache':
             $engine = System\View\ViewEngine::shared();
             $engine->clearCache();
@@ -503,6 +520,8 @@ try {
                 'cache:clear' => 'Delete everything in the cache',
                 'config:cache' => 'Cache config/ and .env in one file for faster requests (run on deploy)',
                 'config:clear' => 'Remove the config cache',
+                'route:cache' => 'Cache routes into one file for faster dispatching (run on deploy)',
+                'route:clear' => 'Remove the route cache',
                 'view:cache' => 'Precompile and lint every template (run on deploy)',
                 'view:clear' => 'Delete compiled templates in storage/cache/views',
                 'log:clear' => 'Delete the log files in storage/logs',

@@ -159,7 +159,7 @@ Engineered for efficient memory usage and rapid execution cycles:
 | **Peak Memory per Request** | **0.45 MB – 0.65 MB** |
 | **Response Latency (Worst-Case, OpCache Disabled)** | **8.5 ms** (JSON API) to **18.9 ms** (Full DB page) |
 | **Framework Files Loaded per Request** | **20 – 28 files** |
-| **Boot Optimization (`php bongo config:cache`)** | **36% startup speedup** (17.3 ms → 11.1 ms) |
+| **Boot & Route Optimization** | **`config:cache` (36% startup speedup)** & **`route:cache` (zero-regex dispatch)** |
 
 ### 4. Comprehensive Security by Default
 Security mechanisms are embedded directly into the framework foundation:
@@ -222,7 +222,7 @@ Architectural trade-offs compared objectively across common PHP ecosystems:
 
 ### Current Architectural Boundaries
 * **Supported Databases:** Full support for **MySQL / MariaDB** and **SQLite**. *(PostgreSQL and SQL Server drivers are on the product roadmap).*
-* **Queue Drivers:** High-reliability database queue worker is built in. *(Dedicated Redis / SQS queue workers are under development).*
+* **Queue Drivers:** High-reliability Database and Redis queue drivers are built in (with delayed retry sets and failed job tracking).
 * **Ecosystem Scale:** Focuses on standard web patterns. Third-party integrations (e.g., custom OAuth providers, specialized payment gateways) are implemented cleanly in application code or via optional Composer packages.
 
 ---
