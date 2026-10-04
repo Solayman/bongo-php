@@ -5,6 +5,9 @@ Every notable change to the Bongo PHP Framework. Versions follow [semantic versi
 ## Unreleased
 
 ### Added
+- **Native PostgreSQL support** (`DB_CONNECTION=pgsql`): pure-PHP `PostgresGrammar` DDL, `BIGSERIAL PRIMARY KEY`, `BOOLEAN`, `JSONB`, enum `CHECK` constraints, column comments, automatic `useCurrentOnUpdate` triggers, atomic `RETURNING "id"` inserts, `ON CONFLICT` upserts, and `FOR SHARE` locks.
+- **Route caching** (`php bongo route:cache` / `route:clear`): compiles registered routes into `storage/cache/routes.php`, with static route fast-path matching to skip regex overhead for static URLs.
+- **Redis queue driver** (`QUEUE_DRIVER=redis`): high-performance queues via Redis lists and delayed sorted sets with unified database `failed_jobs` error tracking.
 - **SQLite support** (`DB_CONNECTION=sqlite`): the same migrations, models and queries; no database server needed.
 - **Redis cache and sessions** (`CACHE_DRIVER=redis`, `SESSION_DRIVER=redis`), optional, for apps on several servers.
 - **Live updates over WebSockets**: `php bongo websocket:serve`, `Broadcast::to('orders')->send(...)`, private channels, and the `bongo-socket.js` browser client.
@@ -20,7 +23,8 @@ Every notable change to the Bongo PHP Framework. Versions follow [semantic versi
 
 ### Changed
 - The framework is now called **Bongo PHP Framework**, made by Nobotech (formerly BongoMVC). The repository is `Solayman/bongo-php`.
-- Query values are bound with their real types (int, null, bool).
+- Query values are bound with their real types (int, null, bool with native `\PDO::PARAM_BOOL` for pgsql).
+- Framework autoloader optimized with direct prefix checks (`strncmp`) and `is_file()` lookups.
 
 ## 0.9.0 — 2026-10-03
 
