@@ -279,6 +279,38 @@ if (!function_exists('response')) {
     }
 }
 
+if (!function_exists('cache_for')) {
+    /**
+     * Let the browser keep this response, and skip resending it when nothing changed.
+     *
+     *   cache_for(300);                                   // reuse for 5 minutes
+     *   cache_for(300, etag: $product->updated_at);       // after that, 304 Not Modified while unchanged
+     *   cache_for(3600, public: true);                    // shared caches (CDN) too: only for pages that are the same for everyone
+     *
+     * Call it in the controller before returning. A matching If-None-Match ends the request with 304.
+     */
+    function cache_for(int $seconds, mixed $etag = null, bool $public = false): void
+    {
+        if (headers_sent()) {
+            return;
+        }
+        header_remove('Pragma');    // sent by session_start(); conflicts with caching
+        header_remove('Expires');
+        header('Cache-Control: ' . ($public ? 'public' : 'private') . ', max-age=' . max(0, $seconds));
+        if ($etag === null) {
+            return;
+        }
+        $tag = '"' . sha1(is_scalar($etag) || $etag instanceof \Stringable ? (string) $etag : serialize($etag)) . '"';
+        header('ETag: ' . $tag);
+        header('Vary: Cookie', false);   // a signed-in and a guest page never share one cache entry
+        $sent = array_map('trim', explode(',', (string) ($_SERVER['HTTP_IF_NONE_MATCH'] ?? '')));
+        if (in_array($tag, $sent, true) || in_array('W/' . $tag, $sent, true)) {
+            http_response_code(304);
+            exit;
+        }
+    }
+}
+
 if (!function_exists('logger')) {
     /** logger() -> the Logger; logger('message', $context) -> write a debug line */
     function logger(?string $message = null, array $context = [])
@@ -363,16 +395,23 @@ if (!function_exists('dd')) {
 }
 
 if (!function_exists('debug_stats')) {
-    /** Numbers for the debug footer: queries, query time, page time, memory */
+    /**
+     * Numbers for the debug footer: queries, query time, page time, memory, and
+     * "repeated": the same SQL run 3+ times with different values, usually a query
+     * inside a loop (N+1). Fix it by loading the relation up front: Post::with('author')->get().
+     */
     function debug_stats(): array
     {
         $log = \System\Database\DB::getQueryLog();
+        $repeated = array_filter(array_count_values(array_column($log, 'sql')), fn($n) => $n >= 3);
+        arsort($repeated);
         return [
             'queries'  => count($log),
             'query_ms' => round(array_sum(array_column($log, 'ms')), 1),
             'page_ms'  => round((microtime(true) - (defined('BONGO_START') ? BONGO_START : microtime(true))) * 1000, 1),
             'memory'   => round(memory_get_peak_usage() / 1048576, 1),
             'log'      => $log,
+            'repeated' => $repeated,
         ];
     }
 }

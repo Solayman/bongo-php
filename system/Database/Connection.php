@@ -141,18 +141,29 @@ class Connection
         return $config['connections'][$name];
     }
 
-    protected static function options(): array
+    /** "persistent" (DB_PERSISTENT=true) reuses the server connection across requests, saving the connect time */
+    protected static function options(array $db = []): array
     {
         return [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_PERSISTENT => !empty($db['persistent']),
         ];
+    }
+
+    /** A reused connection must not carry an unfinished transaction from an earlier request */
+    protected static function cleanPersistent(PDO $pdo, array $db): void
+    {
+        if (!empty($db['persistent']) && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
     }
 
     protected static function connectMysql(array $db): PDO
     {
         $dsn = "mysql:host={$db['host']};port={$db['port']};dbname={$db['database']};charset={$db['charset']}";
-        $pdo = new PDO($dsn, $db['username'], $db['password'], self::options());
+        $pdo = new PDO($dsn, $db['username'], $db['password'], self::options($db));
+        self::cleanPersistent($pdo, $db);
         // Same clock as PHP, so CURRENT_TIMESTAMP matches date() and log times
         $pdo->exec("SET time_zone = '" . date('P') . "'");
         return $pdo;
@@ -183,7 +194,8 @@ class Connection
         $database = $db['database'] ?? 'bongo';
         $sslmode = $db['sslmode'] ?? 'prefer';
         $dsn = "pgsql:host={$host};port={$port};dbname={$database};sslmode={$sslmode}";
-        $pdo = new PDO($dsn, $db['username'] ?? 'postgres', $db['password'] ?? '', self::options());
+        $pdo = new PDO($dsn, $db['username'] ?? 'postgres', $db['password'] ?? '', self::options($db));
+        self::cleanPersistent($pdo, $db);
         if (!empty($db['schema'])) {
             $pdo->exec('SET search_path TO ' . $db['schema']);
         }

@@ -15,6 +15,7 @@ return [
             'unix_socket' => env('DB_SOCKET', ''),
             'charset' => 'utf8mb4',
             'collation' => 'utf8mb4_unicode_ci',
+            'persistent' => env('DB_PERSISTENT', false),
         ],
 
         'sqlite' => [
@@ -32,6 +33,8 @@ return [
             'password' => env('DB_PASSWORD', ''),
             'schema' => env('DB_SCHEMA', 'public'),
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // Reuse connections across requests (saves the connect time; most useful for PostgreSQL)
+            'persistent' => env('DB_PERSISTENT', false),
         ],
 
         // Simultaneous Multi-Database: Add any number of named connections here

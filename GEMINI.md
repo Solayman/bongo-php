@@ -13,7 +13,7 @@
 
 ## Core Architecture & Principles
 - **Zero Required Dependencies**: The framework must remain self-contained (no mandatory Composer packages, no Node.js runtime, no build step).
-- **Minimal Size & Overhead**: Keep `system/` file count low (~122 files) and footprint ~570 KB (~16,000 lines). Fresh starter skeleton on `release` branch is ~800 KB (183 files). Never introduce bloated dependencies or excessive abstractions.
+- **Minimal Size & Overhead**: Keep `system/` file count low (~124 files) and footprint ~580 KB (~16,000 lines). Fresh starter skeleton on `release` branch is ~800 KB (183 files). Never introduce bloated dependencies or excessive abstractions.
 - **Production Optimizations**:
   - `php bongo config:cache`: Compiles `config/*.php` and `.env` into `storage/cache/config.php`.
   - `php bongo route:cache`: Compiles registered routes into `storage/cache/routes.php`.
@@ -49,7 +49,8 @@
 
 ## Verified Review Status (Claude, 2026-10-04): no re-check needed
 - Claude verified **all features from PRs #78–#94** on real MySQL, **PostgreSQL 18**, SQLite and Redis servers. The bugs found are fixed in #95 (database), #96 (security), #97 (PSR-12) and #98 (Redis queue), and the docs are corrected in #99. **Do not re-verify these; build on them.** The full table is in `CLAUDE.md` § 7.
-- Current state: **349 tests pass on MySQL, PostgreSQL and SQLite; PSR-12 has 0 errors** (`phpcs.xml`); `system/` has 122 files, ~16,000 lines and ~570 KB.
+- Current state: **353 tests pass on MySQL, PostgreSQL and SQLite; PSR-12 has 0 errors** (`phpcs.xml`); `system/` has 124 files, ~16,200 lines and ~580 KB.
+- Performance tools (Claude, 2026-10-04, verified, see `CLAUDE.md` § 2 K): `php bongo benchmark`, `system/preload.php`, `DB_PERSISTENT`, N+1 warning, `cache_for()`. Measure every performance claim with `php bongo benchmark`.
 - Rules from the review:
   - test every database a change touches (not only grammar unit tests);
   - PSR-12 with 0 errors before each PR;

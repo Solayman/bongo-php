@@ -5,6 +5,12 @@ Every notable change to the Bongo PHP Framework. Versions follow [semantic versi
 ## Unreleased
 
 ### Added
+- **Performance tools** (measured, see DOCUMENTATION.md "Performance"):
+  - `php bongo benchmark [--url=/x] [--requests=200] [--opcache=both|on|off]`: median, p95, requests per second, memory and HTTP status per URL, OpCache off vs on.
+  - `system/preload.php` for OpCache preloading on Linux/macOS servers (PHP has no preloading on Windows).
+  - `DB_PERSISTENT=true`: persistent MySQL/PostgreSQL connections; an unfinished transaction left on a reused connection is rolled back. `/shop` on PostgreSQL (Windows): 85.7 ms → 13.4 ms.
+  - **N+1 warning** in debug mode: the same query 3+ times shows "Possible N+1" in the debug footer and, for JSON/API pages, in the log. `debug_stats()['repeated']`.
+  - `cache_for($seconds, etag: ..., public: false)`: `Cache-Control` and ETag headers; an unchanged page is answered with `304 Not Modified`.
 - **Simultaneous multi-database & multi-tenancy engine**: query multiple databases concurrently in a single request via `DB::connection('name')`, isolated per-connection transaction lifecycles and savepoints (`$conn->transaction(fn() => ...)`), model connection routing (`protected static ?string $connection = 'tenant';` and `Model::on('tenant')`), cross-database relationships, schema management (`Schema::connection('name')`), dynamic runtime connection registration (`Connection::addConnection()`), and migration CLI support (`php bongo migrate --database=name`).
 - **Unified spreadsheet engine** (`System\Data\Spreadsheet`): frictionless single-API import and export for both CSV and genuine OpenXML Excel (`.xlsx`) files (`Spreadsheet::read()`, `Spreadsheet::download()`, `Spreadsheet::store()`) with UTF-8 BOM injection for clean multilingual Excel display and zero third-party dependencies.
 - **Printable documents & vector PDF engine** (`System\Data\Printable`): responsive, print-optimized document generator with `@media print` CSS, one-click browser print/PDF trigger, and automatic headless browser PDF compilation bridge (Chrome, Edge, Chromium, wkhtmltopdf) so Bengali and other Indic scripts keep their ligatures and vowel signs (a real browser engine shapes the text).
@@ -35,6 +41,11 @@ Every notable change to the Bongo PHP Framework. Versions follow [semantic versi
 - **PSR-12 coding standard** for the whole codebase (formatting only, #97). Rules in `phpcs.xml`; check with `php phpcs.phar` (0 errors required, see CONTRIBUTING).
 - `php bongo test` now runs on **PostgreSQL** too: it creates the test database and loads `pdo_pgsql` in the test server (#95).
 - Docs corrected (#99): measured numbers only (122 files, ~16,000 lines, ~570 KB, 349 tests), no "Blade" wording, correct controller path, unique section numbers in DOCUMENTATION.md, `php bongo help` instead of a non-existent `list`. CLAUDE.md and GEMINI.md record the verified review status.
+
+- Performance numbers in README.md, WHY_BONGO.md and CLAUDE.md re-measured with `php bongo benchmark`: the old "0.45–0.65 MB, 8–19 ms" could not be reproduced; measured now 0.67–0.83 MB and 7–13 ms per page with OpCache (Windows, built-in server). System size: 124 files, ~16,200 lines, ~583 KB; 353 tests.
+
+### Fixed
+- The rate limiter on API routes no longer asks the session guard for a user when no session is started (skips a pointless lookup and a "remember me" cookie database query on stateless routes).
 
 ### Fixed (review of #78–#94, verified on MySQL, PostgreSQL 18 and SQLite)
 - **Database (#95):**
