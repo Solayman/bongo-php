@@ -26,7 +26,8 @@ $optionValue = function (string $name, $default = null) use ($options) {
 };
 
 $databaseOption = $optionValue('database');
-$migrator = fn(?string $conn = null) => new Migrator(base_path('database/migrations'), $conn ?? $databaseOption);
+$migrationPaths = array_merge([base_path('database/migrations')], System\Package\PackageManager::migrationPaths());
+$migrator = fn(?string $conn = null) => new Migrator($migrationPaths, $conn ?? $databaseOption);
 
 try {
     switch ($command) {
@@ -826,23 +827,22 @@ function loadCustomCommands(): array
 {
     $commands = [];
     $dir = BASE_PATH . '/app/Commands';
-    if (!is_dir($dir)) {
-        return [];
-    }
-    foreach (glob($dir . '/*.php') ?: [] as $file) {
-        // One broken command file must not break every other command
-        try {
-            require_once $file;
-            $class = 'App\\Commands\\' . basename($file, '.php');
-            if (class_exists($class) && is_subclass_of($class, System\Console\Command::class) && !(new ReflectionClass($class))->isAbstract()) {
-                /** @var System\Console\Command $instance */
-                $instance = new $class();
-                if ($instance->getName() !== '') {
-                    $commands[$instance->getName()] = $instance;
+    if (is_dir($dir)) {
+        foreach (glob($dir . '/*.php') ?: [] as $file) {
+            // One broken command file must not break every other command
+            try {
+                require_once $file;
+                $class = 'App\\Commands\\' . basename($file, '.php');
+                if (class_exists($class) && is_subclass_of($class, System\Console\Command::class) && !(new ReflectionClass($class))->isAbstract()) {
+                    /** @var System\Console\Command $instance */
+                    $instance = new $class();
+                    if ($instance->getName() !== '') {
+                        $commands[$instance->getName()] = $instance;
+                    }
                 }
+            } catch (Throwable $e) {
+                fwrite(STDERR, "Skipped app/Commands/" . basename($file) . ': ' . get_class($e) . ': ' . $e->getMessage() . PHP_EOL);
             }
-        } catch (Throwable $e) {
-            fwrite(STDERR, "Skipped app/Commands/" . basename($file) . ': ' . get_class($e) . ': ' . $e->getMessage() . PHP_EOL);
         }
     }
     if (class_exists(System\Package\PackageManager::class)) {

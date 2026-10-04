@@ -5,7 +5,7 @@ Every notable change to the Bongo PHP Framework. Versions follow [semantic versi
 ## Unreleased
 
 ### Added
-- **Official Package Subsystem** (`System\Package`): pure-PHP, zero-dependency package manager and runtime loader (`Installer` and `PackageManager`) supporting official catalog installation, lockfile tracking (`packages/.lock.json`), SHA-256 integrity checks, update safety net (`--backup` to `storage/package-backups/`, `--force`), namespaced views and translations with priority application overrides (`resources/views/vendor/<name>/`, `lang/vendor/<name>/`), package CLI command auto-discovery, package test runner integration, and CLI commands:
+- **Official Package Subsystem** (`System\Package`): pure-PHP, zero-dependency package manager and runtime loader (`Installer` and `PackageManager`) supporting official catalog installation, lockfile tracking (`packages/.lock.json`), SHA-256 integrity checks, update safety net (`--backup` to `storage/package-backups/`, `--force`), namespaced views and translations with priority application overrides (`resources/views/vendor/<name>/`, `lang/vendor/<name>/`), package routes integration with route caching support, multi-directory package migration discovery in `php bongo migrate` / `migrate:status` / `migrate:rollback`, package CLI command auto-discovery, package test runner integration, and CLI commands:
   - `php bongo add <name>[@version]`
   - `php bongo package:install [<name>[@version]]`
   - `php bongo package:update [name] [--backup] [--force]`

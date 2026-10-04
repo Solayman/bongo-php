@@ -56,7 +56,7 @@ class ReleaseBuilder
         }
         $count += $this->copy("{$this->source}/release/skeleton", $target);
 
-        foreach (['storage/logs', 'storage/cache', 'storage/mail', 'public/storage'] as $dir) {
+        foreach (['storage/logs', 'storage/cache', 'storage/mail', 'public/storage', 'packages'] as $dir) {
             if (!is_dir("$target/$dir")) {
                 mkdir("$target/$dir", 0775, true);
             }

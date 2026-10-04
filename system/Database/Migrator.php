@@ -17,7 +17,7 @@ class Migrator
 
     protected PDO $pdo;
 
-    public function __construct(protected string $path, protected ?string $connection = null)
+    public function __construct(protected string|array $path, protected ?string $connection = null)
     {
         $this->pdo = Connection::getInstance($this->connection);
     }
@@ -58,9 +58,12 @@ class Migrator
     /** name => file path, sorted by name */
     public function files(): array
     {
+        $paths = is_array($this->path) ? $this->path : [$this->path];
         $files = [];
-        foreach (glob(rtrim($this->path, '/\\') . '/*.php') ?: [] as $file) {
-            $files[basename($file, '.php')] = $file;
+        foreach ($paths as $dir) {
+            foreach (glob(rtrim($dir, '/\\') . '/*.php') ?: [] as $file) {
+                $files[basename($file, '.php')] = $file;
+            }
         }
         ksort($files);
         return $files;

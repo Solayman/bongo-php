@@ -24,6 +24,9 @@ spl_autoload_register(function ($class) {
         if (isset($parts[1])) {
             $pkgName = strtolower((string) preg_replace('/(?<!^)[A-Z]/', '-$0', $parts[0]));
             $file = BASE_PATH . '/packages/' . $pkgName . '/src/' . str_replace('\\', '/', $parts[1]) . '.php';
+            if (!is_file($file)) {
+                $file = BASE_PATH . '/packages/' . strtolower($parts[0]) . '/src/' . str_replace('\\', '/', $parts[1]) . '.php';
+            }
             if (is_file($file)) {
                 require_once $file;
             }

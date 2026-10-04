@@ -8,4 +8,7 @@ public/files/*
 !/public/storage/.htaccess
 /dist/
 /database/*.sqlite
+/packages/*
+!/packages/.gitkeep
+!/packages/.lock.json
 

@@ -2422,8 +2422,8 @@ Bongo includes an integrated, zero-dependency package manager and runtime loader
 - **Application Override Priority:**
   - **Configuration:** Auto-published to `config/<name>.php` upon installation and customizable via `.env`.
   - **Views:** Run `php bongo package:publish <name> --views` to publish to `resources/views/vendor/<name>/`. Bongo's `ViewEngine` checks the application directory before falling back to package templates (`<x-name::view>` and `@include('name::view')`).
-  - **Translations:** Run `php bongo package:publish <name> --lang` to publish to `lang/vendor/<name>/`. Namespaced keys (`__('name::key')`) check the application directory before falling back to package strings.
-  - **Migrations:** Package migrations in `packages/<name>/database/migrations/` are detected and managed via standard CLI (`php bongo migrate`).
+  - **Migrations:** Package migrations in `packages/<name>/database/migrations/` are detected and managed via standard CLI (`php bongo migrate`, `php bongo migrate:status`, `php bongo migrate:rollback`).
+  - **Routes & Route Caching:** Package routes in `packages/<name>/routes.php` are automatically loaded into the router and are 100% compatible with production route caching (`php bongo route:cache` / `php bongo route:clear`).
   - **Console Commands:** Package commands in `packages/<name>/src/Commands/` extending `System\Console\Command` are automatically discovered and listed in `php bongo help`.
 
 ### Package Commands
