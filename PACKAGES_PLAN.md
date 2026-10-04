@@ -195,26 +195,26 @@ Later: GitHub Actions runs every package's tests on each push and on each core c
 **Phase D (after 1.0)**
 paypal, admin-panel, api-tools, two-factor, backup, image, docker.
 
-### Completed Official Packages (7 Packages, 53 Tests Passing)
+### Completed Official Packages (10 Packages, 85 Tests Passing)
 | Package | Description | Status |
 |---|---|---|
-| `sslcommerz` | SSLCommerz payment gateway | ✔ Done (v1.0.0, 6 tests) |
-| `bkash` | bKash tokenized checkout | ✔ Done (v1.0.0, 7 tests) |
-| `sms` | Multi-driver SMS & phone OTP | ✔ Done (v1.0.0, 7 tests) |
-| `s3` | AWS S3 & SigV4 object storage | ✔ Done (v1.0.0, 7 tests) |
+| `sslcommerz` | SSLCommerz payment gateway | ✔ Done (v1.0.0, 4 tests) |
+| `bkash` | bKash tokenized checkout | ✔ Done (v1.0.0, 6 tests) |
+| `sms` | Multi-driver SMS & phone OTP | ✔ Done (v1.0.0, 8 tests) |
+| `s3` | AWS S3 & SigV4 object storage | ✔ Done (v1.0.0, 9 tests) |
 | `social-login` | OAuth 2.0 Google, GitHub, Facebook | ✔ Done (v1.0.0, 6 tests) |
 | `nagad` | Direct Nagad MFS payment gateway | ✔ Done (v1.0.0, 9 tests) |
 | `stripe` | Stripe international payments & webhooks | ✔ Done (v1.0.0, 11 tests) |
+| `two-factor` | RFC 6238 TOTP 2FA + SVG QR codes & recovery | ✔ Done (v1.0.0, 9 tests) |
+| `image` | Pure-PHP GD image manipulation, cropping, WebP | ✔ Done (v1.0.0, 17 tests) |
+| `backup` | Zero-dependency database & asset backup engine | ✔ Done (v1.0.0, 6 tests) |
 
-### Not needed now — candidates for next packages
+### Candidates for future packages
 | Package | Why it waits |
 |---|---|
-| `paypal` | International payments |
+| `paypal` | International payment gateway |
 | `admin-panel` | Large; needs a stable 1.0 API first |
 | `api-tools` (resources, versioning, docs) | Nice to have; core JSON responses are enough for now |
-| `two-factor` | Useful, but no current project needs it |
-| `backup` | Hosting panels already do backups |
-| `image` | Upload storage works; resizing can wait |
 | `docker` | Most target users deploy on shared hosting |
 
 ### Never packages
