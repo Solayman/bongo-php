@@ -634,7 +634,7 @@ foreach ($request->files('photos') as $photo) {   // a list of UploadedFile; emp
 
 ---
 
-## 6. Spreadsheets & Documents
+## 6a. Spreadsheets & Documents
 
 Bongo provides a unified, zero-dependency data suite for daily business operations: import/export of spreadsheets (CSV and Excel `.xlsx`) and printable invoices/reports with **flawless Bengali and multilingual typography**.
 
@@ -687,7 +687,7 @@ foreach ($rows as $row) {
 Traditional PHP PDF libraries (DomPDF, FPDF) famously break Indic scripts (Bengali, Hindi, etc.) because they lack OpenType complex text shaping (conjuncts like `ক্ষ` split and vowel marks like `কি` appear backwards).
 
 Bongo solves this with `Printable`:
-- **Flawless Typography**: Emits print-ready HTML5 with standard `@media print` rules, rendering Bengali fonts (**Kalpurush, SolaimanLipi, Noto Sans Bengali**) with 100% pixel-perfect ligatures.
+- **Flawless Typography**: Emits print-ready HTML5 with standard `@media print` rules, rendering Bengali fonts (**Kalpurush, SolaimanLipi, Noto Sans Bengali**) with correct ligatures, because a real browser engine shapes the text.
 - **One-Click Native PDF**: Displays an action bar with a **Print / Save as PDF** button (`window.print()`).
 - **Optional Headless PDF Bridge**: If Google Chrome, Microsoft Edge, Chromium, or `wkhtmltopdf` is installed on the server, Bongo compiles binary `.pdf` files automatically for email attachments (`$doc->toPdf($path)`).
 
@@ -2241,7 +2241,7 @@ public function testOrderConfirmation(): void
 
 ---
 
-## 13. Maintenance mode
+## 13a. Maintenance mode
 
 ```bash
 php bongo down                                       # every page: "We'll be back soon" (HTTP 503)
@@ -2254,7 +2254,7 @@ php bongo up                                         # live again
 - To design the page yourself, create `resources/views/errors/503.php`; it receives `$message`.
 - The state is the file `storage/framework/down.json`, so it also works on several servers that share that folder.
 
-## 13a. Branches and releases
+## 13b. Branches and releases
 
 | Branch | Holds |
 | --- | --- |
@@ -2263,7 +2263,7 @@ php bongo up                                         # live again
 
 `php bongo release:branch` adds that commit ("Bongo X.Y.Z"), built from the current `master`, using a temporary worktree so your folder isn't touched. Nothing is tagged or published. Push it with `git push origin release`.
 
-## 13a-2. Upgrading the framework
+## 13c. Upgrading the framework
 
 ```bash
 php bongo upgrade --check      # installed vs latest version, and the release notes
@@ -2283,7 +2283,7 @@ gh release create vX.Y.Z dist/bongo-framework-X.Y.Z.json.gz dist/bongo-framework
 
 `UPGRADE_URL` points to the releases API (GitHub by default). Set `UPGRADE_TOKEN` when the repository is private.
 
-## 13b. Starting a new project
+## 13d. Starting a new project
 
 ### Option A: Clone the clean starter skeleton (`release` branch)
 For direct end users starting a brand-new project without the demo e-commerce store or test suites, clone the dedicated `release` branch (**~800 KB**, 183 files):
