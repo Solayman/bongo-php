@@ -10,7 +10,7 @@ A complete full-stack web framework contained in ~554 KB of clean, readable code
 [![PHP Version](https://img.shields.io/badge/PHP-8.0%2B-777bb4?style=flat-square&logo=php&logoColor=white)](https://www.php.net)
 [![Dependencies](https://img.shields.io/badge/dependencies-0%20required-success?style=flat-square)](DOCUMENTATION.md)
 [![Test Suite](https://img.shields.io/badge/automated%20tests-340%20passing-success?style=flat-square)](TESTING_GUIDE.md)
-[![Core Footprint](https://img.shields.io/badge/core%20size-~170%20KB-informational?style=flat-square)](#empirical-benchmarks)
+[![Starter Skeleton](https://img.shields.io/badge/starter%20skeleton-~800%20KB-informational?style=flat-square)](#framework-comparison)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 [![Localization](https://img.shields.io/badge/i18n-English%20%7C%20বাংলা-orange?style=flat-square)](DOCUMENTATION.md#localization)
 
@@ -37,11 +37,14 @@ Modern web development frameworks increasingly carry substantial cognitive, oper
 
 Get a fully functional MVC application running locally in under a minute:
 
-```bash
-# Clone the repository
-git clone https://github.com/Solayman/bongo-php.git my-app && cd my-app
+### Option A: Fresh Starter Skeleton (Recommended for direct end-users & new apps)
+The `release` branch provides a clean, production-ready starter skeleton (**~800 KB**, 183 files) containing the core framework, starter controllers, models, views, and migrations—with zero demo store clutter and zero test fixtures:
 
-# Configure environment (MySQL or SQLite)
+```bash
+# Clone the clean starter skeleton
+git clone -b release https://github.com/Solayman/bongo-php.git my-app && cd my-app
+
+# Configure environment (MySQL, PostgreSQL, or SQLite)
 cp .env.example .env        # Windows: copy .env.example .env
 
 # Initialize application key and database
@@ -50,6 +53,19 @@ php bongo migrate
 
 # Start development server
 php bongo serve             # Listening on http://127.0.0.1:8000
+```
+
+### Option B: Full Framework with Demo Store & Test Suite
+The `master` branch includes the full framework alongside a complete sample e-commerce application (admin dashboard + customer storefront) and the 340-test automated test suite:
+
+```bash
+# Clone the complete development repository
+git clone https://github.com/Solayman/bongo-php.git my-app && cd my-app
+cp .env.example .env
+php bongo key:generate
+php bongo migrate
+php bongo db:seed           # Populates demo catalog & admin accounts
+php bongo serve
 ```
 
 > [!NOTE]
@@ -205,13 +221,16 @@ Architectural trade-offs compared objectively across common PHP ecosystems:
 |---|---|---|---|---|---|
 | **Architecture** | **Full-Stack, Zero-Dep** | Full-Stack | Component-Based | Full-Stack, Lightweight | Micro-Framework |
 | **Required Dependencies** | **0** | ~50+ packages | ~40+ packages | Minimal | Several |
-| **Fresh Skeleton Footprint** | **~170 KB** | 30 MB+ | 25 MB+ | ~2 MB | ~1 MB |
-| **Total Core Code** | **~13k lines (Fully auditable)** | ~300k+ lines | ~500k+ lines | ~80k lines | Minimal router only |
+| **Fresh Skeleton Footprint** | **~800 KB** (183 files) | 30 MB+ | 25 MB+ | ~2 MB | ~1 MB |
+| **Total Core Code** | **~15k lines (122 files · ~554 KB)** | ~300k+ lines | ~500k+ lines | ~80k lines | Minimal router only |
 | **ORM, Auth, Queues, Mail** | **Integrated** | Integrated | Integrated / Bundles | Partially Integrated | External Packages Required |
 | **Native WebSockets** | **Integrated (Pure PHP)** | Separate Service / Reverb | Third-Party Bundle | Not Included | Not Included |
 | **Built-in Security Auditor** | **`security:check`** | External package | External package | Not Included | Not Included |
 | **Native Bilingual (বাংলা)** | **Built-in** | Community Package | Community Package | Community Package | Not Included |
 | **Ecosystem Maturity** | **v0.9.x (Focused)** | Industry Standard | Enterprise Standard | Mature | Mature |
+
+> [!TIP]
+> **Branch Distribution:** Direct end-users clone the `release` branch (`git clone -b release ...`) for the clean ~800 KB starter skeleton (183 files). Framework contributors and auditors clone `master` for the demo store and automated test suites.
 
 ---
 
@@ -256,6 +275,11 @@ All benchmarks recorded on a clean reference environment using PHP 8.3 on Window
 find system -name "*.php" | wc -l                     # 122 files
 find system -name "*.php" -exec cat {} + | wc -l      # ~15,000 lines (~554 KB)
 ```
+
+**Fresh Starter Skeleton Footprint (`release` branch)**:
+- Total Files: 183 files
+- Total Uncompressed Footprint: ~785 KB (~800 KB)
+- Zero `vendor/` directory, zero required external dependencies, zero build steps
 
 **Per-Request Resource Utilization**:  
 Executed against `public/index.php` in isolated PHP processes under production configuration with compiled views. Memory represents `memory_get_peak_usage()`; latency represents the median of 6 runs with OpCache disabled (worst-case baseline). Under standard production OpCache, response times are faster.

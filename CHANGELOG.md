@@ -29,6 +29,7 @@ Every notable change to the Bongo PHP Framework. Versions follow [semantic versi
 
 ### Changed
 - The framework is now called **Bongo PHP Framework**, made by Nobotech (formerly BongoMVC). The repository is `Solayman/bongo-php`.
+- Starter skeleton metrics and documentation synchronized: updated fresh starter skeleton documentation to reflect accurate footprint (~800 KB, 183 files) and documented direct end-user distribution via the `release` branch (`git clone -b release`).
 - Query values are bound with their real types (int, null, bool with native `\PDO::PARAM_BOOL` for pgsql).
 - Framework autoloader optimized with direct prefix checks (`strncmp`) and `is_file()` lookups.
 

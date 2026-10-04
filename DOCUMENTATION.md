@@ -2285,7 +2285,18 @@ gh release create vX.Y.Z dist/bongo-framework-X.Y.Z.json.gz dist/bongo-framework
 
 ## 13b. Starting a new project
 
-This repository also holds an e-commerce demo app, which the framework's tests use. To start your own project without it:
+### Option A: Clone the clean starter skeleton (`release` branch)
+For direct end users starting a brand-new project without the demo e-commerce store or test suites, clone the dedicated `release` branch (**~800 KB**, 183 files):
+
+```bash
+git clone -b release https://github.com/Solayman/bongo-php.git my-app
+cd my-app
+cp .env.example .env
+php bongo key:generate && php bongo migrate && php bongo serve
+```
+
+### Option B: Build a starter project locally (`release:build`)
+If you already have the repository checked out locally:
 
 ```bash
 php bongo release:build ../my-app
@@ -2300,7 +2311,7 @@ The new project has:
 - the framework's migrations: users, login throttling, JWT revocations, password resets, jobs, remember me and email verification;
 - starter files from `release/skeleton/`: a welcome page with its `HomeController` and route, `/api/health`, a `User` model, an empty seeder, two example tests and a README.
 
-The new project runs as built: `php bongo test` passes and its views compile. A folder that isn't empty, or one inside this repository, is refused. `php bongo about` shows the framework version.
+The new project runs as built: `php bongo test` passes and its views compile. A folder that isn't empty, or one inside this repository, is refused. `php bongo about` shows the framework version. Maintainers synchronize the `release` branch using `php bongo release:branch` and `git push origin release`.
 
 ## 14. The e-commerce test application
 

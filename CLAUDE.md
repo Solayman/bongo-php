@@ -9,6 +9,7 @@ This document is prepared for **Claude AI** (and other internal reviewers and ag
 **Bongo PHP Framework** is a lightweight, high-performance PHP MVC framework built from first principles with **zero required external dependencies**.
 
 * **Size & Footprint:** ~15,000 lines across 122 modular files in `system/` (~554 KB total footprint).
+* **Starter Skeleton:** ~800 KB across 183 files on the `release` branch (clean blank slate for direct end-users; zero demo clutter).
 * **Resource Utilization:** Peak memory usage is **0.45 MB – 0.65 MB per request** with **<15ms execution latency** (even with OpCache disabled).
 * **Zero Dependencies:** No mandatory Composer packages, no Node.js runtime, no asset compilation steps. Pure PHP 8.0+.
 * **Auditable Architecture:** Written in readable, single-responsibility PHP modules averaging 200–600 lines each.
