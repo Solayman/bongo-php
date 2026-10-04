@@ -11,7 +11,7 @@ php bongo migrate
 php bongo serve                 # http://127.0.0.1:8000
 ```
 
-Requires PHP 8.0+ with `pdo_mysql` and `openssl`, plus MySQL or MariaDB. No Composer or Node needed.
+Requires PHP 8.0+ with `pdo_mysql`, `pdo_pgsql`, or `pdo_sqlite`, plus `openssl`. Supports MySQL / MariaDB, PostgreSQL, and SQLite. No Composer or Node needed.
 
 ## Useful commands
 
