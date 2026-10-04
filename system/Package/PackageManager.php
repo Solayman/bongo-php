@@ -49,6 +49,12 @@ class PackageManager
             if (is_dir($langDir)) {
                 Translator::addNamespace($name, $langDir);
             }
+
+            // Run package bootstrap if provided: packages/<name>/bootstrap.php
+            $bootFile = $pkgDir . '/bootstrap.php';
+            if (is_file($bootFile)) {
+                require_once $bootFile;
+            }
         }
     }
 
