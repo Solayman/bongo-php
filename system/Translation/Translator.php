@@ -19,6 +19,13 @@ class Translator
 {
     protected array $json = [];
     protected array $groups = [];
+    /** Package translation namespaces: name => folder path */
+    protected static array $namespaces = [];
+
+    public static function addNamespace(string $namespace, string $path): void
+    {
+        self::$namespaces[$namespace] = rtrim($path, '/\\');
+    }
 
     public function __construct(
         protected string $path,
@@ -86,6 +93,29 @@ class Translator
 
     protected function find(string $key, string $locale): ?string
     {
+        if (str_contains($key, '::')) {
+            [$namespace, $realKey] = explode('::', $key, 2);
+            // 1. App override takes precedence: lang/vendor/<namespace>/<locale>.json
+            $overrideFile = "{$this->path}/vendor/{$namespace}/{$locale}.json";
+            if (is_file($overrideFile)) {
+                $overrideJson = json_decode((string) file_get_contents($overrideFile), true) ?: [];
+                if (isset($overrideJson[$realKey]) && is_string($overrideJson[$realKey])) {
+                    return $overrideJson[$realKey];
+                }
+            }
+            // 2. Package translation file: packages/<name>/lang/<locale>.json
+            if (isset(self::$namespaces[$namespace])) {
+                $pkgFile = self::$namespaces[$namespace] . "/{$locale}.json";
+                if (is_file($pkgFile)) {
+                    $pkgJson = json_decode((string) file_get_contents($pkgFile), true) ?: [];
+                    if (isset($pkgJson[$realKey]) && is_string($pkgJson[$realKey])) {
+                        return $pkgJson[$realKey];
+                    }
+                }
+            }
+            return null;
+        }
+
         // Group key "file.nested.key" (no spaces) → lang/{locale}/file.php
         if (!preg_match('/\s/', $key) && str_contains($key, '.')) {
             [$group, $rest] = explode('.', $key, 2);

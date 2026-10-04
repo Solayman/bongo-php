@@ -518,6 +518,196 @@ try {
 ";
             break;
 
+        case 'add':
+            $target = $options[0] ?? null;
+            if (!$target || str_starts_with($target, '--')) {
+                throw new RuntimeException('Usage: php bongo add <package>[@version]');
+            }
+            $parts = explode('@', $target, 2);
+            $name = $parts[0];
+            $version = $parts[1] ?? null;
+            $installer = new System\Package\Installer();
+            $result = $installer->add($name, $version, $hasOption('force'), $hasOption('backup'));
+            echo "Installed {$result['name']} ({$result['version']})." . PHP_EOL;
+            if (!empty($result['backup'])) {
+                echo "Backed up previous files to: " . relative_path($result['backup']) . PHP_EOL;
+            }
+            if ($result['config_created']) {
+                echo "Published configuration: config/{$result['name']}.php" . PHP_EOL;
+            }
+            if (!empty($result['migrations'])) {
+                echo "Package includes migration(s): " . implode(', ', $result['migrations']) . PHP_EOL;
+                echo "Run: php bongo migrate" . PHP_EOL;
+            }
+            if (!empty($result['env_keys'])) {
+                echo "Environment variables in .env:" . PHP_EOL;
+                foreach ($result['env_keys'] as $key) {
+                    echo "  $key" . PHP_EOL;
+                }
+            }
+            if ($result['readme']) {
+                echo "Documentation: {$result['readme']}" . PHP_EOL;
+            }
+            break;
+
+        case 'package:install':
+            $target = $options[0] ?? null;
+            $force = $hasOption('force');
+            $backup = $hasOption('backup');
+            $installer = new System\Package\Installer();
+            if ($target && !str_starts_with($target, '--')) {
+                $parts = explode('@', $target, 2);
+                $name = $parts[0];
+                $version = $parts[1] ?? null;
+                $result = $installer->install($name, $version, $force, $backup);
+                echo "Installed {$result['name']} ({$result['version']})." . PHP_EOL;
+                if (!empty($result['backup'])) {
+                    echo "Backed up previous files to: " . relative_path($result['backup']) . PHP_EOL;
+                }
+                if ($result['config_created']) {
+                    echo "Published configuration: config/{$result['name']}.php" . PHP_EOL;
+                }
+                if (!empty($result['migrations'])) {
+                    echo "Package includes migration(s): " . implode(', ', $result['migrations']) . PHP_EOL;
+                    echo "Run: php bongo migrate" . PHP_EOL;
+                }
+            } else {
+                $results = $installer->installAll($force, $backup);
+                if (empty($results)) {
+                    echo "No packages enabled in config/packages.php." . PHP_EOL;
+                    echo "Enable a package in config/packages.php or run: php bongo add <name>" . PHP_EOL;
+                } else {
+                    foreach ($results as $res) {
+                        echo "Installed {$res['name']} ({$res['version']})." . PHP_EOL;
+                    }
+                }
+            }
+            break;
+
+        case 'package:update':
+            $target = $options[0] ?? null;
+            $force = $hasOption('force');
+            $backup = $hasOption('backup');
+            $installer = new System\Package\Installer();
+            $pkgName = ($target && !str_starts_with($target, '--')) ? $target : null;
+            $results = $installer->update($pkgName, $force, $backup);
+            if ($pkgName !== null) {
+                $results = [$pkgName => $results];
+            }
+            foreach ($results as $pkg => $res) {
+                if (($res['status'] ?? '') === 'up_to_date') {
+                    echo "Package $pkg is already up to date ({$res['version']})." . PHP_EOL;
+                } else {
+                    echo "Updated $pkg {$res['old_version']} → {$res['version']}." . PHP_EOL;
+                    if (!empty($res['backup'])) {
+                        echo "  Backed up previous files to: " . relative_path($res['backup']) . PHP_EOL;
+                    }
+                }
+            }
+            break;
+
+        case 'package:remove':
+            $name = $options[0] ?? null;
+            if (!$name || str_starts_with($name, '--')) {
+                throw new RuntimeException("Usage: php bongo package:remove <package> [--force]");
+            }
+            $force = $hasOption('force');
+            $installer = new System\Package\Installer();
+            $res = $installer->remove($name, $force);
+            echo "Removed package {$res['name']}." . PHP_EOL;
+            if (!empty($res['migrations'])) {
+                echo "\033[33mNote:\033[0m Package had migrations: " . implode(', ', $res['migrations']) . PHP_EOL;
+                echo "If you ran these migrations, you may want to roll them back or clean up their tables." . PHP_EOL;
+            }
+            break;
+
+        case 'package:list':
+            $installer = new System\Package\Installer();
+            $catalog = $installer->catalog();
+            $installed = System\Package\PackageManager::installed();
+            echo "Official Bongo Packages:\n\n";
+            printf("  %-16s %-12s %-10s %s\n", "Package", "Installed", "Latest", "Description");
+            printf("  %-16s %-12s %-10s %s\n", "-------", "---------", "------", "-----------");
+            $all = array_unique(array_merge(array_keys($catalog), array_keys($installed)));
+            sort($all);
+            foreach ($all as $pkg) {
+                $instVer = $installed[$pkg]['version'] ?? '-';
+                $latest = $catalog[$pkg]['latest'] ?? '-';
+                $desc = $catalog[$pkg]['description'] ?? ($installed[$pkg]['description'] ?? '');
+                $status = '';
+                if ($instVer !== '-' && $latest !== '-' && version_compare($instVer, $latest, '<')) {
+                    $status = " (update available: $latest)";
+                }
+                printf("  %-16s %-12s %-10s %s%s\n", $pkg, $instVer, $latest, $desc, $status);
+            }
+            break;
+
+        case 'package:publish':
+            $name = $options[0] ?? null;
+            if (!$name || str_starts_with($name, '--')) {
+                throw new RuntimeException("Usage: php bongo package:publish <package> [--config] [--views] [--lang]");
+            }
+            $tags = [];
+            if ($hasOption('config')) {
+                $tags[] = 'config';
+            }
+            if ($hasOption('views')) {
+                $tags[] = 'views';
+            }
+            if ($hasOption('lang')) {
+                $tags[] = 'lang';
+            }
+            $installer = new System\Package\Installer();
+            $published = $installer->publish($name, $tags);
+            if (empty($published)) {
+                echo "No files found to publish for package '$name'." . PHP_EOL;
+            } else {
+                echo "Published assets for '$name':" . PHP_EOL;
+                foreach ($published as $item) {
+                    echo "  $item" . PHP_EOL;
+                }
+            }
+            break;
+
+        case 'package:diff':
+            $name = $options[0] ?? null;
+            if (!$name || str_starts_with($name, '--')) {
+                throw new RuntimeException("Usage: php bongo package:diff <package>");
+            }
+            $installer = new System\Package\Installer();
+            $diff = $installer->diff($name);
+            if (empty($diff['modified']) && empty($diff['added']) && empty($diff['deleted'])) {
+                echo "No local modifications in packages/$name (clean)." . PHP_EOL;
+            } else {
+                echo "Local modifications in packages/$name:" . PHP_EOL;
+                foreach ($diff['modified'] as $f) {
+                    echo "  \033[33mmodified:\033[0m $f" . PHP_EOL;
+                }
+                foreach ($diff['added'] as $f) {
+                    echo "  \033[32madded:\033[0m    $f" . PHP_EOL;
+                }
+                foreach ($diff['deleted'] as $f) {
+                    echo "  \033[31mdeleted:\033[0m  $f" . PHP_EOL;
+                }
+            }
+            break;
+
+        case 'package:test':
+            $name = $options[0] ?? null;
+            if (!$name || str_starts_with($name, '--')) {
+                throw new RuntimeException("Usage: php bongo package:test <package>");
+            }
+            $pkgDir = BASE_PATH . '/packages/' . $name;
+            if (!is_dir($pkgDir)) {
+                throw new RuntimeException("Package '$name' is not installed.");
+            }
+            $testsDir = $pkgDir . '/tests';
+            if (!is_dir($testsDir)) {
+                echo "No tests found in packages/$name/tests." . PHP_EOL;
+                break;
+            }
+            exit(System\Testing\Runner::run($testsDir));
+
         case 'benchmark':
             $urls = array_values(array_filter($options, fn($o) => str_starts_with($o, '--url=')));
             $urls = $urls ? array_map(fn($o) => '/' . ltrim(substr($o, 6), '/'), $urls) : ['/', '/api/health'];
@@ -581,6 +771,14 @@ try {
                 'view:clear' => 'Delete compiled templates in storage/cache/views',
                 'log:clear' => 'Delete the log files in storage/logs',
                 'test [filter]' => 'Run the tests in tests/',
+                'add <name>[@version]' => 'Add/uncomment a package in config/packages.php and install it',
+                'package:install [<name>]' => 'Install packages from config/packages.php or install a package',
+                'package:update [name]' => 'Update package(s) to latest allowed version',
+                'package:remove <name> [--force]' => 'Remove package files and comment out in config/packages.php',
+                'package:list' => 'List installed packages, versions and available updates',
+                'package:publish <name>' => 'Publish package config, views, or translations into app',
+                'package:diff <name>' => 'Show local modifications inside packages/<name>',
+                'package:test <name>' => 'Run tests for an installed package',
                 'help' => 'Show this help',
             ];
             $builtIn = array_map(fn($usage) => strtok($usage, ' '), array_keys($help));
@@ -645,6 +843,13 @@ function loadCustomCommands(): array
             }
         } catch (Throwable $e) {
             fwrite(STDERR, "Skipped app/Commands/" . basename($file) . ': ' . get_class($e) . ': ' . $e->getMessage() . PHP_EOL);
+        }
+    }
+    if (class_exists(System\Package\PackageManager::class)) {
+        foreach (System\Package\PackageManager::commands() as $pkgCmd) {
+            if ($pkgCmd->getName() !== '' && !isset($commands[$pkgCmd->getName()])) {
+                $commands[$pkgCmd->getName()] = $pkgCmd;
+            }
         }
     }
     return $commands;

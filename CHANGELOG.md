@@ -5,6 +5,15 @@ Every notable change to the Bongo PHP Framework. Versions follow [semantic versi
 ## Unreleased
 
 ### Added
+- **Official Package Subsystem** (`System\Package`): pure-PHP, zero-dependency package manager and runtime loader (`Installer` and `PackageManager`) supporting official catalog installation, lockfile tracking (`packages/.lock.json`), SHA-256 integrity checks, update safety net (`--backup` to `storage/package-backups/`, `--force`), namespaced views and translations with priority application overrides (`resources/views/vendor/<name>/`, `lang/vendor/<name>/`), package CLI command auto-discovery, package test runner integration, and CLI commands:
+  - `php bongo add <name>[@version]`
+  - `php bongo package:install [<name>[@version]]`
+  - `php bongo package:update [name] [--backup] [--force]`
+  - `php bongo package:remove <name> [--force]`
+  - `php bongo package:list`
+  - `php bongo package:publish <name> [--config] [--views] [--lang]`
+  - `php bongo package:diff <name>`
+  - `php bongo package:test <name>`
 - **Performance tools** (measured, see DOCUMENTATION.md "Performance"):
   - `php bongo benchmark [--url=/x] [--requests=200] [--opcache=both|on|off]`: median, p95, requests per second, memory and HTTP status per URL, OpCache off vs on.
   - `system/preload.php` for OpCache preloading on Linux/macOS servers (PHP has no preloading on Windows).

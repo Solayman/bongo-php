@@ -23,6 +23,11 @@ class Lang
         self::$translator = $translator;
     }
 
+    public static function addNamespace(string $namespace, string $path): void
+    {
+        Translator::addNamespace($namespace, $path);
+    }
+
     public static function locale(): string
     {
         return self::translator()->getLocale();
