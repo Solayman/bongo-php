@@ -12,7 +12,7 @@ Built in:
 | Database | Query builder (row locks, grouped `orWhere`, joins, `groupBy/having`, aggregates, `pluck/value/exists`, `increment`, `chunk`, pagination), transactions with savepoints, query log, models with relations and eager loading |
 | Schema & migrations | PHP migrations with a schema builder; each run is tracked in the database; rollback |
 | Sessions | Flash messages, old input, CSRF tokens |
-| Validation & storage | 35+ rules (dates, regex, files, `unique`, …), `items.*.field` wildcards, custom messages; multi-disk storage (`Storage::disk('public')` vs `Storage::disk('local')`), streaming file downloads (`Storage::download()`), and safe uploads (`$file->store()`, `Storage::url()`) |
+| Validation & storage | 35+ rules (dates, regex, files, `unique`, …), `items.*.field` wildcards, custom messages; multi-disk storage (`Storage::disk('public')`, `Storage::disk('local')`, `Storage::disk('s3')`), streaming file downloads (`Storage::download()`), temporary presigned URLs (`Storage::temporaryUrl()`), custom drivers (`Storage::extend()`), and safe uploads (`$file->store()`, `Storage::url()`) |
 | Spreadsheets & Documents | Unified import/export for CSV and Excel `.xlsx` (`Spreadsheet::read()`, `Spreadsheet::download()`) with UTF-8 BOM, and printable vector documents/PDFs (`Printable::invoice()`) with flawless Bangla and multilingual typography |
 | Hardening | Strict sessions with idle/absolute timeouts, trusted-proxy aware `Request::ip()`/`isSecure()`, optional CSP, `php bongo security:check` deployment checklist |
 | Auth & security | Multiple guards (session, JWT) and providers, `auth:api` middleware, own HS256 JWT with refresh and revocation, peppered Argon2id passwords, AES-256-GCM encryption, login throttling |
@@ -24,7 +24,7 @@ Built in:
 | Container & DI | Service container (`app()`, `bind/singleton/instance`, autowiring), controller method injection, route model binding (`edit(Product $product)` → 404 if missing) |
 | Generators | `make:command`, `make:controller [--api]`, `make:model [--migration]`, `make:middleware`, `make:request`, `make:policy`, `make:job`, `make:component`, `make:seeder`, `make:notification`, `make:mail`, `make:test [--unit]`, `make:migration` |
 | Logging | Built-in daily log files in `storage/logs`, text and structured JSON format (`LOG_FORMAT=json`), levels, secret masking; framework events logged automatically |
-| Packages | Zero-dependency package manager: `php bongo add / package:install / package:update / package:remove / package:list / package:publish / package:diff / package:test`, SHA-256 integrity verification, update safety net, app override priority |
+| Packages | Zero-dependency package manager: `php bongo add / package:install / package:update / package:remove / package:list / package:publish / package:diff / package:test`, SHA-256 integrity verification, update safety net, app override priority; official packages suite (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`) |
 | CLI | `php bongo serve / tinker / route:list / make:* / config:cache / config:clear / view:cache / view:clear / cache:clear / migrate / migrate:status / migrate:rollback / make:migration / db:seed / key:generate / log:clear / test`, plus custom console commands auto-discovery |
 
 The repository currently includes an **e-commerce admin panel** (products, categories, orders, customers). It is the test application used to exercise the framework end to end, and it will be removed later so the framework ships fresh.
@@ -597,11 +597,18 @@ Storage::disk('local')->delete('reports/summary.csv');
 // Directory listing & cleanup
 $files = Storage::disk('public')->files('products');        // Immediate files
 $all   = Storage::disk('local')->allFiles('reports');       // Recursive files
-Storage::disk('local')->deleteDirectory('reports/temp');
+// Temporary presigned URLs (supported on S3 / compatible object storage)
+$url = Storage::disk('s3')->temporaryUrl('invoices/inv-101.pdf', 3600); // Valid for 1 hour
+
+// Runtime custom disk driver extensions
+Storage::extend('sftp', function ($app, $config) {
+    return new SftpDisk($config);
+});
 ```
 
 Uploads and storage are safe by default:
-- **Multi-disk isolation:** Configure disks in `config/storage.php`. By default, `'public'` mounts at `public/storage` (accessible via web URL), while `'local'` mounts at `storage/app` (strictly private, outside the web root).
+- **Multi-disk isolation:** Configure disks in `config/storage.php`. Built-in disks: `'public'` mounts at `public/storage` (accessible via web URL), `'local'` mounts at `storage/app` (strictly private, outside the web root), and `'s3'` (enabled via the official `s3` package or custom S3 adapter).
+- **Custom Disks & Presigned URLs:** Register custom storage engines at runtime via `Storage::extend('driver', fn($app, $config) => ...)`. Generate temporary signed links for private cloud objects via `Storage::temporaryUrl($path, $expirationSeconds)`.
 - **The real content type is checked** (with `fileinfo`), so a PHP script renamed to `cat.jpg` fails `image` and `mimes`.
 - **Stored names are random** (32 hex characters), and the extension comes from the content type, never from the browser's file name.
 - **Only known types are stored:** images, pdf, txt, csv, zip, json, docx and xlsx. Anything else is refused.
@@ -2447,5 +2454,179 @@ BONGO_PACKAGES_TOKEN=ghp_...
 # Local package repository path for local development (defaults to ../bongo-php-packages if present):
 # BONGO_PACKAGES_PATH=../bongo-php-packages
 ```
+
+### Official Packages Suite (`Solayman/bongo-php-packages`)
+
+Bongo maintains an official package suite providing production-grade integrations for regional payment gateways, multi-driver SMS, cloud storage, and social authentication:
+
+#### 1. `sslcommerz` — SSLCommerz Payment Gateway
+Native SSLCommerz payment integration for Bangladesh with sandbox/live modes, IPN handling, and automatic transaction validation.
+* **Install:** `php bongo add sslcommerz`
+* **Configuration (`.env`):**
+  ```ini
+  SSLCOMMERZ_STORE_ID=your_store_id
+  SSLCOMMERZ_STORE_PASSWORD=your_store_password
+  SSLCOMMERZ_SANDBOX=true
+  ```
+* **API Usage:**
+  ```php
+  use BongoPackages\Sslcommerz\Sslcommerz;
+
+  // Initiate payment and redirect user to payment gateway
+  $response = Sslcommerz::initiate([
+      'total_amount' => 1500.00,
+      'currency'     => 'BDT',
+      'tran_id'      => 'TXN_' . uniqid(),
+      'cus_name'     => 'Rahim Ahmed',
+      'cus_email'    => 'rahim@example.com',
+      'cus_phone'    => '01700000000',
+  ]);
+  header('Location: ' . $response['GatewayPageURL']);
+
+  // Validate callback or IPN notification
+  if (Sslcommerz::validate($_POST)) {
+      $valId = $_POST['val_id'];
+      $status = Sslcommerz::status($valId);
+      // Fulfill order
+  }
+  ```
+* **Template Components & Routes:**
+  * Component: `<x-sslcommerz::checkout-button :amount="1500" :transaction-id="$txId" />`
+  * Partial: `@include('sslcommerz::checkout-button')`
+  * Routes: `/sslcommerz/initiate` (POST), `/sslcommerz/success` (POST), `/sslcommerz/failure` (POST), `/sslcommerz/cancel` (POST), `/sslcommerz/ipn` (POST).
+* **CLI Health Check:** `php bongo sslcommerz:check`
+
+#### 2. `bkash` — bKash Tokenized Checkout
+Direct bKash payment gateway via official Tokenized Checkout API with token grant caching, payment execution, query, and refund.
+* **Install:** `php bongo add bkash`
+* **Configuration (`.env`):**
+  ```ini
+  BKASH_APP_KEY=your_app_key
+  BKASH_APP_SECRET=your_app_secret
+  BKASH_USERNAME=your_username
+  BKASH_PASSWORD=your_password
+  BKASH_SANDBOX=true
+  ```
+* **API Usage:**
+  ```php
+  use BongoPackages\Bkash\Bkash;
+
+  // Create payment agreement & get gateway redirect URL
+  $res = Bkash::createPayment([
+      'amount'                => '750.00',
+      'invoice_number'        => 'INV-5501',
+      'payer_reference'       => '01711000000',
+  ]);
+  header('Location: ' . $res['bkashURL']);
+
+  // Execute payment on customer callback
+  $paymentId = $_GET['paymentID'];
+  $result = Bkash::executePayment($paymentId);
+  if (($result['statusCode'] ?? '') === '0000') {
+      // Payment successful; record trxID
+      $trxId = $result['trxID'];
+  }
+  ```
+* **Template Components & Routes:**
+  * Component: `<x-bkash::checkout-button :amount="750" :invoice-number="'INV-5501'" />`
+  * Routes: `/bkash/create` (POST), `/bkash/callback` (GET).
+* **CLI Health Check:** `php bongo bkash:check`
+
+#### 3. `sms` — Multi-Driver SMS Gateway & Phone OTP
+Unified SMS dispatch engine supporting **BulkSMSBD**, **SSL Wireless**, **Alpha SMS**, and a local `log` driver. Includes cryptographic 6-digit phone OTP generation, attempt throttling, verification, and Bengali localization.
+* **Install:** `php bongo add sms`
+* **Configuration (`.env`):**
+  ```ini
+  SMS_DRIVER=bulksmsbd          # bulksmsbd, sslwireless, alpha, or log
+  SMS_API_KEY=your_api_key
+  SMS_SENDER_ID=your_sender_id
+  SMS_CLIENT_ID=your_client_id  # for sslwireless
+  ```
+* **API Usage:**
+  ```php
+  use BongoPackages\Sms\Sms;
+
+  // Direct dispatch
+  Sms::send('01700000000', 'Your order #1042 has been confirmed.');
+
+  // Cryptographic 6-digit OTP dispatch (5-minute TTL, 5-attempt throttle)
+  Sms::sendOtp('01700000000');
+
+  // Verify OTP
+  if (Sms::verifyOtp('01700000000', $submittedCode)) {
+      // Phone number verified
+  }
+  ```
+* **Views & Routes:**
+  * View: `sms::otp-verify` (with English and Bengali locale strings)
+  * Routes: `/otp/verify` (GET/POST), `/otp/resend` (POST)
+* **CLI Command:** `php bongo sms:send 01700000000 "Hello from Bongo!"`
+
+#### 4. `s3` — AWS S3 & Compatible Object Storage (SigV4)
+Pure-PHP AWS Signature Version 4 (SigV4) client connecting Bongo's `Storage` facade directly to **Amazon S3**, **DigitalOcean Spaces**, **Cloudflare R2**, and **MinIO** with zero external dependencies.
+* **Install:** `php bongo add s3`
+* **Configuration (`.env`):**
+  ```ini
+  AWS_ACCESS_KEY_ID=your_access_key
+  AWS_SECRET_ACCESS_KEY=your_secret_key
+  AWS_DEFAULT_REGION=us-east-1
+  AWS_BUCKET=my-app-bucket
+  # Optional custom endpoint (for DigitalOcean Spaces, Cloudflare R2, MinIO):
+  # AWS_ENDPOINT=https://nyc3.digitaloceanspaces.com
+  # AWS_USE_PATH_STYLE_ENDPOINT=false
+  ```
+* **API Usage:**
+  ```php
+  use System\Storage\Storage;
+
+  // S3 disk is automatically registered and ready
+  Storage::disk('s3')->put('reports/monthly.pdf', $binaryPdf);
+  $content = Storage::disk('s3')->get('reports/monthly.pdf');
+  $exists  = Storage::disk('s3')->exists('reports/monthly.pdf');
+
+  // Generate presigned temporary download URL (e.g. valid for 1 hour)
+  $tempUrl = Storage::disk('s3')->temporaryUrl('reports/monthly.pdf', 3600);
+
+  // Streaming download directly from S3
+  return Storage::disk('s3')->download('reports/monthly.pdf', 'download.pdf');
+  ```
+* **CLI Health Check:** `php bongo s3:check`
+
+#### 5. `social-login` — OAuth 2.0 Social Login
+Zero-dependency OAuth 2.0 authentication for **Google**, **GitHub**, and **Facebook** with CSRF state validation, private email resolution, user model auto-creation, and branded SVG button components.
+* **Install:** `php bongo add social-login`
+* **Run Migration:** `php bongo migrate` (adds `social_provider`, `social_id`, `avatar` to `users` table)
+* **Configuration (`.env`):**
+  ```ini
+  GOOGLE_CLIENT_ID=your_google_client_id
+  GOOGLE_CLIENT_SECRET=your_google_client_secret
+  GOOGLE_REDIRECT_URI="${APP_URL}/auth/google/callback"
+
+  GITHUB_CLIENT_ID=your_github_client_id
+  GITHUB_CLIENT_SECRET=your_github_client_secret
+  GITHUB_REDIRECT_URI="${APP_URL}/auth/github/callback"
+
+  FACEBOOK_CLIENT_ID=your_facebook_client_id
+  FACEBOOK_CLIENT_SECRET=your_facebook_client_secret
+  FACEBOOK_REDIRECT_URI="${APP_URL}/auth/facebook/callback"
+  ```
+* **API Usage:**
+  ```php
+  use BongoPackages\SocialLogin\SocialLogin;
+
+  // Redirect to OAuth provider
+  Route::get('/auth/{provider}/redirect', function ($provider) {
+      return SocialLogin::driver($provider)->redirect();
+  });
+
+  // Handle provider callback
+  Route::get('/auth/{provider}/callback', function ($provider) {
+      $socialUser = SocialLogin::driver($provider)->user();
+      // $socialUser->getId(), $socialUser->getName(), $socialUser->getEmail(), $socialUser->getAvatar()
+  });
+  ```
+* **Template Components & Partials:**
+  * Partial: `@include('social-login::buttons')` (clean, responsive Google, GitHub, and Facebook sign-in buttons with SVG brand icons and Bengali localization)
+* **CLI Health Check:** `php bongo social-login:check`
 
 

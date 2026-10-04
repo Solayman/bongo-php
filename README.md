@@ -4,12 +4,12 @@
 
 ### A high-performance, zero-dependency PHP MVC framework engineered for speed, simplicity, and full-source auditability.
 
-A full-stack, enterprise-capable web framework crafted in ~612 KB of clean, readable PHP.  
+A full-stack, enterprise-capable web framework crafted in ~616 KB of clean, readable PHP.  
 **No Composer required. No `vendor/` tree. No Node.js runtime. No build steps.**
 
 [![PHP Version](https://img.shields.io/badge/PHP-8.0%2B-777bb4?style=flat-square&logo=php&logoColor=white)](https://www.php.net)
 [![Dependencies](https://img.shields.io/badge/dependencies-0%20required-brightgreen?style=flat-square)](WHY_BONGO.md)
-[![Test Suite](https://img.shields.io/badge/automated%20tests-364%20passing-brightgreen?style=flat-square)](TESTING_GUIDE.md)
+[![Test Suite](https://img.shields.io/badge/automated%20tests-368%20passing-brightgreen?style=flat-square)](TESTING_GUIDE.md)
 [![Core Size](https://img.shields.io/badge/fresh%20skeleton-~800%20KB-informational?style=flat-square)](#performance--benchmarks)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 [![Localization](https://img.shields.io/badge/i18n-English%20%7C%20বাংলা-orange?style=flat-square)](DOCUMENTATION.md#localization)
@@ -28,7 +28,7 @@ Most modern web frameworks demand significant operational and architectural over
 **Bongo takes an intentional, first-principles path:**
 
 * **Zero Mandatory Dependencies:** Clone the repository, configure your database, and run. No Composer dependency resolver to wait for, no package breaking on minor updates, and no third-party supply-chain vulnerabilities.
-* **Fully Auditable Codebase:** Total framework code is ~17,000 lines across 126 structured files (~612 KB). Every routine—from the request pipeline and ORM to packages and WebSockets—can be read and audited in an afternoon.
+* **Fully Auditable Codebase:** Total framework code is ~15,000 lines across 127 structured files (~616 KB). Every routine—from the request pipeline and ORM to packages and WebSockets—can be read and audited in an afternoon.
 * **Predictable, Measured Performance:** About **0.7–0.85 MB of RAM** per request and **7–13 ms** per page with OpCache (Windows dev machine, built-in server). Loads 24–45 files per request with the caches on. Measure your own app with `php bongo benchmark`.
 * **Deploy Anywhere:** Runs seamlessly on basic shared hosting (cPanel), minimalist VPS instances, Docker containers, or high-density serverless environments without requiring root access or Composer.
 
@@ -173,7 +173,7 @@ $this->get('/products')
     ->assertSee('Yoga Mat');
 ```
 ```bash
-php bongo test              # Runs 353 unit and HTTP integration tests on isolated DB
+php bongo test              # Runs 368 unit and HTTP integration tests on isolated DB
 ```
 
 ---
@@ -187,13 +187,14 @@ Bongo includes an exhaustive set of full-stack batteries out of the box:
 | **HTTP & Routing** | RESTful verb routing (`get`, `post`, `put`, `patch`, `delete`), route groups, route prefixing, named parameters, signed URLs, CORS, security headers, middleware stacks, and form requests (`make:request`). |
 | **Database & ORM** | MySQL/MariaDB, PostgreSQL (`pgsql`), and SQLite query builder, simultaneous multi-database & multi-tenancy (`DB::connection()`, `Model::on()`), isolated transactions & savepoints, Active Record models, relationships (`hasOne`, `hasMany`, `belongsToMany`), eager loading, soft deletes, tracked schema migrations with rollback, and seeders. |
 | **Authentication & Access** | Multi-guard authentication (Session and stateless JWT), password hashing with Argon2id + pepper, account lockout, "Remember me", password reset flows, signed email verification, and authorization policies (`Gate` / `Policy`). |
-| **Storage & Uploads** | Multi-disk storage (`Storage::disk('public')` vs private `Storage::disk('local')`), streaming file downloads (`Storage::download()`), 35+ validation rules, array wildcards (`items.*.qty`), and upload validation inspected via real magic bytes. |
+| **Storage & Uploads** | Multi-disk storage (`Storage::disk('public')`, private `Storage::disk('local')`, and cloud `Storage::disk('s3')`), presigned temporary URLs (`Storage::temporaryUrl()`), custom driver extensibility (`Storage::extend()`), streaming file downloads (`Storage::download()`), 35+ validation rules, array wildcards (`items.*.qty`), and upload validation inspected via real magic bytes. |
 | **Spreadsheets & Docs** | Unified import/export for CSV and Excel `.xlsx` (`Spreadsheet::read()`, `Spreadsheet::download()`) with UTF-8 BOM, and printable vector documents/PDFs (`Printable::invoice()`) with flawless Bangla and multilingual typography. |
 | **Async & Background** | High-throughput job queues (Database and Redis drivers), worker daemon (`php bongo queue:work`), task scheduler (execute recurring jobs without server cron in dev via `php bongo schedule:work`), and queued background mail. |
 | **Logging & Observability**| Text and structured JSON logging (`LOG_FORMAT=json`), daily rotated logs in `storage/logs/`, levels, secret masking, and structured exception formatting for Datadog, CloudWatch, and ELK. |
 | **Extensible CLI** | Pure-PHP CLI with custom console commands (`php bongo make:command <Name>`), base `Command` class, and automatic discovery from `app/Commands/`. |
 | **Communication** | Built-in SMTP mailer, HTML/text templates, attachments, notifications (Mail, SMS, Slack), and an HTTP client with retry policies (`Http::get/post`). |
 | **Real-Time WebSockets** | Native PHP WebSocket server (`php bongo websocket:serve`) with channel multiplexing and public/private subscriptions. |
+| **Packages & Ecosystem** | Zero-dependency package manager (`System\Package`), update diff safety, app override priority, and official production packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`). |
 | **Developer Ergonomics** | Collapsible zero-freeze `dd()` / `dump()` profiling, actionable debug exception screens with auto-fix hints, browser mailbox inspector, and interactive shell (`php bongo tinker`). |
 | **Security Auditing** | `php bongo security:check` scans server configuration, permissions, security headers, and production readiness before launch. |
 | **Multilingual (I18n)** | Shipped with bilingual support for **English** and **Bengali (বাংলা)** across validation errors and UI text. Extensible via JSON dictionaries. |

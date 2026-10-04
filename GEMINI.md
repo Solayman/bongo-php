@@ -21,7 +21,7 @@
 
 ## Core Architecture & Principles
 - **Zero Required Dependencies**: The framework must remain self-contained (no mandatory Composer packages, no Node.js runtime, no build step).
-- **Minimal Size & Overhead**: Keep `system/` file count low (~126 files) and footprint ~612 KB (~17,000 lines). Fresh starter skeleton on `release` branch is ~800 KB (183 files). Never introduce bloated dependencies or excessive abstractions.
+- **Minimal Size & Overhead**: Keep `system/` file count low (~127 files) and footprint ~616 KB (~15,000 lines). Fresh starter skeleton on `release` branch is ~800 KB (183 files). Never introduce bloated dependencies or excessive abstractions.
 - **Production Optimizations**:
   - `php bongo config:cache`: Compiles `config/*.php` and `.env` into `storage/cache/config.php`.
   - `php bongo route:cache`: Compiles registered routes into `storage/cache/routes.php`.
@@ -36,8 +36,8 @@
   - `pgsql`: Native PostgreSQL driver with `PostgresGrammar` DDL, `BIGSERIAL`, `JSONB`, `BOOLEAN`, schema search paths, double-quote identifier escaping, atomic `RETURNING "id"`, and `ON CONFLICT` upsert.
   - **Simultaneous Multi-Database & Multi-Tenancy**: Full support for concurrent querying of multiple named connections in the same request via `DB::connection('name')`, isolated per-connection transaction lifecycles and savepoints (`$conn->transaction(fn() => ...)`), model routing (`protected static ?string $connection = 'name';` and `Model::on('name')`), cross-database relationships, connection-scoped schemas (`Schema::connection('name')`), dynamic runtime connection registration (`Connection::addConnection()`), and migration CLI targeting (`php bongo migrate --database=name`).
 - **Storage Subsystem**:
-  - Multi-disk isolation (`config/storage.php`): `'public'` (`public/storage`) and private `'local'` (`storage/app`).
-  - Safe streaming downloads via `Storage::download()` and `System\Storage\DownloadResponse`.
+  - Multi-disk isolation (`config/storage.php`): `'public'` (`public/storage`), private `'local'` (`storage/app`), and cloud `'s3'` (via official `s3` package).
+  - Presigned temporary URLs via `Storage::temporaryUrl()`, runtime driver extension via `Storage::extend()`, test disk injection via `Storage::set()`, and safe streaming downloads via `Storage::download()`.
 - **Extensible CLI**:
   - Base class `System\Console\Command` with `handle(array $args, array $options): int` and styled output helpers (`info`, `warn`, `error`, `line`).
   - Auto-discovery of custom commands from `app/Commands/*.php`.
@@ -46,8 +46,9 @@
 - **Data & Document Subsystem**:
   - `System\Data\Spreadsheet`: Unified CSV and OpenXML Excel (`.xlsx`) import and export engine with UTF-8 BOM, automatic format detection, and streaming downloads.
   - `System\Data\Printable`: Responsive, print-ready document and vector PDF engine with `@media print` CSS, native browser print/PDF trigger, and headless browser PDF compilation bridge (Chrome/Edge/Chromium/wkhtmltopdf) so Bengali and other Indic scripts keep their ligatures and vowel signs (a real browser engine shapes the text).
-- **Official Package Subsystem**:
-  - `System\Package`: Zero-dependency package manager and runtime loader (`Installer` and `PackageManager`), SHA-256 integrity verification, safe publishing with app override priority (`resources/views/vendor/<name>/`, `lang/vendor/<name>/`), developer safety net (`--backup`, `--force`), package migration management, CLI command auto-discovery, and full CLI suite (`php bongo add / package:*`).
+- **Official Package Subsystem & Ecosystem**:
+  - `System\Package`: Zero-dependency package manager and runtime loader (`Installer` and `PackageManager`), SHA-256 integrity verification, safe publishing with app override priority (`resources/views/vendor/<name>/`, `lang/vendor/<name>/`), developer safety net (`--backup`, `--force`), package migration management, CLI command auto-discovery, runtime `bootstrap.php` execution, and full CLI suite (`php bongo add / package:*`).
+  - **Official Packages Suite (`Solayman/bongo-php-packages`)**: 5 production packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`) with 33 passing package tests.
 
 ## Review & Documentation Tracking Policy
 - **Testing & Pre-Release Tracking**: During the active testing stage prior to public production release, `CLAUDE.md` is tracked in the repository to maintain memory continuity across AI agents and internal developers.
@@ -59,7 +60,7 @@
 
 ## Verified Review Status (Claude, 2026-10-04): no re-check needed
 - Claude verified **all features from PRs #78–#94** on real MySQL, **PostgreSQL 18**, SQLite and Redis servers. The bugs found are fixed in #95 (database), #96 (security), #97 (PSR-12) and #98 (Redis queue), and the docs are corrected in #99. **Do not re-verify these; build on them.** The full table is in `CLAUDE.md` § 7.
-- Current state: **364 tests pass on MySQL, PostgreSQL and SQLite; `system/` has 126 files, ~17,000 lines and ~612 KB.**
+- Current state: **368 tests pass on MySQL, PostgreSQL and SQLite; `system/` has 127 files, 14,988 lines (~15,000 lines) and ~616 KB.**
 - Performance tools (Claude, 2026-10-04, verified, see `CLAUDE.md` § 2 K): `php bongo benchmark`, `system/preload.php`, `DB_PERSISTENT`, N+1 warning, `cache_for()`. Measure every performance claim with `php bongo benchmark`.
 - Rules from the review:
   - test every database a change touches (not only grammar unit tests);

@@ -8,7 +8,7 @@ This document is prepared for **Claude AI** (and other internal reviewers and ag
 
 **Bongo PHP Framework** is a lightweight, high-performance PHP MVC framework built from first principles with **zero required external dependencies**.
 
-* **Size & Footprint:** ~17,000 lines across 126 modular files in `system/` (~612 KB total footprint).
+* **Size & Footprint:** ~15,000 lines across 127 modular files in `system/` (~616 KB total footprint).
 * **Starter Skeleton:** ~800 KB across 183 files on the `release` branch (clean blank slate for direct end-users; zero demo clutter).
 * **Resource Utilization:** About **0.67–0.83 MB per request** and **7–13 ms per page with OpCache** (`php bongo benchmark`, Windows, built-in server; see DOCUMENTATION.md "Performance").
 * **Zero Dependencies:** No mandatory Composer packages, no Node.js runtime, no asset compilation steps. Pure PHP 8.0+.
@@ -123,7 +123,9 @@ The following high-priority features and optimizations were recently implemented
   * **Runtime Loader (`System\Package\PackageManager`):** Zero-cost boot hook (`PackageManager::boot()`) costing a single `is_file()` check on `packages/.lock.json`. Automatically registers view namespaces (`name::view`), translation namespaces (`name::key`), and discovers package console commands.
   * **Application Overrides:** `resources/views/vendor/<name>/` and `lang/vendor/<name>/` take precedence over package assets, surviving updates.
   * **CLI Commands:** `add`, `package:install`, `package:update`, `package:remove`, `package:list`, `package:publish`, `package:diff`, and `package:test`.
-  * **Testing:** 11 unit tests in `tests/Unit/PackageTest.php` (43 assertions). Full test suite: **364 tests passing across MySQL, PostgreSQL 18, and SQLite**.
+  * **Storage Extensibility & Bootstrapping:** Package `bootstrap.php` runner on framework boot; `Storage::extend()`, `Storage::set()`, and `Storage::temporaryUrl()`.
+  * **Official Packages Suite (`Solayman/bongo-php-packages`):** 5 packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`) with 33 passing package tests (119 assertions).
+  * **Testing:** 11 unit tests in `tests/Unit/PackageTest.php` (43 assertions), 6 tests in `tests/Unit/StorageTest.php` (31 assertions). Full core test suite: **368 tests passing (1845 assertions) across MySQL, PostgreSQL 18, and SQLite**.
 
 ---
 
@@ -211,7 +213,7 @@ php bongo package:test <x>     # Runs test suite of installed package
 ## 6. Development Guidelines for AI Agents
 
 1. **Maintain Zero-Dependency Architecture:** Never install or introduce mandatory third-party Composer packages or npm dependencies.
-2. **Minimal Size Principle:** Keep `system/` file count low (~126 files) and footprint ~612 KB (~17,000 lines). Do not create excessive abstraction layers.
+2. **Minimal Size Principle:** Keep `system/` file count low (~127 files) and footprint ~616 KB (~15,000 lines). Do not create excessive abstraction layers.
 3. **PHP 8.0+ Compatibility:** Use strict types, constructor property promotion, union types, and match expressions. Avoid PHP 8.1+ features that break PHP 8.0 support (e.g., `never` return type).
 4. **Update Documentation:** Always update `DOCUMENTATION.md`, `README.md`, `WHY_BONGO.md`, and `GEMINI.md` when introducing new features or commands.
 5. **PSR-12:** run `php phpcs.phar` (rules in `phpcs.xml`); every PR must have 0 errors.
@@ -236,14 +238,14 @@ Claude reviewed **every feature from PRs #78–#94** line by line and ran the fu
 | Printable HTML/PDF (#88) | ✅ Verified, **fixed in #96** | All attributes are validated or escaped; temp files deleted; Chrome output captured. |
 | Code style | ✅ **PSR-12, 0 errors** (#97) | Rules in `phpcs.xml`. Check with `php phpcs.phar` (see CONTRIBUTING). |
 | Docs (#78–#94) | ✅ Corrected (#99) | Real numbers only, no "Blade" wording, correct paths, unique section numbers. |
-| Package Subsystem (Phase A) | ✅ **Complete, 11 tests** | Pure-PHP manager (`System\Package`), SHA-256 verification, update diff safety, app overrides, 8 CLI commands. |
+| Package Subsystem & Official Suite (Phases A, B, C) | ✅ **Complete, 5 packages, 33 package tests** | Pure-PHP manager (`System\Package`), SHA-256 verification, update diff safety, app overrides, `bootstrap.php` runner, storage extensibility (`Storage::extend()`, `Storage::temporaryUrl()`), and 5 official packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`). |
 
-**Test results at review end:** 364 tests pass on MySQL, PostgreSQL 18 and SQLite.
+**Test results at review end:** 368 tests pass on MySQL, PostgreSQL 18 and SQLite.
 
 ### Rules learned from this review (apply to all future work)
 1. **Test on every database a change touches:** `DB_CONNECTION=pgsql DB_PORT=5432 DB_USERNAME=postgres DB_PASSWORD=... php -d extension=pdo_pgsql bongo test`, plus SQLite (`DB_CONNECTION=sqlite php -d extension=pdo_sqlite bongo test`) and MySQL. Grammar-only unit tests are not enough.
 2. **PSR-12 with 0 errors** (`php phpcs.phar`) before every PR.
-3. **Only measured numbers in docs.** No "100%", "<15ms" or "pixel-perfect" without a reproducible measurement. Recount files, lines and tests after changes. Current: 126 files, ~17,000 lines, ~612 KB in `system/`; 364 tests.
+3. **Only measured numbers in docs.** No "100%", "<15ms" or "pixel-perfect" without a reproducible measurement. Recount files, lines and tests after changes. Current: 127 files, ~15,000 lines, ~616 KB in `system/`; 368 tests.
 4. **Never describe Bongo with Laravel or Blade terms** ("Blade-compatible" etc.). Comparison tables that *name* other frameworks are fine.
 5. **Security defaults for new code:**
    - escape or whitelist everything that reaches HTML/CSS/shell/headers;
