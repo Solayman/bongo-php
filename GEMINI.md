@@ -13,7 +13,7 @@
 
 ## Core Architecture & Principles
 - **Zero Required Dependencies**: The framework must remain self-contained (no mandatory Composer packages, no Node.js runtime, no build step).
-- **Minimal Size & Overhead**: Keep `system/` file count low (~122 files) and footprint ~554 KB (~15,000 lines). Never introduce bloated dependencies or excessive abstractions.
+- **Minimal Size & Overhead**: Keep `system/` file count low (~122 files) and footprint ~554 KB (~15,000 lines). Fresh starter skeleton on `release` branch is ~800 KB (183 files). Never introduce bloated dependencies or excessive abstractions.
 - **Production Optimizations**:
   - `php bongo config:cache`: Compiles `config/*.php` and `.env` into `storage/cache/config.php`.
   - `php bongo route:cache`: Compiles registered routes into `storage/cache/routes.php`.

@@ -10,7 +10,7 @@ A full-stack, enterprise-capable web framework crafted in ~554 KB of clean, read
 [![PHP Version](https://img.shields.io/badge/PHP-8.0%2B-777bb4?style=flat-square&logo=php&logoColor=white)](https://www.php.net)
 [![Dependencies](https://img.shields.io/badge/dependencies-0%20required-brightgreen?style=flat-square)](WHY_BONGO.md)
 [![Test Suite](https://img.shields.io/badge/automated%20tests-340%20passing-brightgreen?style=flat-square)](TESTING_GUIDE.md)
-[![Core Size](https://img.shields.io/badge/fresh%20skeleton-~170%20KB-informational?style=flat-square)](#performance--benchmarks)
+[![Core Size](https://img.shields.io/badge/fresh%20skeleton-~800%20KB-informational?style=flat-square)](#performance--benchmarks)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 [![Localization](https://img.shields.io/badge/i18n-English%20%7C%20বাংলা-orange?style=flat-square)](DOCUMENTATION.md#localization)
 [![Maintained by](https://img.shields.io/badge/maintained%20by-Nobotech-blueviolet?style=flat-square)](https://nobotech.xyz)
@@ -38,14 +38,35 @@ Most modern web frameworks demand significant operational and architectural over
 
 Get a fully functional MVC application running locally in under 60 seconds:
 
+### Clean Starter Skeleton (Recommended for new projects)
+The `release` branch provides a clean, production-ready starter skeleton (**~800 KB**, 183 files) containing the core framework, starter controllers, models, views, and migrations—with zero demo clutter and zero test fixtures:
+
 ```bash
-# 1. Clone the project
+# 1. Clone the clean starter skeleton
+git clone -b release https://github.com/Solayman/bongo-php.git my-app && cd my-app
+
+# 2. Configure environment (Windows: copy .env.example .env)
+cp .env.example .env
+
+# 3. Generate security key and run initial migrations
+php bongo key:generate
+php bongo migrate
+
+# 4. Start local development server
+php bongo serve             # Listening on http://127.0.0.1:8000
+```
+
+### Full Repository with Storefront Demo & Test Suites
+If you are evaluating Bongo's complete feature set or contributing:
+
+```bash
+# 1. Clone the full repository
 git clone https://github.com/Solayman/bongo-php.git my-app && cd my-app
 
 # 2. Configure environment (Windows: copy .env.example .env)
 cp .env.example .env
 
-# 3. Generate security key, migrate database, and seed demo app
+# 3. Generate security key, migrate database, and seed demo store
 php bongo key:generate
 php bongo migrate
 php bongo db:seed
