@@ -24,7 +24,7 @@ Built in:
 | Container & DI | Service container (`app()`, `bind/singleton/instance`, autowiring), controller method injection, route model binding (`edit(Product $product)` → 404 if missing) |
 | Generators | `make:command`, `make:controller [--api]`, `make:model [--migration]`, `make:middleware`, `make:request`, `make:policy`, `make:job`, `make:component`, `make:seeder`, `make:notification`, `make:mail`, `make:test [--unit]`, `make:migration` |
 | Logging | Built-in daily log files in `storage/logs`, text and structured JSON format (`LOG_FORMAT=json`), levels, secret masking; framework events logged automatically |
-| Packages | Zero-dependency package manager: `php bongo add / package:install / package:update / package:remove / package:list / package:publish / package:diff / package:test`, SHA-256 integrity verification, update safety net, app override priority; official packages suite (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`) |
+| Packages | Zero-dependency package manager: `php bongo add / package:install / package:update / package:remove / package:list / package:publish / package:diff / package:test`, SHA-256 integrity verification, update safety net, app override priority; official packages suite (`sslcommerz`, `bkash`, `nagad`, `stripe`, `sms`, `s3`, `social-login`, `two-factor`, `image`, `backup`) |
 | CLI | `php bongo serve / tinker / route:list / make:* / config:cache / config:clear / view:cache / view:clear / cache:clear / migrate / migrate:status / migrate:rollback / make:migration / db:seed / key:generate / log:clear / test`, plus custom console commands auto-discovery |
 
 The repository currently includes an **e-commerce admin panel** (products, categories, orders, customers). It is the test application used to exercise the framework end to end, and it will be removed later so the framework ships fresh.
@@ -2419,7 +2419,7 @@ The admin and customer logins are separate guards, so one browser can be signed 
 
 ## 15. Official Package Subsystem
 
-Bongo includes an integrated, zero-dependency package manager and runtime loader designed for optional first-party and community extensions (e.g. `sslcommerz`, `bkash`, `nagad`, `stripe`, `sms`, `s3`, `social-login`).
+Bongo includes an integrated, zero-dependency package manager and runtime loader designed for optional first-party and community extensions (e.g. `sslcommerz`, `bkash`, `nagad`, `stripe`, `sms`, `s3`, `social-login`, `two-factor`, `image`, `backup`).
 
 ### Core Design & Principles
 - **Zero Required Dependencies:** No Composer or Node.js runtime required. The package installer is pure PHP using native HTTP streams, JSON parsing, and `hash_file('sha256', ...)`.
@@ -2457,7 +2457,7 @@ BONGO_PACKAGES_TOKEN=ghp_...
 
 ### Official Packages Suite (`Solayman/bongo-php-packages`)
 
-Bongo maintains an official package suite providing production-grade integrations for regional payment gateways, multi-driver SMS, cloud storage, and social authentication:
+Bongo maintains an official package suite providing production-grade integrations for regional payment gateways, multi-driver SMS, cloud storage, social authentication, two-factor security, image optimization, and database backups:
 
 #### 1. `sslcommerz` — SSLCommerz Payment Gateway
 Native SSLCommerz payment integration for Bangladesh with sandbox/live modes, IPN handling, and automatic transaction validation.
@@ -2714,5 +2714,125 @@ Zero-dependency official Stripe payment gateway client enabling global credit/de
   * Partial: `@include('stripe::checkout')`
   * Routes: `/stripe/checkout` (POST), `/stripe/success` (GET), `/stripe/cancel` (GET), `/stripe/webhook` (POST)
 * **CLI Health Check:** `php bongo stripe:check`
+
+#### 8. `two-factor` — RFC 6238 TOTP Two-Factor Authentication & Pure-PHP SVG QR Codes
+Zero-dependency RFC 6238 TOTP two-factor authentication package compatible with Google Authenticator, Authy, 1Password, and Microsoft Authenticator. Includes a mathematical pure-PHP SVG QR code matrix generator (using Galois Field $GF(2^8)$ and Reed-Solomon polynomial error correction), single-use hashed recovery backup codes, authentication middleware, and complete bilingual setup/challenge views.
+* **Install:** `php bongo add two-factor`
+* **Run Migration:** `php bongo migrate` (creates `two_factor_auth` table for secrets and recovery code storage)
+* **Configuration (`.env`):**
+  ```ini
+  TWO_FACTOR_ISSUER="${APP_NAME}"
+  ```
+* **API Usage:**
+  ```php
+  use Bongo\Packages\TwoFactor\TwoFactor;
+
+  // 1. Generate 16-character Base32 secret
+  $secret = TwoFactor::generateSecret(16);
+
+  // 2. Generate current 6-digit TOTP code
+  $code = TwoFactor::generateTotp($secret);
+
+  // 3. Verify user code with +/- 30s drift tolerance
+  if (TwoFactor::verify($secret, $submittedCode)) {
+      // Valid OTP
+  }
+
+  // 4. Generate pure-PHP SVG QR Code (no external libraries needed)
+  $svgMarkup = TwoFactor::qrCodeSvg('user@example.com', $secret, 'My App');
+  $qrDataUri = TwoFactor::qrCodeDataUri('user@example.com', $secret, 'My App');
+
+  // 5. Generate single-use recovery backup codes
+  $plainCodes = TwoFactor::generateRecoveryCodes(8);
+  $hashedCodes = TwoFactor::hashRecoveryCodes($plainCodes);
+  ```
+* **Views & Middleware:**
+  * Views: `two-factor::setup`, `two-factor::challenge`, `two-factor::recovery`
+  * Middleware: `TwoFactorMiddleware` (enforces 2FA verification before accessing protected routes)
+  * Routes: `/2fa/setup` (GET/POST), `/2fa/challenge` (GET/POST), `/2fa/recovery` (GET/POST)
+* **CLI Command:** `php bongo 2fa:generate admin@example.com`
+
+#### 9. `image` — Pure-PHP Image Manipulation, Resizing, Filters & WebP Optimization
+Zero-dependency image processing and optimization engine powered by PHP's built-in `ext-gd` extension. Supports high-efficiency WebP conversion, thumbnail generation, smart cover/contain fitting, watermarking with alpha blending, and visual adjustments.
+* **Install:** `php bongo add image`
+* **Configuration (`.env`):**
+  ```ini
+  IMAGE_QUALITY=85
+  IMAGE_WATERMARK_POSITION=bottom-right
+  IMAGE_WATERMARK_OPACITY=80
+  ```
+* **API Usage:**
+  ```php
+  use Bongo\Packages\Image\Image;
+
+  // 1. Resize & convert to WebP
+  Image::load('storage/app/photo.jpg')
+      ->resize(800, 600)
+      ->save('public/storage/photo.webp', quality: 85);
+
+  // 2. Smart square thumbnail with cover & center-crop
+  Image::load('avatar.png')
+      ->thumbnail(200)
+      ->save('avatar_thumb.webp');
+
+  // 3. Watermarking with opacity and offsets
+  Image::load('product.jpg')
+      ->watermark('watermark.png', position: 'bottom-right', opacity: 75)
+      ->save('product_wm.webp');
+
+  // 4. Visual filters & transformations
+  Image::load('landscape.jpg')
+      ->brightness(10)
+      ->contrast(15)
+      ->sharpen()
+      ->toWebp();
+  ```
+* **CLI Optimization Command:**
+  ```bash
+  # Optimize and convert all images in a directory to WebP
+  php bongo image:optimize public/uploads --webp --quality=85 --max-width=1920
+  ```
+
+#### 10. `backup` — Zero-Dependency Database & Application Asset Backup Manager
+Zero-dependency multi-database and application asset backup engine. Backs up MySQL, PostgreSQL, or SQLite databases alongside user uploads into compressed `.zip` archives with automatic retention cleanup and optional cloud storage (AWS S3, Cloudflare R2, MinIO).
+* **Install:** `php bongo add backup`
+* **Configuration (`.env`):**
+  ```ini
+  BACKUP_DISK=local
+  BACKUP_KEEP_COUNT=10
+  BACKUP_KEEP_DAYS=30
+  ```
+* **API Usage:**
+  ```php
+  use Bongo\Packages\Backup\Backup;
+
+  // Trigger full backup
+  $result = Backup::run([
+      'db_only' => false,
+      'disk'    => 'local', // or 's3'
+  ]);
+
+  if ($result->isSuccessful()) {
+      echo "Backup saved: " . $result->path() . " (" . $result->humanSize() . ")\n";
+  }
+
+  // List existing backups
+  $backups = Backup::list('local');
+
+  // Retention cleanup
+  Backup::clean(disk: 'local', keepCount: 7, keepDays: 14);
+  ```
+* **CLI Commands:**
+  ```bash
+  # Create a backup
+  php bongo backup:run [--db-only] [--files-only] [--disk=s3]
+
+  # List all backups
+  php bongo backup:list
+
+  # Clean old backups
+  php bongo backup:clean --keep=5
+  ```
+
 
 

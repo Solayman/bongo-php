@@ -22,6 +22,9 @@ Every notable change to the Bongo PHP Framework. Versions follow [semantic versi
   - `social-login` (1.0.0): Google, GitHub, and Facebook OAuth 2.0 social login with CSRF state protection, private email resolution, user model auto-creation, SVG button partials, and natural Bengali localization.
   - `nagad` (1.0.0): Direct Nagad Mobile Financial Service (MFS) payment gateway with native OpenSSL RSA-2048 encryption, SHA256withRSA signatures, two-step checkout flow, verification, refund, CLI key generator (`php bongo nagad:keys --save`), and `php bongo nagad:check`.
   - `stripe` (1.0.0): Zero-dependency Stripe international payment gateway with Checkout Sessions, Payment Intents, full/partial refunds, HMAC-SHA256 webhook signature verification, UI components, and `php bongo stripe:check`.
+  - `two-factor` (1.0.0): RFC 6238 TOTP two-factor authentication with pure-PHP SVG QR code matrix generator (using Galois Field $GF(2^8)$ and Reed-Solomon polynomial error correction), single-use hashed recovery backup codes, middleware, bilingual views, and `php bongo 2fa:generate`.
+  - `image` (1.0.0): Pure-PHP image manipulation, smart cropping, thumbnailing, watermarking with alpha blending, visual filters, and WebP compression engine powered by PHP `ext-gd` with zero third-party dependencies, plus `php bongo image:optimize`.
+  - `backup` (1.0.0): Zero-dependency multi-database (SQLite, MySQL, PostgreSQL) and application asset backup engine with `ZipArchive` packaging, automatic retention cleanup, multi-disk routing (local and cloud S3), and CLI suite (`php bongo backup:run`, `backup:list`, `backup:clean`).
 - **Storage Driver Extensibility & Presigned URLs**:
   - `Storage::extend($driver, $callback)`: register custom filesystem disk drivers at runtime.
   - `Storage::set($name, $disk)`: inject or mock disk instances in unit testing.
