@@ -2419,7 +2419,7 @@ The admin and customer logins are separate guards, so one browser can be signed 
 
 ## 15. Official Package Subsystem
 
-Bongo includes an integrated, zero-dependency package manager and runtime loader designed for optional first-party and community extensions (e.g. `sslcommerz`, `bkash`, `sms`, `s3`, `social-login`).
+Bongo includes an integrated, zero-dependency package manager and runtime loader designed for optional first-party and community extensions (e.g. `sslcommerz`, `bkash`, `nagad`, `sms`, `s3`, `social-login`).
 
 ### Core Design & Principles
 - **Zero Required Dependencies:** No Composer or Node.js runtime required. The package installer is pure PHP using native HTTP streams, JSON parsing, and `hash_file('sha256', ...)`.
@@ -2628,5 +2628,48 @@ Zero-dependency OAuth 2.0 authentication for **Google**, **GitHub**, and **Faceb
 * **Template Components & Partials:**
   * Partial: `@include('social-login::buttons')` (clean, responsive Google, GitHub, and Facebook sign-in buttons with SVG brand icons and Bengali localization)
 * **CLI Health Check:** `php bongo social-login:check`
+
+#### 6. `nagad` — Direct Nagad MFS Payment Gateway
+Direct Nagad Mobile Financial Service (MFS) payment gateway integration using native OpenSSL asymmetric cryptography (RSA-2048 encryption with PKCS#1 v1.5 padding and SHA256withRSA digital signatures), two-step checkout flow, verification, refund, and CLI key generator.
+* **Install:** `php bongo add nagad`
+* **Run Migration:** `php bongo migrate` (creates `nagad_transactions` table for audit and verification)
+* **Configuration (`.env`):**
+  ```ini
+  NAGAD_MERCHANT_ID=your_merchant_id
+  NAGAD_MERCHANT_PRIVATE_KEY=storage/keys/nagad_private.pem
+  NAGAD_PUBLIC_KEY=storage/keys/nagad_public.pem
+  NAGAD_SANDBOX=true
+  NAGAD_CALLBACK_URL="${APP_URL}/nagad/callback"
+  ```
+* **CLI Key Generator:**
+  Generate a compliant 2048-bit RSA key pair instantly (with Windows `openssl.cnf` auto-discovery):
+  ```bash
+  php bongo nagad:keys --save
+  ```
+* **API Usage:**
+  ```php
+  use BongoPackages\Nagad\Nagad;
+
+  // Initialize two-step checkout and redirect to payment gateway
+  $response = Nagad::initiate([
+      'amount'   => 1250.00,
+      'order_id' => 'ORD-' . uniqid(),
+      'mobile'   => '01700000000',
+  ]);
+  header('Location: ' . $response['callBackUrl']);
+
+  // Verify transaction from callback
+  $paymentRefId = $_GET['payment_ref_id'];
+  $result = Nagad::verify($paymentRefId);
+  if (($result['status'] ?? '') === 'Success') {
+      $issuerTrxId = $result['issuerTrxId'];
+      // Fulfill order
+  }
+  ```
+* **Template Components & Routes:**
+  * Component: `<x-nagad::checkout-button :amount="1250" :order-id="'ORD-9901'" />`
+  * Partial: `@include('nagad::checkout-button')`
+  * Routes: `/nagad/initiate` (POST), `/nagad/callback` (GET)
+* **CLI Health Check:** `php bongo nagad:check`
 
 

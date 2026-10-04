@@ -154,7 +154,7 @@ $this->get('/products')
     ->assertSee('Yoga Mat');
 ```
 ```bash
-php bongo test              # Runs 353 unit & feature tests with isolated SQLite/MySQL runner
+php bongo test              # Runs 368 unit & feature tests with isolated SQLite/MySQL/PostgreSQL runner
 ```
 
 ---
@@ -162,7 +162,7 @@ php bongo test              # Runs 353 unit & feature tests with isolated SQLite
 ## Architectural Pillars
 
 ### 1. Full-Source Auditability
-The core framework consists of approximately **16,000 lines of code across 124 files** (~580 KB). Components are modular and focused, averaging about 130 lines per file (largest modules 500–900 lines). Engineers can inspect any internal routine—from the request pipeline to the database grammar—in minutes without navigating third-party repositories.
+The core framework consists of approximately **15,000 lines of code across 127 files** (~616 KB). Components are modular and focused, averaging about 135 lines per file (largest modules 500–900 lines). Engineers can inspect any internal routine—from the request pipeline to the database grammar—in minutes without navigating third-party repositories.
 
 ### 2. Zero-Dependency Resilience
 With zero mandatory external dependencies, Bongo shields applications from supply-chain compromises, unintended automated breakage, and dependency conflicts. Deploy smoothly to shared hosting, minimal VPS instances, or bare containers. Composer integration remains fully optional: if `vendor/autoload.php` is present, it is seamlessly loaded.
