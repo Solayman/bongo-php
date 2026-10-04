@@ -3166,6 +3166,90 @@ Zero-dependency production health check suite for uptime monitors (BetterUptime,
   php bongo health:check --json
   ```
 
+#### 20. `file-manager` — Web File Manager & Embedded Code Editor
+UniSharp-style web file manager and embedded professional code editor with **zero server dependencies** (pure PHP, no Node.js runtime, no npm packages, no Composer dependencies). Designed for modern CMS admin dashboards, standalone file browsing, media management, and code file editing.
+
+* **Install:** `php bongo add file-manager`
+* **Features:**
+  * **UniSharp File Manager Compatible UI:** Dark slate navigation header, responsive sidebar with collapsible directory tree, breadcrumb navigation, and live search.
+  * **Thumbnails & List Views:** Instant toggle between card grid (with sky-blue SVG folder icons, crisp image previews, and distinct teal selection highlight) and detailed data table (Name, Size, Type, Date Modified, Actions).
+  * **Floating Action Button (FAB) Speed Dial:** Quick action dial in the bottom right corner for one-click multi-file uploads (with full-workspace drag & drop overlay) and subfolder creation.
+  * **Embedded Professional Code Editor:** In-browser CodeMirror editor supporting syntax highlighting for PHP, JavaScript, CSS, HTML, SQL, Markdown, YAML, JSON, and XML. Includes Dracula dark and Eclipse light themes, bracket matching, line counts, and `Ctrl+S` / `Cmd+S` keyboard shortcuts.
+  * **High-Resolution Lightbox:** Pixel-perfect image preview modal with natural dimensions (`width × height`), file size display, and direct download.
+  * **WYSIWYG & Form Input Integration:** Standalone JavaScript connector for form input file pickers, image previews, TinyMCE, CKEditor, and Summernote.
+  * **Enterprise Security:** Path traversal sanitization (`..` stripping, null-byte poisoning mitigation), extension whitelisting, MIME verification, and optional read-only mode.
+
+* **Configuration (`config/filemanager.php` & `.env`):**
+  ```ini
+  # Web File Manager & Code Editor
+  FILEMANAGER_PREFIX=filemanager
+  FILEMANAGER_DISK=public
+  FILEMANAGER_BASE_DIR=uploads
+  FILEMANAGER_READ_ONLY=false
+  FILEMANAGER_MAX_FILE_SIZE_KB=20480
+  ```
+
+* **Standalone Form Input Integration:**
+  Include the connector helper script in your admin view:
+  ```html
+  <div class="form-group">
+      <label>Hero Image</label>
+      <div class="input-group">
+          <input type="text" id="hero_image" name="hero_image" class="form-control">
+          <button type="button" id="lfm_btn" class="btn btn-primary">Choose Image</button>
+      </div>
+      <img id="hero_preview" style="max-height: 100px; margin-top: 10px;">
+  </div>
+
+  @include('file-manager::script')
+  <script>
+      bongoFileManager({
+          button: '#lfm_btn',
+          targetInput: '#hero_image',
+          targetPreview: '#hero_preview',
+          type: 'image'
+      });
+  </script>
+  ```
+
+* **TinyMCE Integration:**
+  ```javascript
+  tinymce.init({
+      selector: 'textarea#editor',
+      file_picker_callback: function (callback, value, meta) {
+          const type = meta.filetype === 'image' ? 'image' : 'all';
+          window.bongoFileManagerCallback = function (item) {
+              callback(item.url, { alt: item.name });
+          };
+          window.open('/filemanager?type=' + type + '&callback=1', 'FileManager', 'width=1100,height=700');
+      }
+  });
+  ```
+
+* **Programmatic PHP Usage:**
+  ```php
+  use Bongo\Packages\FileManager\FileManager;
+
+  // List directory contents
+  $items = FileManager::getItems('products');
+  // $items['folders'] and $items['files']
+
+  // Create folder
+  FileManager::createFolder('products', 'electronics');
+
+  // Read & Save code files
+  $code = FileManager::readFile('scripts/app.js');
+  FileManager::saveFile('scripts/app.js', '// updated');
+
+  // Rename or Move
+  FileManager::renameItem('old.jpg', 'new.jpg');
+  FileManager::moveItem('new.jpg', 'archive');
+
+  // Delete item
+  FileManager::deleteItem('temp.txt');
+  ```
+
+
 
 
 
