@@ -155,8 +155,69 @@ class RedisTest extends TestCase
 
             $statsAfter = \System\Queue\Queue::stats('default');
             $this->assertSame(0, $statsAfter['pending']);
+            $this->assertSame(0, $statsAfter['reserved'], 'a finished job is no longer reserved');
         } finally {
             $GLOBALS['config']['queue']['driver'] = $prevDriver;
+        }
+    }
+
+    public function testRedisJobSurvivesAWorkerCrash(): void
+    {
+        if ($this->redis === null) {
+            $this->assertTrue(true);
+            return;
+        }
+        $prev = [config('queue.driver'), config('queue.retry_after')];
+        $GLOBALS['config']['queue']['driver'] = 'redis';
+        $queueKey = \System\Redis\Redis::prefix() . 'queue:crash';
+        $this->redis->del($queueKey, "$queueKey:delayed", "$queueKey:reserved");
+
+        try {
+            \System\Queue\Queue::push(new RedisJobProbe(), 0, 'crash');
+
+            // A worker takes the job and "dies" before finishing it
+            $GLOBALS['config']['queue']['retry_after'] = 0;
+            $this->assertNotNull((new \System\Queue\Worker())->reserve('crash'));
+            $this->assertSame(1, \System\Queue\Queue::stats('crash')['reserved']);
+
+            // The next worker gets it back, because its reservation expired
+            sleep(1);
+            RedisJobProbe::$ran = false;
+            $GLOBALS['config']['queue']['retry_after'] = 90;
+            $this->assertSame(1, (new \System\Queue\Worker())->work(['once' => true, 'queue' => 'crash']));
+            $this->assertTrue(RedisJobProbe::$ran, 'the job was not lost');
+            $this->assertSame(0, \System\Queue\Queue::stats('crash')['reserved']);
+        } finally {
+            [$GLOBALS['config']['queue']['driver'], $GLOBALS['config']['queue']['retry_after']] = $prev;
+            $this->redis->del($queueKey, "$queueKey:delayed", "$queueKey:reserved");
+        }
+    }
+
+    public function testUnsignedRedisJobsAreNeverUnserialized(): void
+    {
+        if ($this->redis === null) {
+            $this->assertTrue(true);
+            return;
+        }
+        $prev = config('queue.driver');
+        $GLOBALS['config']['queue']['driver'] = 'redis';
+        $queueKey = \System\Redis\Redis::prefix() . 'queue:forged';
+        $this->redis->del($queueKey, "$queueKey:reserved");
+
+        try {
+            // Someone with access to Redis writes a job without the APP_KEY signature
+            RedisJobProbe::$ran = false;
+            $forged = json_encode(['id' => 'x', 'queue' => 'forged', 'job' => base64_encode(serialize(new RedisJobProbe())), 'attempts' => 0]);
+            $this->redis->rPush($queueKey, $forged);
+            $this->redis->rPush($queueKey, json_encode(['body' => $forged, 'sig' => str_repeat('0', 64)]));
+
+            $this->assertNull((new \System\Queue\Worker())->reserve('forged'));
+            $this->assertNull((new \System\Queue\Worker())->reserve('forged'));
+            $this->assertFalse(RedisJobProbe::$ran);
+            $this->assertSame(0, (int) $this->redis->zCard("$queueKey:reserved"));
+        } finally {
+            $GLOBALS['config']['queue']['driver'] = $prev;
+            $this->redis->del($queueKey, "$queueKey:reserved");
         }
     }
 }

@@ -34,7 +34,7 @@ class Queue
             $prefix = \System\Redis\Redis::prefix();
             $queueKey = $prefix . 'queue:' . $queue;
             $id = bin2hex(random_bytes(8));
-            $payload = json_encode([
+            $payload = self::signRedisEntry([
                 'id'           => $id,
                 'queue'        => $queue,
                 'job'          => base64_encode(serialize($job)),
@@ -62,6 +62,30 @@ class Queue
         ]);
         Log::debug('Queued {job} (#{id}) on {queue}', ['job' => $job->displayName(), 'id' => $id, 'queue' => $queue]);
         return $id;
+    }
+
+    /**
+     * Redis entries are signed with APP_KEY: a worker only unserializes jobs this app queued,
+     * never objects someone else wrote into a shared or unprotected Redis.
+     */
+    public static function signRedisEntry(array $data): string
+    {
+        $body = json_encode($data, JSON_UNESCAPED_SLASHES);
+        return json_encode(['body' => $body, 'sig' => hash_hmac('sha256', $body, \System\Security\Key::derive('queue'))]);
+    }
+
+    /** The job data of a signed entry, or null when it is malformed or the signature doesn't match */
+    public static function verifyRedisEntry(string $entry): ?array
+    {
+        $outer = json_decode($entry, true);
+        if (!is_array($outer) || !is_string($outer['body'] ?? null) || !is_string($outer['sig'] ?? null)) {
+            return null;
+        }
+        if (!hash_equals(hash_hmac('sha256', $outer['body'], \System\Security\Key::derive('queue')), $outer['sig'])) {
+            return null;
+        }
+        $data = json_decode($outer['body'], true);
+        return is_array($data) && !empty($data['job']) ? $data : null;
     }
 
     public static function later(int $delaySeconds, Job $job): string|int|null
@@ -99,10 +123,10 @@ class Queue
                 $q = $queue ?? 'default';
                 $queueKey = $prefix . 'queue:' . $q;
                 return [
-                    'pending'  => (int) $redis->lLen($queueKey),
+                    'pending'  => (int) $redis->lLen($queueKey) + (int) $redis->zCount($queueKey . ':delayed', '-inf', (string) $now),
                     'delayed'  => (int) $redis->zCount($queueKey . ':delayed', (string) ($now + 1), '+inf'),
-                    'reserved' => 0,
-                    'failed'   => (int) DB::table('failed_jobs')->count(),
+                    'reserved' => (int) $redis->zCard($queueKey . ':reserved'),
+                    'failed'   => (int) DB::table('failed_jobs')->where('queue', $q)->count(),
                 ];
             }
 
