@@ -27,6 +27,16 @@ abstract class Relation
         return $this->query;
     }
 
+    /** Create a new query for the related model inheriting active connection */
+    protected function newRelatedQuery(): QueryBuilder
+    {
+        $query = ($this->related)::query();
+        if ($this->query->getConnection() !== null && ($this->related)::getConnectionName() === null) {
+            $query->setConnection($this->query->getConnection());
+        }
+        return $query;
+    }
+
     /** Limit the query to rows related to $parent */
     abstract protected function constrain(): void;
 
