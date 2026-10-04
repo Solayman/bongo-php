@@ -14,6 +14,17 @@ Every notable change to the Bongo PHP Framework. Versions follow [semantic versi
   - `php bongo package:publish <name> [--config] [--views] [--lang]`
   - `php bongo package:diff <name>`
   - `php bongo package:test <name>`
+- **Official Bongo Packages Suite** (`Solayman/bongo-php-packages`):
+  - `sslcommerz` (1.0.0): SSLCommerz payment gateway for Bangladesh with token validation, sandbox/live modes, IPN handling, checkout views, translations, and `php bongo sslcommerz:check`.
+  - `bkash` (1.0.0): bKash Tokenized Checkout payment gateway with token caching, payment execution, query, refund, checkout views, translations, and `php bongo bkash:check`.
+  - `sms` (1.0.0): Multi-driver SMS gateway (BulkSMSBD, SSL Wireless, Alpha SMS, and log driver) with 6-digit cryptographic phone OTP generation, attempt throttling, verification, views, and natural Bengali localization.
+  - `s3` (1.0.0): Pure-PHP AWS Signature Version 4 (SigV4) object storage disk for Amazon S3, DigitalOcean Spaces, Cloudflare R2, and MinIO with presigned temporary URLs and `php bongo s3:check`.
+  - `social-login` (1.0.0): Google, GitHub, and Facebook OAuth 2.0 social login with CSRF state protection, private email resolution, user model auto-creation, SVG button partials, and natural Bengali localization.
+- **Storage Driver Extensibility & Presigned URLs**:
+  - `Storage::extend($driver, $callback)`: register custom filesystem disk drivers at runtime.
+  - `Storage::set($name, $disk)`: inject or mock disk instances in unit testing.
+  - `Storage::temporaryUrl($path, $expiration)`: generate presigned temporary download URLs directly via the `Storage` facade.
+  - Package runtime boot executes `packages/<name>/bootstrap.php` automatically on framework startup.
 - **Performance tools** (measured, see DOCUMENTATION.md "Performance"):
   - `php bongo benchmark [--url=/x] [--requests=200] [--opcache=both|on|off]`: median, p95, requests per second, memory and HTTP status per URL, OpCache off vs on.
   - `system/preload.php` for OpCache preloading on Linux/macOS servers (PHP has no preloading on Windows).
@@ -23,7 +34,7 @@ Every notable change to the Bongo PHP Framework. Versions follow [semantic versi
 - **Simultaneous multi-database & multi-tenancy engine**: query multiple databases concurrently in a single request via `DB::connection('name')`, isolated per-connection transaction lifecycles and savepoints (`$conn->transaction(fn() => ...)`), model connection routing (`protected static ?string $connection = 'tenant';` and `Model::on('tenant')`), cross-database relationships, schema management (`Schema::connection('name')`), dynamic runtime connection registration (`Connection::addConnection()`), and migration CLI support (`php bongo migrate --database=name`).
 - **Unified spreadsheet engine** (`System\Data\Spreadsheet`): frictionless single-API import and export for both CSV and genuine OpenXML Excel (`.xlsx`) files (`Spreadsheet::read()`, `Spreadsheet::download()`, `Spreadsheet::store()`) with UTF-8 BOM injection for clean multilingual Excel display and zero third-party dependencies.
 - **Printable documents & vector PDF engine** (`System\Data\Printable`): responsive, print-optimized document generator with `@media print` CSS, one-click browser print/PDF trigger, and automatic headless browser PDF compilation bridge (Chrome, Edge, Chromium, wkhtmltopdf) so Bengali and other Indic scripts keep their ligatures and vowel signs (a real browser engine shapes the text).
-- **Multi-disk storage and streaming file downloads**: `Storage::disk('public')` (rooted at `public/storage`) vs `Storage::disk('local')` (private files at `storage/app`), `Storage::download($path, $filename)` with safe streaming headers, directory operations (`allFiles`, `deleteDirectory`), and disk targeting on uploads (`$file->store('folder', 'local')`).
+- **Multi-disk storage and streaming file downloads**: `Storage::disk('public')` (rooted at `public/storage`) vs `Storage::disk('local')` (private files at `storage/app`) and `Storage::disk('s3')`, `Storage::download($path, $filename)` with safe streaming headers, directory operations (`allFiles`, `deleteDirectory`), and disk targeting on uploads (`$file->store('folder', 'local')`).
 - **Custom console commands engine**: `System\Console\Command` base class with formatted output helpers (`info`, `warn`, `error`, `line`), `php bongo make:command <Name>` generator, and automatic CLI discovery and execution from `app/Commands/`.
 - **Structured JSON logging** (`LOG_FORMAT=json`): output single-line JSON log events with context sanitization/masking, structured exception objects (class, message, code, file, line, trace), and dual-format parsing in `Logger::recent()`.
 - **Native PostgreSQL support** (`DB_CONNECTION=pgsql`): pure-PHP `PostgresGrammar` DDL, `BIGSERIAL PRIMARY KEY`, `BOOLEAN`, `JSONB`, enum `CHECK` constraints, column comments, automatic `useCurrentOnUpdate` triggers, atomic `RETURNING "id"` inserts, `ON CONFLICT` upserts, and `FOR SHARE` locks.
