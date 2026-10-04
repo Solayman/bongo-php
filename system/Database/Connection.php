@@ -25,7 +25,11 @@ class Connection
         $db = self::config();
 
         try {
-            self::$pdo = self::driver() === 'sqlite' ? self::connectSqlite($db) : self::connectMysql($db);
+            self::$pdo = match (self::driver()) {
+                'sqlite' => self::connectSqlite($db),
+                'pgsql'  => self::connectPgsql($db),
+                default  => self::connectMysql($db),
+            };
         } catch (PDOException $e) {
             \System\Log\Log::critical('Database connection failed: ' . $e->getMessage(), ['driver' => self::driver(), 'database' => $db['database'] ?? null]);
             // Throw instead of die() so callers can catch it and show a friendly error
@@ -35,15 +39,25 @@ class Connection
         return self::$pdo;
     }
 
-    /** "mysql" or "sqlite" */
+    /** "mysql", "sqlite", or "pgsql" */
     public static function driver(): string
     {
         return self::$driver ??= self::config()['driver'] ?? 'mysql';
     }
 
+    public static function isMysql(): bool
+    {
+        return self::driver() === 'mysql';
+    }
+
     public static function isSqlite(): bool
     {
         return self::driver() === 'sqlite';
+    }
+
+    public static function isPgsql(): bool
+    {
+        return self::driver() === 'pgsql';
     }
 
     /** Forget the connection, e.g. after changing config('database') */
@@ -88,6 +102,24 @@ class Connection
         $pdo = new PDO('sqlite:' . $path, null, null, self::options());
         $pdo->exec('PRAGMA foreign_keys = ON');
         $pdo->exec('PRAGMA busy_timeout = 5000');
+        return $pdo;
+    }
+
+    protected static function connectPgsql(array $db): PDO
+    {
+        if (!in_array('pgsql', PDO::getAvailableDrivers(), true)) {
+            throw new PDOException('The pdo_pgsql PHP extension is not enabled. Add "extension=pdo_pgsql" to php.ini.');
+        }
+        $host = $db['host'] ?? '127.0.0.1';
+        $port = (int) ($db['port'] ?? 5432);
+        $database = $db['database'] ?? 'bongo';
+        $sslmode = $db['sslmode'] ?? 'prefer';
+        $dsn = "pgsql:host={$host};port={$port};dbname={$database};sslmode={$sslmode}";
+        $pdo = new PDO($dsn, $db['username'] ?? 'postgres', $db['password'] ?? '', self::options());
+        if (!empty($db['schema'])) {
+            $pdo->exec('SET search_path TO ' . $db['schema']);
+        }
+        $pdo->exec("SET timezone = '" . date('P') . "'");
         return $pdo;
     }
 }

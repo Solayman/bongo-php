@@ -22,3 +22,7 @@
   - `sync`: Executes jobs immediately inline.
   - `database`: Uses `jobs` table with row locking.
   - `redis`: High-throughput Redis lists and delayed sorted sets (`QUEUE_DRIVER=redis`).
+- **Supported Database Drivers**:
+  - `mysql`: Default enterprise MySQL/MariaDB driver.
+  - `sqlite`: Zero-configuration file database (`database.sqlite`).
+  - `pgsql`: Native PostgreSQL driver with `PostgresGrammar` DDL, `BIGSERIAL`, `JSONB`, `BOOLEAN`, schema search paths, double-quote identifier escaping, atomic `RETURNING "id"`, and `ON CONFLICT` upsert.

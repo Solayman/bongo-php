@@ -43,6 +43,16 @@ The following high-priority features and optimizations were recently implemented
 * **Static Route Fast-Path:** Updated `RouteDefinition::match()` to check `$this->path === $path` for routes without dynamic `{parameters}`. This skips regular expression execution for ~80% of standard application routes.
 * **Autoloader Speedup:** Replaced array iteration and runtime `strlen()` in `config/bootstrap.php` with direct prefix checks (`strncmp('App\\', ...)` and `strncmp('System\\', ...)`) and `is_file()` lookups.
 
+### D. Native PostgreSQL Database Driver & Schema Grammar (`DB_CONNECTION=pgsql`)
+* **Problem Solved:** Enterprise environments and high-concurrency cloud deployments frequently require PostgreSQL instead of MySQL or SQLite.
+* **Implementation:**
+  * **Driver Connection:** Added `connectPgsql()` and `isPgsql()` to `System\Database\Connection` with schema search path and timezone alignment.
+  * **PostgresGrammar:** Created `System\Database\Schema\PostgresGrammar` handling `BIGSERIAL PRIMARY KEY`, `BOOLEAN`, `JSONB`, `VARCHAR(...) CHECK (...)` for enums, double-quote identifier escaping (`"table"."col"`), column comments, and automatic trigger functions for `useCurrentOnUpdate()`.
+  * **Schema Integration:** Updated `Schema::rename()` (`ALTER TABLE ... RENAME TO`), `hasColumn()` and `tables()` using PostgreSQL's `information_schema`, and foreign key bypasses via `session_replication_role = 'replica'`.
+  * **Atomic Inserts & Upsert:** Updated `QueryBuilder::insertGetId()` with atomic `RETURNING "id"` clause; updated `upsert()` with `ON CONFLICT (...) DO UPDATE SET ...` with `EXCLUDED` references; updated `sharedLock()` to `FOR SHARE`.
+  * **Migration State:** Updated `Migrator::ensureTable()` with PostgreSQL `SERIAL PRIMARY KEY` tracking table.
+  * **Unit Testing:** Verified via `tests/Unit/PostgresSchemaTest.php` (100% test suite passing with 319 tests and 1,628 assertions).
+
 ---
 
 ## 3. Strict Git & Branching Rules

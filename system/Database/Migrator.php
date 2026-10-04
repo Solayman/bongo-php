@@ -32,6 +32,15 @@ class Migrator
             )');
             return;
         }
+        if (Connection::isPgsql()) {
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS ' . self::TABLE . ' (
+                id SERIAL PRIMARY KEY,
+                migration VARCHAR(255) NOT NULL UNIQUE,
+                batch INT NOT NULL,
+                ran_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )');
+            return;
+        }
         $this->pdo->exec('CREATE TABLE IF NOT EXISTS ' . self::TABLE . ' (
             id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             migration VARCHAR(255) NOT NULL UNIQUE,

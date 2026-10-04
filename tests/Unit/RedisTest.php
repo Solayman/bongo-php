@@ -128,15 +128,8 @@ class RedisTest extends TestCase
             $this->redis->del($queueKey);
             $this->redis->del($queueKey . ':delayed');
 
-            $job = new class extends \System\Queue\Job {
-                public static bool $ran = false;
-                public function handle(): void {
-                    self::$ran = true;
-                }
-            };
-            $job::$ran = false;
-
-            $id = \System\Queue\Queue::push($job);
+            RedisJobProbe::$ran = false;
+            $id = \System\Queue\Queue::push(new RedisJobProbe());
             $this->assertNotNull($id);
 
             $stats = \System\Queue\Queue::stats('default');
@@ -146,12 +139,21 @@ class RedisTest extends TestCase
             $processed = $worker->work(['once' => true, 'queue' => 'default']);
 
             $this->assertSame(1, $processed);
-            $this->assertTrue($job::$ran);
+            $this->assertTrue(RedisJobProbe::$ran);
 
             $statsAfter = \System\Queue\Queue::stats('default');
             $this->assertSame(0, $statsAfter['pending']);
         } finally {
             $GLOBALS['config']['queue']['driver'] = $prevDriver;
         }
+    }
+}
+
+class RedisJobProbe extends \System\Queue\Job
+{
+    public static bool $ran = false;
+    public function handle(): void
+    {
+        self::$ran = true;
     }
 }

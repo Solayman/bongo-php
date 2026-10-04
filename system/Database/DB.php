@@ -30,11 +30,13 @@ class DB
         $start = microtime(true);
         $stmt = Connection::getInstance()->prepare($sql);
         // Bind with real types: SQLite compares the text '4' and the number 4 as different values
+        $isPgsql = Connection::isPgsql();
         foreach (array_values($bindings) as $i => $value) {
-            $stmt->bindValue($i + 1, is_bool($value) ? (int) $value : $value, match (true) {
-                is_int($value), is_bool($value) => \PDO::PARAM_INT,
-                $value === null                 => \PDO::PARAM_NULL,
-                default                         => \PDO::PARAM_STR,
+            $stmt->bindValue($i + 1, is_bool($value) ? ($isPgsql ? $value : (int) $value) : $value, match (true) {
+                is_bool($value) => $isPgsql ? \PDO::PARAM_BOOL : \PDO::PARAM_INT,
+                is_int($value)  => \PDO::PARAM_INT,
+                $value === null => \PDO::PARAM_NULL,
+                default         => \PDO::PARAM_STR,
             });
         }
         $stmt->execute();

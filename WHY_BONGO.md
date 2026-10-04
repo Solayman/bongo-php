@@ -221,7 +221,7 @@ Architectural trade-offs compared objectively across common PHP ecosystems:
 * **Security & Audit-Sensitive Organizations:** Teams needing complete visibility and audit control over every line of framework code running in production.
 
 ### Current Architectural Boundaries
-* **Supported Databases:** Full support for **MySQL / MariaDB** and **SQLite**. *(PostgreSQL and SQL Server drivers are on the product roadmap).*
+* **Supported Databases:** Native first-class support for **MySQL / MariaDB**, **PostgreSQL (`pgsql`)**, and **SQLite**.
 * **Queue Drivers:** High-reliability Database and Redis queue drivers are built in (with delayed retry sets and failed job tracking).
 * **Ecosystem Scale:** Focuses on standard web patterns. Third-party integrations (e.g., custom OAuth providers, specialized payment gateways) are implemented cleanly in application code or via optional Composer packages.
 
@@ -233,7 +233,7 @@ Architectural trade-offs compared objectively across common PHP ecosystems:
 Yes. Bongo does not require Composer, but it remains fully compatible with it. If `vendor/autoload.php` exists, the framework automatically registers the autoloader.
 
 **Is Bongo suitable for production workloads?**  
-Bongo includes 312 automated test cases, strict type hinting, regression suites, and production security verification (`php bongo security:check`). As a v0.9.x release, core interfaces are stable while feature expansion continues.
+Bongo includes 319 automated test cases, strict type hinting, regression suites, and production security verification (`php bongo security:check`). As a v0.9.x release, core interfaces are stable while feature expansion continues.
 
 **How does framework maintenance and upgrading work?**  
 The framework provides an isolated upgrade utility (`php bongo upgrade`) that verifies cryptographic SHA-256 checksums, creates an automated pre-upgrade backup, and patches core `system/` components without touching application files. Upgrades can be reversed using `php bongo upgrade --rollback`.

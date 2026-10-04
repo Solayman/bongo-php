@@ -302,7 +302,7 @@ class Model implements \JsonSerializable
             if ($this->fireEvent('creating') === false) {
                 return false;
             }
-            $id = (new QueryBuilder(static::tableName()))->insertGetId($this->attributes);
+            $id = (new QueryBuilder(static::tableName()))->insertGetId($this->attributes, static::$primaryKey);
             if ($id && !isset($this->attributes[static::$primaryKey])) {
                 $this->attributes[static::$primaryKey] = $id;
             }
