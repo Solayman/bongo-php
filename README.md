@@ -4,7 +4,7 @@
 
 ### A high-performance, zero-dependency PHP MVC framework engineered for speed, simplicity, and full-source auditability.
 
-A full-stack, enterprise-capable web framework crafted in ~554 KB of clean, readable PHP.  
+A full-stack, enterprise-capable web framework crafted in ~570 KB of clean, readable PHP.  
 **No Composer required. No `vendor/` tree. No Node.js runtime. No build steps.**
 
 [![PHP Version](https://img.shields.io/badge/PHP-8.0%2B-777bb4?style=flat-square&logo=php&logoColor=white)](https://www.php.net)
@@ -28,8 +28,8 @@ Most modern web frameworks demand significant operational and architectural over
 **Bongo takes an intentional, first-principles path:**
 
 * **Zero Mandatory Dependencies:** Clone the repository, configure your database, and run. No Composer dependency resolver to wait for, no package breaking on minor updates, and no third-party supply-chain vulnerabilities.
-* **100% Auditable Codebase:** Total framework code is ~15,000 lines across 122 structured files (~554 KB). Every routine—from the request pipeline and ORM to authentication and WebSockets—can be read and audited in an afternoon.
-* **Predictable, Blazing Performance:** Runs in **0.45–0.65 MB of RAM** per request with **sub-15ms response latency** (even with OpCache disabled). Loads only 20–28 files per lifecycle.
+* **100% Auditable Codebase:** Total framework code is ~16,000 lines across 122 structured files (~570 KB). Every routine—from the request pipeline and ORM to authentication and WebSockets—can be read and audited in an afternoon.
+* **Predictable, Blazing Performance:** Runs in **0.45–0.65 MB of RAM** per request and answers in **about 8–19 ms** (measured without OpCache: JSON API to a full page with queries). Loads only 20–28 files per lifecycle.
 * **Deploy Anywhere:** Runs seamlessly on basic shared hosting (cPanel), minimalist VPS instances, Docker containers, or high-density serverless environments without requiring root access or Composer.
 
 ---
@@ -100,7 +100,7 @@ Route::prefix('/api/v1')->middleware('throttle:60,1')->group(function () {
 });
 ```
 
-### Controller & Request Validation (`app/Controllers/ProductController.php`)
+### Controller & Request Validation (`app/Http/Controllers/ProductController.php`)
 ```php
 public function store(Request $request): Response
 {
@@ -135,7 +135,7 @@ $categories = Category::withCount('products')
     ->get();
 ```
 
-### Expressive Blade-Compatible Views (`resources/views/categories/index.php`)
+### Expressive Template Views (`resources/views/categories/index.php`)
 ```html
 @extends('layouts.admin')
 
@@ -173,7 +173,7 @@ $this->get('/products')
     ->assertSee('Yoga Mat');
 ```
 ```bash
-php bongo test              # Runs 340 unit and HTTP integration tests on isolated DB
+php bongo test              # Runs 349 unit and HTTP integration tests on isolated DB
 ```
 
 ---
@@ -220,7 +220,7 @@ Bongo includes an exhaustive set of full-stack batteries out of the box:
 The framework ships with an integrated CLI runner (`php bongo`):
 
 ```bash
-php bongo list              # Show all available commands
+php bongo help              # Show all available commands
 php bongo migrate           # Run database migrations
 php bongo migrate:rollback  # Rollback last migration batch
 php bongo db:seed           # Populate database with seeds

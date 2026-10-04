@@ -8,12 +8,12 @@ This document is prepared for **Claude AI** (and other internal reviewers and ag
 
 **Bongo PHP Framework** is a lightweight, high-performance PHP MVC framework built from first principles with **zero required external dependencies**.
 
-* **Size & Footprint:** ~15,000 lines across 122 modular files in `system/` (~554 KB total footprint).
+* **Size & Footprint:** ~16,000 lines across 122 modular files in `system/` (~570 KB total footprint).
 * **Starter Skeleton:** ~800 KB across 183 files on the `release` branch (clean blank slate for direct end-users; zero demo clutter).
-* **Resource Utilization:** Peak memory usage is **0.45 MB – 0.65 MB per request** with **<15ms execution latency** (even with OpCache disabled).
+* **Resource Utilization:** Peak memory usage is **0.45 MB – 0.65 MB per request** and **about 8–19 ms per request** (measured without OpCache).
 * **Zero Dependencies:** No mandatory Composer packages, no Node.js runtime, no asset compilation steps. Pure PHP 8.0+.
-* **Auditable Architecture:** Written in readable, single-responsibility PHP modules averaging 200–600 lines each.
-* **Batteries Included:** Routing, Blade-compatible templates, Active Record ORM (MySQL, PostgreSQL & SQLite), Multi-guard Auth (Session & JWT), Multi-disk Storage, Queues (Sync, Database & Redis), In-process Scheduler, pure-PHP WebSockets, SMTP Mailer & Mailbox UI, Notifications, and automated security auditing.
+* **Auditable Architecture:** Written in readable, single-responsibility PHP modules averaging about 130 lines per file (largest modules 500–900 lines).
+* **Batteries Included:** Routing, @-directive templates, Active Record ORM (MySQL, PostgreSQL & SQLite), Multi-guard Auth (Session & JWT), Multi-disk Storage, Queues (Sync, Database & Redis), In-process Scheduler, pure-PHP WebSockets, SMTP Mailer & Mailbox UI, Notifications, and automated security auditing.
 
 ---
 
@@ -104,7 +104,7 @@ The following high-priority features and optimizations were recently implemented
   * **Relationship Inheritance (`System\Database\Relation`):** Child relationships (`hasOne`, `hasMany`, `belongsTo`, `belongsToMany`) automatically inherit the parent model's connection when the related model does not specify its own connection.
   * **Connection-Scoped Schema (`System\Database\Schema\SchemaBuilder` & `Schema`):** `Schema::connection('tenant')->create(...)`, `table()`, `drop()`, `hasTable()`, and `withoutForeignKeyChecks()`.
   * **Migration CLI Flag:** `php bongo migrate --database=tenant`, `migrate:status`, `migrate:rollback`, `migrate:fresh`, and `db:seed`.
-  * **Unit Testing:** 7 unit tests in `tests/Unit/MultiDatabaseTest.php` (30 assertions). Full test suite: **340 passed (1,745 assertions)**.
+  * **Unit Testing:** 7 unit tests in `tests/Unit/MultiDatabaseTest.php` (30 assertions). Full test suite: **349 passed (1,780 assertions)**.
 
 ---
 
@@ -172,7 +172,42 @@ php bongo make:command <X> # Generates custom CLI command in app/Commands/
 ## 6. Development Guidelines for AI Agents
 
 1. **Maintain Zero-Dependency Architecture:** Never install or introduce mandatory third-party Composer packages or npm dependencies.
-2. **Minimal Size Principle:** Keep `system/` file count low (~122 files) and footprint ~554 KB (~15,000 lines). Do not create excessive abstraction layers.
+2. **Minimal Size Principle:** Keep `system/` file count low (~122 files) and footprint ~570 KB (~16,000 lines). Do not create excessive abstraction layers.
 3. **PHP 8.0+ Compatibility:** Use strict types, constructor property promotion, union types, and match expressions. Avoid PHP 8.1+ features that break PHP 8.0 support (e.g., `never` return type).
 4. **Update Documentation:** Always update `DOCUMENTATION.md`, `README.md`, `WHY_BONGO.md`, and `GEMINI.md` when introducing new features or commands.
-5. **Testing Stage Memory:** Maintain `CLAUDE.md` up-to-date across all development cycles during the pre-release testing phase.
+5. **PSR-12:** run `php phpcs.phar` (rules in `phpcs.xml`); every PR must have 0 errors.
+6. **Testing Stage Memory:** Maintain `CLAUDE.md` up-to-date across all development cycles during the pre-release testing phase.
+
+---
+
+## 7. Verified Review Status (Claude, 2026-10-04): no re-check needed
+
+Claude reviewed **every feature from PRs #78–#94** line by line and ran the full test suite on **real servers**: MySQL, **PostgreSQL 18** (first real-server run) and SQLite, plus a real Redis server for the Redis tests. All findings are fixed and merged. Agents **do not need to re-verify** the items below; build on them.
+
+| Area (PR) | Status | Notes |
+|---|---|---|
+| Route caching, static fast path, autoloader (#82) | ✅ Verified, no changes needed | `toCache`/`fromCache` restore everything; tests ignore the route cache; the write is atomic. |
+| Redis queue driver (#82) | ✅ Verified, **fixed in #98** | Jobs are reserved atomically (Lua) in `:reserved` and come back after a crash. Entries are HMAC-signed with APP_KEY. |
+| PostgreSQL driver and grammar (#84) | ✅ Verified on PostgreSQL 18, **fixed in #95** | Per-blueprint quoting, pgsql `upsert` unique key, `DROP ... CASCADE` without superuser, `php bongo test` on pgsql. |
+| Multi-database / multi-tenancy (#89) | ✅ Verified, **fixed in #95** | `setConnectionName()` is now per model class; connection routing, transactions and savepoints are correct. |
+| Multi-disk storage, downloads (#87) | ✅ Verified, **fixed in #96** | Path traversal is blocked (it was correct). Fixed: symlink-safe `deleteDirectory`, safe `Content-Disposition`, `deleteAfterSend`. |
+| Custom console commands (#87) | ✅ Verified, **fixed in #96** | A broken `app/Commands` file is skipped; name clashes with built-ins are reported. |
+| JSON logging (#87) | ✅ Verified, **fixed in #96** | Secret-like keys are masked by pattern; log lines can't be forged. |
+| Spreadsheet csv/xlsx (#88) | ✅ Verified, **fixed in #96** | CSV formula injection blocked, XML-safe text, zip-bomb limit, temp files deleted. |
+| Printable HTML/PDF (#88) | ✅ Verified, **fixed in #96** | All attributes are validated or escaped; temp files deleted; Chrome output captured. |
+| Code style | ✅ **PSR-12, 0 errors** (#97) | Rules in `phpcs.xml`. Check with `php phpcs.phar` (see CONTRIBUTING). |
+| Docs (#78–#94) | ✅ Corrected (#99) | Real numbers only, no "Blade" wording, correct paths, unique section numbers. |
+
+**Test results at review end:** 349 tests pass on MySQL, PostgreSQL 18 and SQLite.
+
+### Rules learned from this review (apply to all future work)
+1. **Test on every database a change touches:** `DB_CONNECTION=pgsql DB_PORT=5432 DB_USERNAME=postgres DB_PASSWORD=... php -d extension=pdo_pgsql bongo test`, plus SQLite (`DB_CONNECTION=sqlite php -d extension=pdo_sqlite bongo test`) and MySQL. Grammar-only unit tests are not enough.
+2. **PSR-12 with 0 errors** (`php phpcs.phar`) before every PR.
+3. **Only measured numbers in docs.** No "100%", "<15ms" or "pixel-perfect" without a reproducible measurement. Recount files, lines and tests after changes. Current: 122 files, ~16,000 lines, ~570 KB in `system/`; 349 tests.
+4. **Never describe Bongo with Laravel or Blade terms** ("Blade-compatible" etc.). Comparison tables that *name* other frameworks are fine.
+5. **Security defaults for new code:**
+   - escape or whitelist everything that reaches HTML/CSS/shell/headers;
+   - delete temp files;
+   - never `unserialize` data that isn't signed or generated locally;
+   - mask secrets in logs.
+6. After a batch of work is merged, **update the `release` branch** (`php bongo release:branch` and `git push origin release`, with no tag).

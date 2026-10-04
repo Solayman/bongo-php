@@ -10,7 +10,7 @@ use System\Storage\DownloadResponse;
  * Solves the classic problem where traditional PHP PDF engines break complex
  * Indic/Bengali scripts, conjuncts (যুক্তাক্ষর), and vowel marks.
  *
- * It generates pixel-perfect, print-optimized HTML5 documents with responsive
+ * It generates print-optimized HTML5 documents with responsive
  * @media print CSS, native font rendering, and an optional headless browser
  * PDF compilation bridge (Google Chrome, Microsoft Edge, Chromium, wkhtmltopdf).
  */
@@ -293,7 +293,7 @@ HTML;
      * Compile this printable document directly into a binary PDF using a local headless browser.
      *
      * Supports Google Chrome, Microsoft Edge, Chromium, or wkhtmltopdf.
-     * Guaranteed 100% pixel-perfect vector font rendering for complex scripts (Bangla, Arabic).
+     * A real browser engine shapes the text, so complex scripts (Bangla, Arabic) keep their ligatures.
      */
     public function toPdf(string $outputPath): bool
     {

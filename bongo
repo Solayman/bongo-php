@@ -559,7 +559,7 @@ try {
                 'make:mail <name>' => 'Create an email template in resources/views/emails',
                 'make:test <Name> [--unit]' => 'Create a feature (or unit) test',
                 'security:check' => 'Deployment security checklist (exit 1 on failures)',
-                'queue:work [--once] [--stop-when-empty]' => 'Run queued jobs (QUEUE_DRIVER=database)',
+                'queue:work [--once] [--stop-when-empty]' => 'Run queued jobs (QUEUE_DRIVER=database or redis)',
                 'queue:failed / queue:retry <id|all>' => 'List / retry failed jobs',
                 'queue:flush' => 'Delete all failed jobs',
                 'schedule:run' => 'Run due scheduled tasks (call it every minute)',

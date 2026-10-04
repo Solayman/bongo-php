@@ -4,7 +4,7 @@
 
 ### High-performance, zero-dependency PHP MVC framework engineered for simplicity, auditability, and speed.
 
-A complete full-stack web framework contained in ~554 KB of clean, readable code.  
+A complete full-stack web framework contained in ~570 KB of clean, readable code.  
 **Zero external dependencies. No Composer required. No Node.js runtime. No build steps.**
 
 [![PHP Version](https://img.shields.io/badge/PHP-8.0%2B-777bb4?style=flat-square&logo=php&logoColor=white)](https://www.php.net)
@@ -29,7 +29,7 @@ Modern web development frameworks increasingly carry substantial cognitive, oper
 * **Opaque Abstractions:** Troubleshooting unexpected behavior often leads through deep call stacks and nested packages.
 * **Deployment Friction:** Heavy memory footprints and rigid environment prerequisites complicate hosting on cost-effective infrastructure.
 
-**Bongo takes an intentional, first-principles approach.** Everything required to build, secure, and scale modern web applications is built directly into a compact, unified codebase of approximately **15,000 lines across 122 files** (~554 KB). You can read, audit, and understand the entire framework in an afternoon.
+**Bongo takes an intentional, first-principles approach.** Everything required to build, secure, and scale modern web applications is built directly into a compact, unified codebase of approximately **15,000 lines across 122 files** (~570 KB). You can read, audit, and understand the entire framework in an afternoon.
 
 ---
 
@@ -83,7 +83,7 @@ Route::get('/products', [ProductController::class, 'index'])->name('products.ind
 Route::post('/products', [ProductController::class, 'store'])->middleware('auth');
 ```
 
-### 2. Request Handling & Validation (`app/Controllers/ProductController.php`)
+### 2. Request Handling & Validation (`app/Http/Controllers/ProductController.php`)
 ```php
 public function store(Request $request): Response
 {
@@ -154,7 +154,7 @@ $this->get('/products')
     ->assertSee('Yoga Mat');
 ```
 ```bash
-php bongo test              # Runs 340 unit & feature tests with isolated SQLite/MySQL runner
+php bongo test              # Runs 349 unit & feature tests with isolated SQLite/MySQL runner
 ```
 
 ---
@@ -162,7 +162,7 @@ php bongo test              # Runs 340 unit & feature tests with isolated SQLite
 ## Architectural Pillars
 
 ### 1. Full-Source Auditability
-The core framework consists of approximately **15,000 lines of code across 122 files** (~554 KB). Components are modular and focused, averaging 200–600 lines each. Engineers can inspect any internal routine—from the request pipeline to the database grammar—in minutes without navigating third-party repositories.
+The core framework consists of approximately **16,000 lines of code across 122 files** (~570 KB). Components are modular and focused, averaging about 130 lines per file (largest modules 500–900 lines). Engineers can inspect any internal routine—from the request pipeline to the database grammar—in minutes without navigating third-party repositories.
 
 ### 2. Zero-Dependency Resilience
 With zero mandatory external dependencies, Bongo shields applications from supply-chain compromises, unintended automated breakage, and dependency conflicts. Deploy smoothly to shared hosting, minimal VPS instances, or bare containers. Composer integration remains fully optional: if `vendor/autoload.php` is present, it is seamlessly loaded.
@@ -222,7 +222,7 @@ Architectural trade-offs compared objectively across common PHP ecosystems:
 | **Architecture** | **Full-Stack, Zero-Dep** | Full-Stack | Component-Based | Full-Stack, Lightweight | Micro-Framework |
 | **Required Dependencies** | **0** | ~50+ packages | ~40+ packages | Minimal | Several |
 | **Fresh Skeleton Footprint** | **~800 KB** (183 files) | 30 MB+ | 25 MB+ | ~2 MB | ~1 MB |
-| **Total Core Code** | **~15k lines (122 files · ~554 KB)** | ~300k+ lines | ~500k+ lines | ~80k lines | Minimal router only |
+| **Total Core Code** | **~16k lines (122 files · ~570 KB)** | ~300k+ lines | ~500k+ lines | ~80k lines | Minimal router only |
 | **ORM, Auth, Queues, Mail** | **Integrated** | Integrated | Integrated / Bundles | Partially Integrated | External Packages Required |
 | **Native WebSockets** | **Integrated (Pure PHP)** | Separate Service / Reverb | Third-Party Bundle | Not Included | Not Included |
 | **Built-in Security Auditor** | **`security:check`** | External package | External package | Not Included | Not Included |
@@ -255,7 +255,7 @@ Architectural trade-offs compared objectively across common PHP ecosystems:
 Yes. Bongo does not require Composer, but it remains fully compatible with it. If `vendor/autoload.php` exists, the framework automatically registers the autoloader.
 
 **Is Bongo suitable for production workloads?**  
-Bongo includes 340 automated test cases, strict type hinting, regression suites, and production security verification (`php bongo security:check`). As a v0.9.x release, core interfaces are stable while feature expansion continues.
+Bongo includes 349 automated test cases, strict type hinting, regression suites, and production security verification (`php bongo security:check`). As a v0.9.x release, core interfaces are stable while feature expansion continues.
 
 **How does framework maintenance and upgrading work?**  
 The framework provides an isolated upgrade utility (`php bongo upgrade`) that verifies cryptographic SHA-256 checksums, creates an automated pre-upgrade backup, and patches core `system/` components without touching application files. Upgrades can be reversed using `php bongo upgrade --rollback`.
@@ -273,7 +273,7 @@ All benchmarks recorded on a clean reference environment using PHP 8.3 on Window
 **Codebase Size** (Excluding application and demo layer):
 ```bash
 find system -name "*.php" | wc -l                     # 122 files
-find system -name "*.php" -exec cat {} + | wc -l      # ~15,000 lines (~554 KB)
+find system -name "*.php" -exec cat {} + | wc -l      # ~16,000 lines (~570 KB)
 ```
 
 **Fresh Starter Skeleton Footprint (`release` branch)**:

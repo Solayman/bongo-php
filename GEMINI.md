@@ -13,7 +13,7 @@
 
 ## Core Architecture & Principles
 - **Zero Required Dependencies**: The framework must remain self-contained (no mandatory Composer packages, no Node.js runtime, no build step).
-- **Minimal Size & Overhead**: Keep `system/` file count low (~122 files) and footprint ~554 KB (~15,000 lines). Fresh starter skeleton on `release` branch is ~800 KB (183 files). Never introduce bloated dependencies or excessive abstractions.
+- **Minimal Size & Overhead**: Keep `system/` file count low (~122 files) and footprint ~570 KB (~16,000 lines). Fresh starter skeleton on `release` branch is ~800 KB (183 files). Never introduce bloated dependencies or excessive abstractions.
 - **Production Optimizations**:
   - `php bongo config:cache`: Compiles `config/*.php` and `.env` into `storage/cache/config.php`.
   - `php bongo route:cache`: Compiles registered routes into `storage/cache/routes.php`.
@@ -37,7 +37,7 @@
   - Supports `LOG_FORMAT=text` and `LOG_FORMAT=json` with secret masking and structured exception objects.
 - **Data & Document Subsystem**:
   - `System\Data\Spreadsheet`: Unified CSV and OpenXML Excel (`.xlsx`) import and export engine with UTF-8 BOM, automatic format detection, and streaming downloads.
-  - `System\Data\Printable`: Responsive, print-ready document and vector PDF engine with `@media print` CSS, native browser print/PDF trigger, and headless browser PDF compilation bridge (Chrome/Edge/Chromium/wkhtmltopdf) ensuring 100% pixel-perfect Bengali and Indic font ligatures and vowel rendering.
+  - `System\Data\Printable`: Responsive, print-ready document and vector PDF engine with `@media print` CSS, native browser print/PDF trigger, and headless browser PDF compilation bridge (Chrome/Edge/Chromium/wkhtmltopdf) so Bengali and other Indic scripts keep their ligatures and vowel signs (a real browser engine shapes the text).
 
 ## Review & Documentation Tracking Policy
 - **Testing & Pre-Release Tracking**: During the active testing stage prior to public production release, `CLAUDE.md` is tracked in the repository to maintain memory continuity across AI agents and internal developers.
@@ -46,3 +46,16 @@
 - **Always Synchronize Docs**: Whenever ANY code change, feature, optimization, or bug fix is made, updating all relevant documentation files (`DOCUMENTATION.md`, `README.md`, `WHY_BONGO.md`, `CHANGELOG.md`, `CLAUDE.md`, and `GEMINI.md`) is **MANDATORY AND HIGH PRIORITY**.
 - **Always Maintain `.env.example`**: Whenever any configuration option, environment variable, driver, or system setting is introduced or updated, `.env.example` MUST be updated immediately with clear comments and sensible defaults so users and developers understand how to configure every framework capability.
 - **Cross-Agent Memory Continuity**: Keeping markdown memory files synchronized ensures other AI agents and human developers immediately inherit accurate architecture, rules, and implementation status.
+
+## Verified Review Status (Claude, 2026-10-04): no re-check needed
+- Claude verified **all features from PRs #78–#94** on real MySQL, **PostgreSQL 18**, SQLite and Redis servers. The bugs found are fixed in #95 (database), #96 (security), #97 (PSR-12) and #98 (Redis queue), and the docs are corrected in #99. **Do not re-verify these; build on them.** The full table is in `CLAUDE.md` § 7.
+- Current state: **349 tests pass on MySQL, PostgreSQL and SQLite; PSR-12 has 0 errors** (`phpcs.xml`); `system/` has 122 files, ~16,000 lines and ~570 KB.
+- Rules from the review:
+  - test every database a change touches (not only grammar unit tests);
+  - PSR-12 with 0 errors before each PR;
+  - only measured numbers in docs (no "100%", "pixel-perfect" or "<15ms");
+  - no Laravel/Blade wording to describe Bongo;
+  - escape or whitelist everything that reaches HTML/shell/headers;
+  - delete temp files;
+  - never unserialize unsigned data;
+  - update the `release` branch after a batch of merged work.
