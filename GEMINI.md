@@ -34,6 +34,9 @@
   - Auto-discovery of custom commands from `app/Commands/*.php`.
 - **Structured Logging**:
   - Supports `LOG_FORMAT=text` and `LOG_FORMAT=json` with secret masking and structured exception objects.
+- **Data & Document Subsystem**:
+  - `System\Data\Spreadsheet`: Unified CSV and OpenXML Excel (`.xlsx`) import and export engine with UTF-8 BOM, automatic format detection, and streaming downloads.
+  - `System\Data\Printable`: Responsive, print-ready document and vector PDF engine with `@media print` CSS, native browser print/PDF trigger, and headless browser PDF compilation bridge (Chrome/Edge/Chromium/wkhtmltopdf) ensuring 100% pixel-perfect Bengali and Indic font ligatures and vowel rendering.
 
 ## Review & Privacy Policy
 - **Gitignore Review Files**: Files created specifically for AI/internal reviews (e.g. `CLAUDE.md`, `*claude*review*`) MUST remain in `.gitignore` and untracked from Git to protect company privacy and avoid exposing internal review artifacts publicly on GitHub.
