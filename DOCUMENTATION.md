@@ -24,6 +24,7 @@ Built in:
 | Container & DI | Service container (`app()`, `bind/singleton/instance`, autowiring), controller method injection, route model binding (`edit(Product $product)` → 404 if missing) |
 | Generators | `make:command`, `make:controller [--api]`, `make:model [--migration]`, `make:middleware`, `make:request`, `make:policy`, `make:job`, `make:component`, `make:seeder`, `make:notification`, `make:mail`, `make:test [--unit]`, `make:migration` |
 | Logging | Built-in daily log files in `storage/logs`, text and structured JSON format (`LOG_FORMAT=json`), levels, secret masking; framework events logged automatically |
+| Packages | Zero-dependency package manager: `php bongo add / package:install / package:update / package:remove / package:list / package:publish / package:diff / package:test`, SHA-256 integrity verification, update safety net, app override priority |
 | CLI | `php bongo serve / tinker / route:list / make:* / config:cache / config:clear / view:cache / view:clear / cache:clear / migrate / migrate:status / migrate:rollback / make:migration / db:seed / key:generate / log:clear / test`, plus custom console commands auto-discovery |
 
 The repository currently includes an **e-commerce admin panel** (products, categories, orders, customers). It is the test application used to exercise the framework end to end, and it will be removed later so the framework ships fresh.
@@ -2406,4 +2407,45 @@ The e-commerce app is how Bongo is tested the way a real project would use it. I
 | My orders | `/shop/orders`, `/shop/orders/{order}` | Customers only see **their own** orders (404 otherwise) |
 
 The admin and customer logins are separate guards, so one browser can be signed in to both. Demo customer: `rahim1@example.com` / `password`.
+
+---
+
+## 15. Official Package Subsystem
+
+Bongo includes an integrated, zero-dependency package manager and runtime loader designed for optional first-party and community extensions (e.g. `sslcommerz`, `bkash`, `sms`, `s3`, `social-login`).
+
+### Core Design & Principles
+- **Zero Required Dependencies:** No Composer or Node.js runtime required. The package installer is pure PHP using native HTTP streams, JSON parsing, and `hash_file('sha256', ...)`.
+- **Zero Runtime Overhead When Empty:** Package loading costs a single `is_file()` check on `packages/.lock.json`. When no packages are installed, zero extra files or classes are loaded.
+- **Integrity & Security Defaults:** Every installed file is verified against SHA-256 checksums recorded in `packages/.lock.json`. Path traversal attacks (`..`, absolute paths, symlinks) are strictly blocked.
+- **Developer Safety Net:** If a developer modifies files inside `packages/<name>/`, `package:update` and `package:install` refuse to overwrite changes unless `--backup` (saves modified files to `storage/package-backups/<name>-<timestamp>/`) or `--force` is provided.
+- **Application Override Priority:**
+  - **Configuration:** Auto-published to `config/<name>.php` upon installation and customizable via `.env`.
+  - **Views:** Run `php bongo package:publish <name> --views` to publish to `resources/views/vendor/<name>/`. Bongo's `ViewEngine` checks the application directory before falling back to package templates (`<x-name::view>` and `@include('name::view')`).
+  - **Translations:** Run `php bongo package:publish <name> --lang` to publish to `lang/vendor/<name>/`. Namespaced keys (`__('name::key')`) check the application directory before falling back to package strings.
+  - **Migrations:** Package migrations in `packages/<name>/database/migrations/` are detected and managed via standard CLI (`php bongo migrate`).
+  - **Console Commands:** Package commands in `packages/<name>/src/Commands/` extending `System\Console\Command` are automatically discovered and listed in `php bongo help`.
+
+### Package Commands
+```bash
+php bongo package:list                                         # List installed packages, versions, and available updates
+php bongo add <name>[@version]                                 # Enable in config/packages.php and install
+php bongo package:install [<name>[@version]]                   # Install package or all enabled packages
+php bongo package:update [name] [--backup] [--force]           # Update package(s) with local diff safety
+php bongo package:diff <name>                                  # Inspect local file modifications
+php bongo package:publish <name> [--config] [--views] [--lang] # Publish assets to app for customization
+php bongo package:remove <name> [--force]                      # Remove package files, lock entry, and comment in config
+php bongo package:test <name>                                  # Run the package's test suite
+```
+
+### Environment & Private Repositories
+Configure in `.env`:
+```ini
+# Access token for private official package repositories (or falls back to GITHUB_TOKEN):
+BONGO_PACKAGES_TOKEN=ghp_...
+
+# Local package repository path for local development (defaults to ../bongo-php-packages if present):
+# BONGO_PACKAGES_PATH=../bongo-php-packages
+```
+
 
