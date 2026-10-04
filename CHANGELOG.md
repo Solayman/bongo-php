@@ -32,6 +32,37 @@ Every notable change to the Bongo PHP Framework. Versions follow [semantic versi
 - Starter skeleton metrics and documentation synchronized: updated fresh starter skeleton documentation to reflect accurate footprint (~800 KB, 183 files) and documented direct end-user distribution via the `release` branch (`git clone -b release`).
 - Query values are bound with their real types (int, null, bool with native `\PDO::PARAM_BOOL` for pgsql).
 - Framework autoloader optimized with direct prefix checks (`strncmp`) and `is_file()` lookups.
+- **PSR-12 coding standard** for the whole codebase (formatting only, #97). Rules in `phpcs.xml`; check with `php phpcs.phar` (0 errors required, see CONTRIBUTING).
+- `php bongo test` now runs on **PostgreSQL** too: it creates the test database and loads `pdo_pgsql` in the test server (#95).
+
+### Fixed (review of #78–#94, verified on MySQL, PostgreSQL 18 and SQLite)
+- **Database (#95):**
+  - Schema quoting followed the *default* connection, so `migrate:fresh --database=pg` sent MySQL backticks to PostgreSQL. Each blueprint now uses its own driver.
+  - PostgreSQL `upsert()` guessed its conflict columns and failed. It now uses the table's matching unique key, or asks for the third argument with a clear error.
+  - `Model::setConnectionName()` moved **every** model to the new connection. It now applies per class.
+  - Dropping all tables on PostgreSQL needed superuser rights. It now uses `DROP ... CASCADE`.
+  - `Connection` now has one driver fallback instead of two that disagreed.
+- **Redis queue (#98):**
+  - A job was lost if a worker crashed mid-job. Jobs are now reserved atomically (a Lua script) in a `:reserved` set and come back after `retry_after`.
+  - Entries are signed with `APP_KEY`, so forged or foreign entries are dropped, never unserialized.
+  - `stats()` now reports reserved jobs and per-queue failed jobs.
+
+### Security (#96)
+- **CSV export:** cells starting with `= + - @` are exported as text, so they can't run as Excel formulas (CSV formula injection).
+- **xlsx:**
+  - control characters and invalid UTF-8 no longer corrupt the file;
+  - import has a 50 MB per-part limit against zip bombs, and loads XML with `LIBXML_NONET`.
+- **Printable:**
+  - the badge colour, table widths/aligns and labels can't inject HTML into the PDF browser;
+  - temp files with customer data are deleted after download.
+- **DownloadResponse:**
+  - safe `Content-Disposition` (UTF-8 filenames, no header injection), `nosniff`;
+  - new `deleteAfterSend` option.
+- **`Disk::deleteDirectory`:** removes links, never their targets outside the disk.
+- **Logger:**
+  - masks `api_key`, `access_token`, `client_secret`, `new_password`, `X-Api-Key` and other secret-like keys;
+  - a message containing a newline can't fake a separate log entry.
+- **`bongo` CLI:** one broken `app/Commands` file no longer breaks every command, and a custom command named like a built-in is reported.
 
 ## 0.9.0 — 2026-10-03
 
