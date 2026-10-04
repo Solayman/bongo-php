@@ -316,6 +316,34 @@ HTML) . " (send it: Mail::to(\$email)->subject('...')->view('emails.$file', ['us
         return $this->write("tests/$dir/$class.php", "<?php\nnamespace Tests\\$dir;\n\nuse System\\Testing\\$base;\n\nclass $class extends $base\n{\n$body\n}\n");
     }
 
+    /** make:command SendWeeklyReport → app/Commands/SendWeeklyReport.php */
+    public function command(string $name): string
+    {
+        [$namespace, $class, $path] = $this->locate($name, 'App\\Commands', 'app/Commands');
+        $cmdName = strtolower(preg_replace('/(?<!^)[A-Z]/', ':$0', preg_replace('/Command$/', '', $class)));
+
+        $code = <<<PHP
+<?php
+namespace $namespace;
+
+use System\Console\Command;
+
+class $class extends Command
+{
+    protected string \$name = '$cmdName';
+    protected string \$description = 'Command description for $cmdName';
+
+    public function handle(array \$args, array \$options): int
+    {
+        \$this->info('Executing $cmdName...');
+        return 0;
+    }
+}
+
+PHP;
+        return $this->write($path, $code);
+    }
+
     // ------------------------------------------------------------------
 
     /** "Admin/ReportController" → [namespace, class, relative path] */

@@ -12,7 +12,7 @@ Built in:
 | Database | Query builder (row locks, grouped `orWhere`, joins, `groupBy/having`, aggregates, `pluck/value/exists`, `increment`, `chunk`, pagination), transactions with savepoints, query log, models with relations and eager loading |
 | Schema & migrations | PHP migrations with a schema builder; each run is tracked in the database; rollback |
 | Sessions | Flash messages, old input, CSRF tokens |
-| Validation & uploads | 35+ rules (dates, regex, files, `unique`, …), `items.*.field` wildcards, custom messages; safe uploads (`$file->store()`, `Storage::url()`) |
+| Validation & storage | 35+ rules (dates, regex, files, `unique`, …), `items.*.field` wildcards, custom messages; multi-disk storage (`Storage::disk('public')` vs `Storage::disk('local')`), streaming file downloads (`Storage::download()`), and safe uploads (`$file->store()`, `Storage::url()`) |
 | Hardening | Strict sessions with idle/absolute timeouts, trusted-proxy aware `Request::ip()`/`isSecure()`, optional CSP, `php bongo security:check` deployment checklist |
 | Auth & security | Multiple guards (session, JWT) and providers, `auth:api` middleware, own HS256 JWT with refresh and revocation, peppered Argon2id passwords, AES-256-GCM encryption, login throttling |
 | Testing | `php bongo test`: unit + HTTP tests on a separate test database |
@@ -21,9 +21,9 @@ Built in:
 | Localization | `__()`, `trans_choice()`, JSON + group translation files, `?lang=` / session / `Accept-Language`, translated validation messages; English and বাংলা included |
 | Cache & rate limits | File cache (`Cache::remember`), `throttle:60,1` middleware with rate-limit headers, `RateLimiter` |
 | Container & DI | Service container (`app()`, `bind/singleton/instance`, autowiring), controller method injection, route model binding (`edit(Product $product)` → 404 if missing) |
-| Generators | `make:controller [--api]`, `make:model [--migration]`, `make:middleware`, `make:request`, `make:policy`, `make:job`, `make:component`, `make:seeder`, `make:notification`, `make:mail`, `make:test [--unit]`, `make:migration` |
-| Logging | Built-in daily log files in `storage/logs`, levels, secret masking; framework events logged automatically |
-| CLI | `php bongo serve / tinker / route:list / make:* / config:cache / config:clear / view:cache / view:clear / cache:clear / migrate / migrate:status / migrate:rollback / make:migration / db:seed / key:generate / log:clear / test` |
+| Generators | `make:command`, `make:controller [--api]`, `make:model [--migration]`, `make:middleware`, `make:request`, `make:policy`, `make:job`, `make:component`, `make:seeder`, `make:notification`, `make:mail`, `make:test [--unit]`, `make:migration` |
+| Logging | Built-in daily log files in `storage/logs`, text and structured JSON format (`LOG_FORMAT=json`), levels, secret masking; framework events logged automatically |
+| CLI | `php bongo serve / tinker / route:list / make:* / config:cache / config:clear / view:cache / view:clear / cache:clear / migrate / migrate:status / migrate:rollback / make:migration / db:seed / key:generate / log:clear / test`, plus custom console commands auto-discovery |
 
 The repository currently includes an **e-commerce admin panel** (products, categories, orders, customers). It is the test application used to exercise the framework end to end, and it will be removed later so the framework ships fresh.
 
@@ -572,20 +572,38 @@ On failure the result is the same as `$this->validate()`: the browser goes back 
 use System\Http\Request;
 use System\Storage\Storage;
 
+// Store to default 'public' disk (in public/storage)
 $data = $request->validate(['photo' => 'required|image|max:2048']);
-$path = $data['photo']->store('products');   // "products/3f9c…e1.jpg" (in public/storage)
+$path = $data['photo']->store('products');             // "products/3f9c…e1.jpg"
 $product->update(['image' => $path]);
 
-Storage::url($path);        // http://…/storage/products/3f9c…e1.jpg
-Storage::delete($old);      // when replacing
-$request->file('photo');    // UploadedFile or null; $request->hasFile('photo')
+// Store confidential documents to private 'local' disk (in storage/app, outside web root)
+$docPath = $request->file('tax_doc')->store('receipts', 'local');
+
+// URL & Download
+Storage::url($path);                                   // http://…/storage/products/3f9c…e1.jpg
+return Storage::disk('local')->download($docPath, 'my-tax-doc.pdf'); // Streams download with safe headers
+
+// File operations on any disk (default is 'public')
+Storage::disk('local')->put('reports/summary.csv', $csvContent);
+$content = Storage::disk('local')->get('reports/summary.csv');
+$exists  = Storage::disk('local')->exists('reports/summary.csv');
+$size    = Storage::disk('local')->size('reports/summary.csv');
+Storage::disk('local')->delete('reports/summary.csv');
+
+// Directory listing & cleanup
+$files = Storage::disk('public')->files('products');        // Immediate files
+$all   = Storage::disk('local')->allFiles('reports');       // Recursive files
+Storage::disk('local')->deleteDirectory('reports/temp');
 ```
 
-Uploads are safe by default:
+Uploads and storage are safe by default:
+- **Multi-disk isolation:** Configure disks in `config/storage.php`. By default, `'public'` mounts at `public/storage` (accessible via web URL), while `'local'` mounts at `storage/app` (strictly private, outside the web root).
 - **The real content type is checked** (with `fileinfo`), so a PHP script renamed to `cat.jpg` fails `image` and `mimes`.
 - **Stored names are random** (32 hex characters), and the extension comes from the content type, never from the browser's file name.
 - **Only known types are stored:** images, pdf, txt, csv, zip, json, docx and xlsx. Anything else is refused.
-- **Paths can't leave the storage folder,** and `public/storage/.htaccess` stops Apache from running scripts there.
+- **Paths can't leave the storage folder:** path traversal attempts (e.g. `../`) are rejected with an `InvalidArgumentException`, and `public/storage/.htaccess` stops Apache from running scripts there.
+- **Streaming downloads:** `Storage::download($path, $filename)` emits proper `Content-Disposition`, `Content-Length`, and `Content-Type` headers and streams the file chunked via `readfile()`.
 - Forms need `enctype="multipart/form-data"`.
 
 **Several files in one field:** `<input type="file" name="photos[]" multiple>`
@@ -1666,16 +1684,25 @@ logger('Quick debug line', ['x' => 1]);                            // debug leve
 logger()->warning('Disk almost full');
 ```
 
-Each entry is one line in `storage/logs/bongo-YYYY-MM-DD.log`:
+Each entry is one line in `storage/logs/bongo-YYYY-MM-DD.log`.
 
+**Default text format (`LOG_FORMAT=text`):**
 ```
 [2026-10-02 14:03:11] local.INFO: Order 42 shipped to Dhaka {"id":42,"city":"Dhaka"}
 [2026-10-02 14:05:40] local.WARNING: Failed login for admin@example.com {"email":"admin@example.com","ip":"127.0.0.1"}
 ```
 
+**Structured JSON format (`LOG_FORMAT=json`):**
+```json
+{"timestamp":"2026-10-04 06:45:00","env":"production","level":"info","message":"Order 42 shipped to Dhaka","context":{"id":42,"city":"Dhaka"}}
+{"timestamp":"2026-10-04 06:45:02","env":"production","level":"error","message":"Payment gateway timeout","exception":{"class":"RuntimeException","message":"Gateway timed out","code":504,"file":"app/Services/Payment.php","line":42,"trace":["..."]}}
+```
+
+- **Output formats:** `text` (human-readable bracketed lines) or `json` (single-line JSON objects ideal for Docker, Kubernetes, AWS CloudWatch, Datadog, and ELK stack). Configurable via `LOG_FORMAT` in `.env` and `config/logging.php`.
 - **Levels**, lowest to highest: `debug`, `info`, `notice`, `warning`, `error`, `critical`, `alert`, `emergency`. Anything below `LOG_LEVEL` is skipped.
-- **Placeholders:** `{key}` in a message is replaced from the context. The context itself is appended as JSON.
+- **Placeholders:** `{key}` in a message is replaced from the context. In text mode, the context itself is appended as JSON; in JSON mode, it becomes a structured `context` object.
 - **Secrets are masked:** context keys such as `password`, `token`, `secret`, `key` or `cookie` are written as `********`, at any depth.
+- **Exceptions are structured:** When logging an exception in context (`['exception' => $e]`), JSON mode serializes the error class, message, code, file, line, and trace array.
 - **Logging never breaks a request.** If the file can't be written, the line goes to PHP's own error log instead.
 - **Retention:** daily files older than `LOG_DAYS` are deleted automatically. `php bongo log:clear` removes them all.
 
@@ -1769,7 +1796,6 @@ If a query fails because a table or column is missing and migrations are pending
 
 ---
 
-php bongo make:request StoreOrderRequest             # rules + authorize() in app/Http/Requests
 ## 11. Debugging
 
 ### `dump()` and `dd()`
@@ -1844,20 +1870,68 @@ An interactive PHP shell with the app loaded:
 
 ---
 
-### Code generators
+### Code generators & Custom Console Commands
 
 ```bash
-php bongo make:controller ProductController           # app/Http/Controllers/ProductController.php
-php bongo make:controller Admin/ReportController      # sub-folder + namespace App\Http\Controllers\Admin
-php bongo make:controller Api/OrderController --api   # JSON actions: index, show, store
-php bongo make:model Coupon --migration               # app/Models/Coupon.php (table "coupons") + migration
-php bongo make:middleware EnsureIsAdmin               # register it in config/app.php
-php bongo make:test CouponApi                         # tests/Feature/CouponApiTest.php
-php bongo make:test Price --unit                      # tests/Unit/PriceTest.php
+php bongo make:command SendWeeklyReport        # app/Commands/SendWeeklyReport.php (custom CLI command)
+php bongo make:controller ProductController    # app/Http/Controllers/ProductController.php
+php bongo make:controller Admin/ReportController # sub-folder + namespace App\Http\Controllers\Admin
+php bongo make:controller Api/OrderController --api # JSON actions: index, show, store
+php bongo make:model Coupon --migration        # app/Models/Coupon.php (table "coupons") + migration
+php bongo make:middleware EnsureIsAdmin        # register it in config/app.php
+php bongo make:request StoreOrderRequest       # form request validation in app/Http/Requests/
+php bongo make:policy ProductPolicy            # authorization policy in app/Policies/
+php bongo make:job ProcessPayment              # queue job in app/Jobs/
+php bongo make:component AlertBox              # view component in resources/views/components/
+php bongo make:seeder ProductSeeder            # database seeder in database/seeders/
+php bongo make:notification OrderShipped       # multi-channel notification in app/Notifications/
+php bongo make:mail OrderReceipt               # email template in resources/views/emails/
+php bongo make:test CouponApi                  # tests/Feature/CouponApiTest.php
+php bongo make:test Price --unit               # tests/Unit/PriceTest.php
 php bongo make:migration add_notes_to_orders
 ```
 
-Generators never overwrite an existing file. New migrations always sort after the existing ones, whatever the clock or timezone.
+Generators never overwrite an existing file. New migrations always sort after existing ones, whatever the clock or timezone.
+
+#### Creating Custom Console Commands
+
+You can build and register your own CLI commands in seconds:
+
+1. Generate a command:
+   ```bash
+   php bongo make:command SendWeeklyDigest
+   ```
+2. Edit `app/Commands/SendWeeklyDigest.php`:
+   ```php
+   namespace App\Commands;
+
+   use System\Console\Command;
+
+   class SendWeeklyDigest extends Command
+   {
+       protected string $name = 'digest:send';
+       protected string $description = 'Send weekly email digest to subscribers';
+
+       public function handle(array $args, array $options): int
+       {
+           $dryRun = isset($options['dry-run']);
+           $this->line('Preparing weekly digest...');
+
+           if ($dryRun) {
+               $this->warn('Running in dry-run mode: no emails will be sent.');
+           } else {
+               $this->info('Digest emails dispatched successfully.');
+           }
+
+           return 0; // Exit status code
+       }
+   }
+   ```
+3. Run it via the CLI:
+   ```bash
+   php bongo digest:send --dry-run
+   ```
+   Bongo automatically discovers all command classes in `app/Commands/`, adds them to `php bongo help`, and routes CLI flags and arguments directly to your command. Available terminal styling helpers: `$this->info()`, `$this->warn()`, `$this->error()`, and `$this->line()`.
 
 ---
 

@@ -9,7 +9,7 @@ A full-stack, enterprise-capable web framework crafted in ~480 KB of clean, read
 
 [![PHP Version](https://img.shields.io/badge/PHP-8.0%2B-777bb4?style=flat-square&logo=php&logoColor=white)](https://www.php.net)
 [![Dependencies](https://img.shields.io/badge/dependencies-0%20required-brightgreen?style=flat-square)](WHY_BONGO.md)
-[![Test Suite](https://img.shields.io/badge/automated%20tests-312%20passing-brightgreen?style=flat-square)](TESTING_GUIDE.md)
+[![Test Suite](https://img.shields.io/badge/automated%20tests-328%20passing-brightgreen?style=flat-square)](TESTING_GUIDE.md)
 [![Core Size](https://img.shields.io/badge/fresh%20skeleton-~170%20KB-informational?style=flat-square)](#performance--benchmarks)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 [![Localization](https://img.shields.io/badge/i18n-English%20%7C%20বাংলা-orange?style=flat-square)](DOCUMENTATION.md#localization)
@@ -152,7 +152,7 @@ $this->get('/products')
     ->assertSee('Yoga Mat');
 ```
 ```bash
-php bongo test              # Runs 319 unit and HTTP integration tests on isolated DB
+php bongo test              # Runs 328 unit and HTTP integration tests on isolated DB
 ```
 
 ---
@@ -166,8 +166,10 @@ Bongo includes an exhaustive set of full-stack batteries out of the box:
 | **HTTP & Routing** | RESTful verb routing (`get`, `post`, `put`, `patch`, `delete`), route groups, route prefixing, named parameters, signed URLs, CORS, security headers, middleware stacks, and form requests (`make:request`). |
 | **Database & ORM** | MySQL/MariaDB, PostgreSQL (`pgsql`), and SQLite query builder, transactions, Active Record models, relationships (`hasOne`, `hasMany`, `belongsToMany`), eager loading, soft deletes, tracked schema migrations with rollback, and seeders. |
 | **Authentication & Access** | Multi-guard authentication (Session and stateless JWT), password hashing with Argon2id + pepper, account lockout, "Remember me", password reset flows, signed email verification, and authorization policies (`Gate` / `Policy`). |
-| **Validation & Uploads** | 35+ validation rules, array wildcards (`items.*.qty`), conditional rules, and upload validation inspected via real magic bytes (preventing extension spoofing). |
+| **Storage & Uploads** | Multi-disk storage (`Storage::disk('public')` vs private `Storage::disk('local')`), streaming file downloads (`Storage::download()`), 35+ validation rules, array wildcards (`items.*.qty`), and upload validation inspected via real magic bytes. |
 | **Async & Background** | High-throughput job queues (Database and Redis drivers), worker daemon (`php bongo queue:work`), task scheduler (execute recurring jobs without server cron in dev via `php bongo schedule:work`), and queued background mail. |
+| **Logging & Observability**| Text and structured JSON logging (`LOG_FORMAT=json`), daily rotated logs in `storage/logs/`, levels, secret masking, and structured exception formatting for Datadog, CloudWatch, and ELK. |
+| **Extensible CLI** | Pure-PHP CLI with custom console commands (`php bongo make:command <Name>`), base `Command` class, and automatic discovery from `app/Commands/`. |
 | **Communication** | Built-in SMTP mailer, HTML/text templates, attachments, notifications (Mail, SMS, Slack), and an HTTP client with retry policies (`Http::get/post`). |
 | **Real-Time WebSockets** | Native PHP WebSocket server (`php bongo websocket:serve`) with channel multiplexing and public/private subscriptions. |
 | **Developer Ergonomics** | Collapsible zero-freeze `dd()` / `dump()` profiling, actionable debug exception screens with auto-fix hints, browser mailbox inspector, and interactive shell (`php bongo tinker`). |
@@ -213,6 +215,7 @@ php bongo upgrade           # Safely upgrade framework with auto-backup & rollba
 
 Generate boilerplate components instantly:
 ```bash
+php bongo make:command SendWeeklyDigest
 php bongo make:controller UserController
 php bongo make:model Invoice
 php bongo make:migration create_invoices_table
