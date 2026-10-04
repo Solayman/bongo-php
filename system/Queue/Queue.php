@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Queue;
 
 use System\Container\Container;
@@ -71,7 +72,7 @@ class Queue
     /** Run a job in this process, with retries handled inline (sync driver) */
     protected static function runNow(Job $job): void
     {
-        for ($attempt = 1; ; $attempt++) {
+        for ($attempt = 1;; $attempt++) {
             $job->attempt = $attempt;
             try {
                 Container::getInstance()->call([$job, 'handle']);

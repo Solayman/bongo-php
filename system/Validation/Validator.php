@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Validation;
 
 use System\Database\DB;
@@ -37,7 +38,8 @@ class Validator
         protected array $rules,
         protected array $messages = [],
         protected array $attributes = []
-    ) {}
+    ) {
+    }
 
     public static function make(array $data, array $rules, array $messages = [], array $attributes = []): array
     {
@@ -66,10 +68,16 @@ class Validator
     /** An upload, or a list holding one (uploads are never kept in the session) */
     protected static function containsUpload($value): bool
     {
-        if ($value instanceof UploadedFile) return true;
-        if (!is_array($value)) return false;
+        if ($value instanceof UploadedFile) {
+            return true;
+        }
+        if (!is_array($value)) {
+            return false;
+        }
         foreach ($value as $item) {
-            if (self::containsUpload($item)) return true;
+            if (self::containsUpload($item)) {
+                return true;
+            }
         }
         return false;
     }
@@ -161,7 +169,9 @@ class Validator
     protected function requiredBy(array $rules, string $field): ?array
     {
         foreach ($rules as $rule) {
-            if (!is_string($rule)) continue;
+            if (!is_string($rule)) {
+                continue;
+            }
             [$name, $param] = array_pad(explode(':', $rule, 2), 2, null);
             $params = $param === null ? [] : explode(',', $param);
 
@@ -254,9 +264,15 @@ class Validator
     /** How min/max/between measure the value */
     protected function kind(array $rules, $value): string
     {
-        if ($value instanceof UploadedFile) return 'file';
-        if (is_array($value)) return 'array';
-        if (in_array('numeric', $rules, true) || in_array('integer', $rules, true)) return 'numeric';
+        if ($value instanceof UploadedFile) {
+            return 'file';
+        }
+        if (is_array($value)) {
+            return 'array';
+        }
+        if (in_array('numeric', $rules, true) || in_array('integer', $rules, true)) {
+            return 'numeric';
+        }
         return 'string';
     }
 
@@ -352,12 +368,20 @@ class Validator
                 return is_scalar($value) && @preg_match((string) $param, (string) $value) === 1 ? null : 'The :attribute format is invalid.';
 
             case 'starts_with':
-                foreach ($params as $p) if (is_string($value) && str_starts_with($value, $p)) return null;
+                foreach ($params as $p) {
+                    if (is_string($value) && str_starts_with($value, $p)) {
+                        return null;
+                    }
+                }
                 $this->replace = [':values' => implode(', ', $params)];
                 return 'The :attribute must start with one of: :values.';
 
             case 'ends_with':
-                foreach ($params as $p) if (is_string($value) && str_ends_with($value, $p)) return null;
+                foreach ($params as $p) {
+                    if (is_string($value) && str_ends_with($value, $p)) {
+                        return null;
+                    }
+                }
                 $this->replace = [':values' => implode(', ', $params)];
                 return 'The :attribute must end with one of: :values.';
 
@@ -369,7 +393,9 @@ class Validator
                 $mine = is_string($value) ? strtotime($value) : false;
                 $other = self::get($this->data, (string) $param);
                 $limit = strtotime(is_string($other) ? $other : (string) $param);
-                if ($mine === false || $limit === false) return 'The :attribute is not a valid date.';
+                if ($mine === false || $limit === false) {
+                    return 'The :attribute is not a valid date.';
+                }
                 if ($rule === 'before') {
                     return $mine < $limit ? null : 'The :attribute must be a date before :param.';
                 }
@@ -397,8 +423,12 @@ class Validator
                 return DB::table($table)->where($column ?: 'id', $value)->count() > 0 ? null : 'The selected :attribute is invalid.';
 
             case 'file':
-                if ($value instanceof UploadedFile && $value->isValid()) return null;
-                if (!$value instanceof UploadedFile) return 'The :attribute must be a file.';
+                if ($value instanceof UploadedFile && $value->isValid()) {
+                    return null;
+                }
+                if (!$value instanceof UploadedFile) {
+                    return 'The :attribute must be a file.';
+                }
                 $this->replace = [':reason' => $value->errorMessage()];
                 return 'The :attribute failed to upload: :reason';
 
@@ -413,7 +443,9 @@ class Validator
             // mimetypes:image/*,application/pdf (the real content type, not the client's claim)
             case 'mimetypes':
                 $this->replace = [':values' => implode(', ', $params)];
-                if (!$value instanceof UploadedFile || !$value->isValid()) return 'The :attribute must be a file of type: :values.';
+                if (!$value instanceof UploadedFile || !$value->isValid()) {
+                    return 'The :attribute must be a file of type: :values.';
+                }
                 $mime = $value->mimeType();
                 foreach ($params as $allowed) {
                     if ($allowed === $mime || (str_ends_with($allowed, '/*') && str_starts_with($mime, substr($allowed, 0, -1)))) {
@@ -424,7 +456,9 @@ class Validator
 
             // dimensions:min_width=100,max_width=2000,min_height=..,max_height=..,width=..,height=..,ratio=16/9
             case 'dimensions':
-                if (!$value instanceof UploadedFile || !$value->isValid() || !$value->isImage()) return 'The :attribute must be an image (jpg, png, gif or webp).';
+                if (!$value instanceof UploadedFile || !$value->isValid() || !$value->isImage()) {
+                    return 'The :attribute must be an image (jpg, png, gif or webp).';
+                }
                 return $this->checkDimensions($value, $params);
         }
 
@@ -511,9 +545,13 @@ class Validator
     /** [found, value] for "field" or "items.0.name" */
     protected static function find(array $data, string $path): array
     {
-        if (array_key_exists($path, $data)) return [true, $data[$path]];
+        if (array_key_exists($path, $data)) {
+            return [true, $data[$path]];
+        }
         foreach (explode('.', $path) as $segment) {
-            if (!is_array($data) || !array_key_exists($segment, $data)) return [false, null];
+            if (!is_array($data) || !array_key_exists($segment, $data)) {
+                return [false, null];
+            }
             $data = $data[$segment];
         }
         return [true, $data];

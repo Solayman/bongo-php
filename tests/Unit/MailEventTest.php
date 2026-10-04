@@ -1,4 +1,5 @@
 <?php
+
 namespace Tests\Unit;
 
 use System\Events\Event;
@@ -144,8 +145,12 @@ class MailEventTest extends TestCase
     public function testEventsWithClosuresClassesAndInjection(): void
     {
         $seen = [];
-        Event::listen('order.shipped', function ($order) use (&$seen) { $seen[] = "closure:{$order['id']}"; });
-        Event::listen('order.shipped', function ($order, \System\Http\Request $request) use (&$seen) { $seen[] = 'injected:' . get_class($request); });
+        Event::listen('order.shipped', function ($order) use (&$seen) {
+            $seen[] = "closure:{$order['id']}";
+        });
+        Event::listen('order.shipped', function ($order, \System\Http\Request $request) use (&$seen) {
+            $seen[] = 'injected:' . get_class($request);
+        });
         $this->assertTrue(Event::hasListeners('order.shipped'));
 
         Event::dispatch('order.shipped', ['id' => 7]);
@@ -158,7 +163,9 @@ class MailEventTest extends TestCase
 
         // A listener returning false stops the rest
         Event::listen('stop.test', fn() => false);
-        Event::listen('stop.test', function () use (&$seen) { $seen[] = 'never'; });
+        Event::listen('stop.test', function () use (&$seen) {
+            $seen[] = 'never';
+        });
         Event::dispatch('stop.test');
         $this->assertNotContains('never', implode(',', $seen));
     }

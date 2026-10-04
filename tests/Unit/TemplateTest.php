@@ -1,4 +1,5 @@
 <?php
+
 namespace Tests\Unit;
 
 use System\Testing\TestCase;
@@ -20,7 +21,9 @@ class TemplateTest extends TestCase
     public function tearDown(): void
     {
         $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($this->dir, \FilesystemIterator::SKIP_DOTS), \RecursiveIteratorIterator::CHILD_FIRST);
-        foreach ($it as $file) $file->isDir() ? @rmdir($file) : @unlink($file);
+        foreach ($it as $file) {
+            $file->isDir() ? @rmdir($file) : @unlink($file);
+        }
         @rmdir($this->dir);
     }
 
@@ -179,7 +182,10 @@ class TemplateTest extends TestCase
         $this->assertSame('a', $this->render("@forelse(\$xs as \$x){{ \$x }}@endforelse", ['xs' => ['a']]));
 
         // Generators cannot be counted: last is unknown, the rest works
-        $gen = (function () { yield 'a'; yield 'b'; })();
+        $gen = (function () {
+            yield 'a';
+            yield 'b';
+        })();
         $this->assertSame('1? 2?', $this->render("@foreach(\$g as \$x){{ \$loop->iteration }}{{ \$loop->last === null ? '?' : '!' }} @endforeach", ['g' => $gen]));
     }
 
@@ -269,16 +275,20 @@ class TemplateTest extends TestCase
         $this->view('components.forms.input', '<input name="{{ $name }}" maxlength="{{ $maxLength }}" @disabled($disabled ?? false)>');
 
         // Text attributes, a slot with HTML and {{ }} inside, PHP values with ":"
-        $this->assertSame('<div class="alert alert-danger">Saved <b>Mug</b>!</div>',
-            $this->render('<x-alert type="danger">Saved <b>{{ $name }}</b>!</x-alert>', ['name' => 'Mug']));
+        $this->assertSame(
+            '<div class="alert alert-danger">Saved <b>Mug</b>!</div>',
+            $this->render('<x-alert type="danger">Saved <b>{{ $name }}</b>!</x-alert>', ['name' => 'Mug'])
+        );
         $this->assertSame('<span>New3</span>', $this->render('<x-badge text="New" :count="1 + 2" />'));
 
         // Folders, dashed names become camelCase, bare attributes are true
         $this->assertSame('<input name="email" maxlength="20" disabled>', $this->render('<x-forms.input name="email" max-length="20" disabled />'));
 
         // Nested components, and the slot's own data is still escaped
-        $this->assertSame('<div class="alert alert-info">x <span>&lt;b&gt;</span></div>',
-            $this->render('<x-alert>x <x-badge :text="$evil" /></x-alert>', ['evil' => '<b>']));
+        $this->assertSame(
+            '<div class="alert alert-info">x <span>&lt;b&gt;</span></div>',
+            $this->render('<x-alert>x <x-badge :text="$evil" /></x-alert>', ['evil' => '<b>'])
+        );
 
         // Directives work inside a slot
         $this->assertSame('<div class="alert alert-info">1 2 </div>', $this->render('<x-alert>@foreach([1, 2] as $i){{ $i }} @endforeach</x-alert>'));

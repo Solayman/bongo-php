@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Security;
 
 /**
@@ -65,8 +66,11 @@ class SecurityCheck
         $add('Session timeout', $idle > 24 * 60 ? 'warn' : 'ok', "Signed-in users are logged out after $idle idle minutes.");
 
         // Content-Security-Policy
-        $add('Content-Security-Policy', trim((string) config('security.csp', '')) === '' ? 'warn' : 'ok',
-            trim((string) config('security.csp', '')) === '' ? 'Not set. Consider SECURITY_CSP to limit where scripts can load from (see config/security.php).' : 'Sent on every response.');
+        $add(
+            'Content-Security-Policy',
+            trim((string) config('security.csp', '')) === '' ? 'warn' : 'ok',
+            trim((string) config('security.csp', '')) === '' ? 'Not set. Consider SECURITY_CSP to limit where scripts can load from (see config/security.php).' : 'Sent on every response.'
+        );
 
         // PHP settings
         if ($production && in_array(strtolower((string) ini_get('display_errors')), ['1', 'on', 'stdout'], true)) {
@@ -78,7 +82,9 @@ class SecurityCheck
         // Writable folders
         foreach (['storage/logs', 'storage/cache', 'public/storage'] as $dir) {
             $path = BASE_PATH . '/' . $dir;
-            if (!is_dir($path)) @mkdir($path, 0775, true);
+            if (!is_dir($path)) {
+                @mkdir($path, 0775, true);
+            }
             $add("Writable: $dir", is_writable($path) ? 'ok' : 'fail', is_writable($path) ? 'OK' : 'PHP cannot write here; logs, cache or uploads will fail.');
         }
 

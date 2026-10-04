@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Debug;
 
 /**
@@ -7,7 +8,9 @@ namespace System\Debug;
  */
 class DdPage
 {
-    public function __construct(protected array $values, protected array $context) {}
+    public function __construct(protected array $values, protected array $context)
+    {
+    }
 
     public function render(): string
     {
@@ -80,7 +83,9 @@ class DdPage
     protected function editorLink(string $file, int $line): ?string
     {
         $editor = function_exists('config') ? (string) config('app.editor', 'vscode') : 'vscode';
-        if ($line < 1 || !is_file($file)) return null;
+        if ($line < 1 || !is_file($file)) {
+            return null;
+        }
         $path = str_replace('\\', '/', (string) realpath($file));
         return match ($editor) {
             'vscode'   => 'vscode://file/' . $path . ':' . $line,

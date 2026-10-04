@@ -1,4 +1,5 @@
 <?php
+
 return [
     'name'  => env('APP_NAME', 'Bongo'),
     'env'   => env('APP_ENV', 'local'),

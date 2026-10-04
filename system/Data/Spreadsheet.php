@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Data;
 
 use InvalidArgumentException;
@@ -85,7 +86,9 @@ class Spreadsheet
         // Check magic bytes: PK\x03\x04 indicates a ZIP archive (OpenXML .xlsx)
         $fh = @fopen($path, 'rb');
         $magic = $fh ? fread($fh, 4) : '';
-        if ($fh) fclose($fh);
+        if ($fh) {
+            fclose($fh);
+        }
 
         $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
 
@@ -316,8 +319,11 @@ class Spreadsheet
             $commas = substr_count($firstLine, ',');
             $semis  = substr_count($firstLine, ';');
             $tabs   = substr_count($firstLine, "\t");
-            if ($semis > $commas && $semis > $tabs) $delimiter = ';';
-            elseif ($tabs > $commas && $tabs > $semis) $delimiter = "\t";
+            if ($semis > $commas && $semis > $tabs) {
+                $delimiter = ';';
+            } elseif ($tabs > $commas && $tabs > $semis) {
+                $delimiter = "\t";
+            }
         }
 
         $headers = [];
@@ -325,7 +331,9 @@ class Spreadsheet
 
         while (($data = fgetcsv($fh, 0, $delimiter)) !== false) {
             // Skip empty rows
-            if (count($data) === 1 && $data[0] === null) continue;
+            if (count($data) === 1 && $data[0] === null) {
+                continue;
+            }
 
             if (empty($headers)) {
                 $headers = array_map('trim', $data);
@@ -416,7 +424,9 @@ class Spreadsheet
                 $cells[$colIndex] = $val;
             }
 
-            if (empty($cells)) continue;
+            if (empty($cells)) {
+                continue;
+            }
 
             // Fill empty intermediate columns
             $maxCol = max(array_keys($cells));

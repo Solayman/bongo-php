@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Auth;
 
 /**
@@ -9,7 +10,9 @@ abstract class Guard
     protected ?object $user = null;
     protected bool $resolved = false;
 
-    public function __construct(protected string $name, protected UserProvider $provider, protected array $config = []) {}
+    public function __construct(protected string $name, protected UserProvider $provider, protected array $config = [])
+    {
+    }
 
     /** The authenticated user, or null */
     abstract public function user(): ?object;

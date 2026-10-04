@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Http\Client;
 
 use RuntimeException;
@@ -16,7 +17,9 @@ class PendingRequest
     protected int $retryDelayMs = 0;
     protected bool $form = false;
 
-    public function __construct(protected ?Factory $factory = null) {}
+    public function __construct(protected ?Factory $factory = null)
+    {
+    }
 
     public function withHeaders(array $headers): static
     {
@@ -61,10 +64,22 @@ class PendingRequest
         return $this->send('GET', $url . ($query ? (str_contains($url, '?') ? '&' : '?') . http_build_query($query) : ''));
     }
 
-    public function post(string $url, array $data = []): Response   { return $this->send('POST', $url, $data); }
-    public function put(string $url, array $data = []): Response    { return $this->send('PUT', $url, $data); }
-    public function patch(string $url, array $data = []): Response  { return $this->send('PATCH', $url, $data); }
-    public function delete(string $url, array $data = []): Response { return $this->send('DELETE', $url, $data); }
+    public function post(string $url, array $data = []): Response
+    {
+        return $this->send('POST', $url, $data);
+    }
+    public function put(string $url, array $data = []): Response
+    {
+        return $this->send('PUT', $url, $data);
+    }
+    public function patch(string $url, array $data = []): Response
+    {
+        return $this->send('PATCH', $url, $data);
+    }
+    public function delete(string $url, array $data = []): Response
+    {
+        return $this->send('DELETE', $url, $data);
+    }
 
     public function send(string $method, string $url, array $data = []): Response
     {
@@ -79,7 +94,7 @@ class PendingRequest
         }
         $request = ['method' => $method, 'url' => $url, 'headers' => $headers, 'body' => $body, 'data' => $data];
 
-        for ($attempt = 1; ; $attempt++) {
+        for ($attempt = 1;; $attempt++) {
             try {
                 $response = $this->factory?->fakeResponse($request) ?? $this->transport($request);
                 if ($response->status() < 500 || $attempt >= $this->tries) {
@@ -87,16 +102,22 @@ class PendingRequest
                     return $response;
                 }
             } catch (ConnectionException $e) {
-                if ($attempt >= $this->tries) throw $e;
+                if ($attempt >= $this->tries) {
+                    throw $e;
+                }
             }
-            if ($this->retryDelayMs) usleep($this->retryDelayMs * 1000);
+            if ($this->retryDelayMs) {
+                usleep($this->retryDelayMs * 1000);
+            }
         }
     }
 
     protected function transport(array $request): Response
     {
         $lines = [];
-        foreach ($request['headers'] as $name => $value) $lines[] = "$name: $value";
+        foreach ($request['headers'] as $name => $value) {
+            $lines[] = "$name: $value";
+        }
 
         if (function_exists('curl_init')) {
             $ch = curl_init($request['url']);
@@ -109,7 +130,9 @@ class PendingRequest
                 CURLOPT_FOLLOWLOCATION => true,
                 CURLOPT_MAXREDIRS      => 5,
             ]);
-            if ($request['body'] !== null) curl_setopt($ch, CURLOPT_POSTFIELDS, $request['body']);
+            if ($request['body'] !== null) {
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $request['body']);
+            }
             $raw = curl_exec($ch);
             if ($raw === false) {
                 $error = curl_error($ch);
@@ -141,7 +164,10 @@ class PendingRequest
     {
         $headers = [];
         foreach (preg_split('/\r?\n/', $raw) as $line) {
-            if (str_starts_with($line, 'HTTP/')) { $headers = []; continue; }
+            if (str_starts_with($line, 'HTTP/')) {
+                $headers = [];
+                continue;
+            }
             if (str_contains($line, ':')) {
                 [$name, $value] = explode(':', $line, 2);
                 $headers[strtolower(trim($name))] = trim($value);

@@ -21,7 +21,7 @@ class Category extends Model
     {
         $base = trim(preg_replace('/[^a-z0-9]+/', '-', strtolower($name)), '-') ?: 'category';
         $slug = $base;
-        for ($i = 2; ; $i++) {
+        for ($i = 2;; $i++) {
             $query = static::where('slug', $slug);
             if ($ignoreId) {
                 $query->where('id', '!=', $ignoreId);

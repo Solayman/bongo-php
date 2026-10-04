@@ -18,7 +18,9 @@ $options = array_slice($args, 1);
 $hasOption = fn(string $name) => in_array("--$name", $options, true);
 $optionValue = function (string $name, $default = null) use ($options) {
     foreach ($options as $opt) {
-        if (str_starts_with($opt, "--$name=")) return substr($opt, strlen($name) + 3);
+        if (str_starts_with($opt, "--$name=")) {
+            return substr($opt, strlen($name) + 3);
+        }
     }
     return $default;
 };
@@ -63,7 +65,9 @@ try {
                     echo 'You have the latest version.' . PHP_EOL;
                     break;
                 }
-                if ($notes !== '') echo PHP_EOL . "What changed in $latest:" . PHP_EOL . $notes . PHP_EOL . PHP_EOL;
+                if ($notes !== '') {
+                    echo PHP_EOL . "What changed in $latest:" . PHP_EOL . $notes . PHP_EOL . PHP_EOL;
+                }
                 if ((int) explode('.', $latest)[0] > (int) explode('.', $current)[0]) {
                     echo "\033[33m$latest is a major version: read UPGRADE.md before upgrading.\033[0m" . PHP_EOL;
                 }
@@ -91,7 +95,9 @@ try {
             $secret = $optionValue('secret');
             System\Http\Maintenance::down((string) $optionValue('message', ''), (int) $optionValue('retry', 60), $secret);
             echo "The site is in maintenance mode: visitors see \"We'll be back soon\" (HTTP 503)." . PHP_EOL;
-            if ($secret) echo 'Visit ' . url('/' . trim($secret, '/')) . ' once to keep using the site in your browser.' . PHP_EOL;
+            if ($secret) {
+                echo 'Visit ' . url('/' . trim($secret, '/')) . ' once to keep using the site in your browser.' . PHP_EOL;
+            }
             echo 'Turn it off with: php bongo up' . PHP_EOL;
             break;
 
@@ -182,7 +188,9 @@ try {
                 }
             }
             $freshMigrator = $migrator($targetConn);
-            foreach ($freshMigrator->dropAllTables() as $table) echo "Dropped: $table\n";
+            foreach ($freshMigrator->dropAllTables() as $table) {
+                echo "Dropped: $table\n";
+            }
             $freshMigrator->migrate(fn($name) => print("Migrated: $name\n"));
             if ($hasOption('seed')) {
                 runSeeder($targetConn);
@@ -233,11 +241,17 @@ try {
                 $rows = array_filter($rows, fn($r) => stripos(implode(' ', $r), $filter) !== false);
             }
             $widths = [6, 4, 4, 6, 10];
-            foreach ($rows as $r) foreach ($r as $i => $v) $widths[$i] = max($widths[$i], strlen($v));
+            foreach ($rows as $r) {
+                foreach ($r as $i => $v) {
+                    $widths[$i] = max($widths[$i], strlen($v));
+                }
+            }
             $line = fn($r) => vsprintf("%-{$widths[0]}s  %-{$widths[1]}s  %-{$widths[2]}s  %-{$widths[3]}s  %s
 ", $r);
             echo $line(['Method', 'Path', 'Name', 'Action', 'Middleware']);
-            foreach ($rows as $r) echo $line($r);
+            foreach ($rows as $r) {
+                echo $line($r);
+            }
             echo "
 " . count($rows) . " route(s)
 ";
@@ -246,17 +260,27 @@ try {
         case 'tinker':
             echo "Bongo tinker. The app is loaded: try DB::table('users')->count(), config('app'), Hash::make('x').\n";
             echo "Type exit to quit.\n";
-            foreach (['DB' => System\Database\DB::class, 'Schema' => System\Database\Schema\Schema::class, 'Log' => System\Log\Log::class,
-                      'Hash' => System\Security\Hash::class, 'Crypt' => System\Security\Crypt::class, 'Auth' => System\Auth\Auth::class] as $alias => $class) {
-                if (!class_exists($alias, false)) class_alias($class, $alias);
+            foreach (
+                ['DB' => System\Database\DB::class, 'Schema' => System\Database\Schema\Schema::class, 'Log' => System\Log\Log::class,
+                      'Hash' => System\Security\Hash::class, 'Crypt' => System\Security\Crypt::class, 'Auth' => System\Auth\Auth::class] as $alias => $class
+            ) {
+                if (!class_exists($alias, false)) {
+                    class_alias($class, $alias);
+                }
             }
             $dumper = new System\Debug\Dumper();
             while (true) {
                 $line = function_exists('readline') ? readline('>>> ') : (fwrite(STDOUT, '>>> ') ? fgets(STDIN) : false);
-                if ($line === false || in_array(trim($line), ['exit', 'quit'], true)) break;
+                if ($line === false || in_array(trim($line), ['exit', 'quit'], true)) {
+                    break;
+                }
                 $code = trim($line);
-                if ($code === '') continue;
-                if (function_exists('readline_add_history')) readline_add_history($code);
+                if ($code === '') {
+                    continue;
+                }
+                if (function_exists('readline_add_history')) {
+                    readline_add_history($code);
+                }
                 $code = rtrim($code, ';');
                 try {
                     $result = eval(str_starts_with($code, 'return ') || preg_match('/^(echo|print|if|foreach|for|while|function|class)\b/', $code) ? "$code;" : "return $code;");
@@ -385,7 +409,9 @@ try {
             $minutes = (int) $optionValue('minutes', 0);   // --minutes=N: stop after N runs (0 = forever)
             for ($run = 1; $minutes === 0 || $run <= $minutes; $run++) {
                 $wait = 60 - (int) date('s');
-                if ($run > 1 || $hasOption('wait')) sleep($wait);
+                if ($run > 1 || $hasOption('wait')) {
+                    sleep($wait);
+                }
                 passthru(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(__FILE__) . ' schedule:run');
             }
             break;
@@ -403,7 +429,7 @@ try {
             break;
 
         case 'schedule:list':
-            $tasks =System\Scheduling\Schedule::load()->tasks();
+            $tasks = System\Scheduling\Schedule::load()->tasks();
             $now = new DateTimeImmutable();
             $width = max(array_map(fn($t) => strlen($t->getName()), $tasks)) + 2;
             printf("%-15s %-{$width}s %s%s", 'Cron', 'Task', 'Next run', PHP_EOL);
@@ -420,18 +446,24 @@ try {
             // One file instead of every config/*.php on each request. Values must be plain data.
             $check = function ($value, string $path) use (&$check) {
                 if (is_array($value)) {
-                    foreach ($value as $key => $item) $check($item, "$path.$key");
+                    foreach ($value as $key => $item) {
+                        $check($item, "$path.$key");
+                    }
                 } elseif (!is_scalar($value) && $value !== null) {
                     throw new RuntimeException("config('$path') is not plain data (" . get_debug_type($value) . '), so the config cannot be cached.');
                 }
             };
             $config = load_config_files();
             $check($config, 'config');
-            if (!is_dir(dirname(CONFIG_CACHE))) mkdir(dirname(CONFIG_CACHE), 0775, true);
+            if (!is_dir(dirname(CONFIG_CACHE))) {
+                mkdir(dirname(CONFIG_CACHE), 0775, true);
+            }
             $tmp = CONFIG_CACHE . '.' . bin2hex(random_bytes(4));
             file_put_contents($tmp, "<?php\n// Made by php bongo config:cache. Run it again after changing config/ or .env (or: php bongo config:clear)\nreturn " . var_export($config, true) . ";\n");
             rename($tmp, CONFIG_CACHE);
-            if (function_exists('opcache_invalidate')) @opcache_invalidate(CONFIG_CACHE, true);
+            if (function_exists('opcache_invalidate')) {
+                @opcache_invalidate(CONFIG_CACHE, true);
+            }
             echo 'Config cached in ' . relative_path(CONFIG_CACHE) . '. Run php bongo config:cache again after changing config/ or .env.' . PHP_EOL;
             break;
 
@@ -443,11 +475,15 @@ try {
         case 'route:cache':
             $router = System\Routing\Router::fromConfig();
             $data = $router->toCache();
-            if (!is_dir(dirname(ROUTE_CACHE))) mkdir(dirname(ROUTE_CACHE), 0775, true);
+            if (!is_dir(dirname(ROUTE_CACHE))) {
+                mkdir(dirname(ROUTE_CACHE), 0775, true);
+            }
             $tmp = ROUTE_CACHE . '.' . bin2hex(random_bytes(4));
             file_put_contents($tmp, "<?php\n// Made by php bongo route:cache. Run it again after changing routes/ (or: php bongo route:clear)\nreturn " . var_export($data, true) . ";\n");
             rename($tmp, ROUTE_CACHE);
-            if (function_exists('opcache_invalidate')) @opcache_invalidate(ROUTE_CACHE, true);
+            if (function_exists('opcache_invalidate')) {
+                @opcache_invalidate(ROUTE_CACHE, true);
+            }
             echo 'Routes cached in ' . relative_path(ROUTE_CACHE) . ' (' . count($data['routes']) . ' routes). Run php bongo route:cache again after changing routes.' . PHP_EOL;
             break;
 
@@ -558,8 +594,6 @@ try {
                 printf("  %-44s %s\n", $usage, $description);
             }
             break;
-
-
     }
 } catch (Throwable $e) {
     fwrite(STDERR, get_class($e) . ': ' . $e->getMessage() . "\n");

@@ -1,4 +1,5 @@
 <?php
+
 namespace Tests\Unit;
 
 use App\Models\Category;
@@ -187,7 +188,10 @@ class OrmTest extends TestCase
         $this->assertSame([20, 4], [$seen, $batches]);
 
         $stopped = 0;
-        DB::table('products')->orderBy('id')->chunk(5, function () use (&$stopped) { $stopped++; return false; });
+        DB::table('products')->orderBy('id')->chunk(5, function () use (&$stopped) {
+            $stopped++;
+            return false;
+        });
         $this->assertSame(1, $stopped, 'returning false stops chunking');
     }
 

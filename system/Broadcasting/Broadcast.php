@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Broadcasting;
 
 use System\Http\Http;
@@ -20,7 +21,9 @@ class Broadcast
 {
     protected static ?array $fake = null;
 
-    public function __construct(protected array $channels) {}
+    public function __construct(protected array $channels)
+    {
+    }
 
     public static function to(string ...$channels): static
     {

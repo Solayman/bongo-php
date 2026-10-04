@@ -1,4 +1,5 @@
 <?php
+
 return [
     // Default disk: 'public' or 'local'
     'default' => env('STORAGE_DISK', 'public'),

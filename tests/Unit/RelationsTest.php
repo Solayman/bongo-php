@@ -8,8 +8,14 @@ namespace Tests\Unit\RelationsProbe {
         protected static $table = 'rel_writers';
         protected array $fillable = ['name'];
         protected array $casts = ['id' => 'int'];
-        public function bio() { return $this->hasOne(Bio::class); }
-        public function genres() { return $this->belongsToMany(Genre::class, 'rel_genre_writer'); }
+        public function bio()
+        {
+            return $this->hasOne(Bio::class);
+        }
+        public function genres()
+        {
+            return $this->belongsToMany(Genre::class, 'rel_genre_writer');
+        }
     }
 
     class Bio extends Model
@@ -40,10 +46,23 @@ namespace Tests\Unit {
         public function setUp(): void
         {
             $this->tearDown();
-            Schema::create('rel_writers', function (Blueprint $t) { $t->id(); $t->string('name'); });
-            Schema::create('rel_bios', function (Blueprint $t) { $t->id(); $t->integer('writer_id'); $t->string('text'); });
-            Schema::create('rel_genres', function (Blueprint $t) { $t->id(); $t->string('name'); });
-            Schema::create('rel_genre_writer', function (Blueprint $t) { $t->integer('writer_id'); $t->integer('genre_id'); });
+            Schema::create('rel_writers', function (Blueprint $t) {
+                $t->id();
+                $t->string('name');
+            });
+            Schema::create('rel_bios', function (Blueprint $t) {
+                $t->id();
+                $t->integer('writer_id');
+                $t->string('text');
+            });
+            Schema::create('rel_genres', function (Blueprint $t) {
+                $t->id();
+                $t->string('name');
+            });
+            Schema::create('rel_genre_writer', function (Blueprint $t) {
+                $t->integer('writer_id');
+                $t->integer('genre_id');
+            });
         }
 
         public function tearDown(): void

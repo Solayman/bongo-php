@@ -6,8 +6,13 @@ namespace Tests\Unit\QueueProbe {
     class RecordJob extends Job
     {
         public static array $runs = [];
-        public function __construct(public string $label) {}
-        public function handle(): void { self::$runs[] = $this->label; }
+        public function __construct(public string $label)
+        {
+        }
+        public function handle(): void
+        {
+            self::$runs[] = $this->label;
+        }
     }
 
     class FlakyJob extends Job
@@ -16,13 +21,20 @@ namespace Tests\Unit\QueueProbe {
         public int|array $backoff = 0;
         public static int $calls = 0;
         public static array $failedWith = [];
-        public function __construct(public int $failTimes) {}
+        public function __construct(public int $failTimes)
+        {
+        }
         public function handle(): void
         {
             self::$calls++;
-            if (self::$calls <= $this->failTimes) throw new \RuntimeException("boom " . self::$calls);
+            if (self::$calls <= $this->failTimes) {
+                throw new \RuntimeException("boom " . self::$calls);
+            }
         }
-        public function failed(\Throwable $e): void { self::$failedWith[] = $e->getMessage(); }
+        public function failed(\Throwable $e): void
+        {
+            self::$failedWith[] = $e->getMessage();
+        }
     }
 }
 
@@ -157,8 +169,12 @@ namespace Tests\Unit {
         {
             $schedule = new Schedule();
             $ran = [];
-            $schedule->call(function () use (&$ran) { $ran[] = 'hourly'; })->hourly()->name('h');
-            $schedule->call(function () use (&$ran) { $ran[] = 'report'; })->weekdays()->at('08:00')->name('r');
+            $schedule->call(function () use (&$ran) {
+                $ran[] = 'hourly';
+            })->hourly()->name('h');
+            $schedule->call(function () use (&$ran) {
+                $ran[] = 'report';
+            })->weekdays()->at('08:00')->name('r');
             $schedule->call(fn() => null)->dailyAt('02:30')->name('d');
 
             $this->assertSame(['h'], array_map(fn($t) => $t->getName(), $schedule->due(new \DateTimeImmutable('2026-10-02 13:00'))));
@@ -166,7 +182,9 @@ namespace Tests\Unit {
             $this->assertSame(['h'], array_map(fn($t) => $t->getName(), $schedule->due(new \DateTimeImmutable('2026-10-03 08:00'))), 'no weekday report on Saturday');
             $this->assertSame('30 2 * * *', $schedule->tasks()[2]->expression());
 
-            foreach ($schedule->due(new \DateTimeImmutable('2026-10-02 13:00')) as $task) $task->run();
+            foreach ($schedule->due(new \DateTimeImmutable('2026-10-02 13:00')) as $task) {
+                $task->run();
+            }
             $this->assertSame(['hourly'], $ran);
         }
 
@@ -174,7 +192,9 @@ namespace Tests\Unit {
         {
             $schedule = new Schedule();
             $inner = null;
-            $task = $schedule->call(function () use (&$inner, &$task) { $inner = $task->run(); })->withoutOverlapping()->name('long');
+            $task = $schedule->call(function () use (&$inner, &$task) {
+                $inner = $task->run();
+            })->withoutOverlapping()->name('long');
             $this->assertSame('ran', $task->run());
             $this->assertSame('skipped', $inner, 'the nested run saw the lock');
         }

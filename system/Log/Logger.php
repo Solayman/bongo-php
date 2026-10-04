@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Log;
 
 use Throwable;
@@ -40,7 +41,8 @@ class Logger
         protected int $days = 14,
         protected string $environment = 'local',
         protected string $format = 'text'
-    ) {}
+    ) {
+    }
 
     public static function instance(): self
     {
@@ -71,14 +73,38 @@ class Logger
         self::$instance = $logger;
     }
 
-    public function debug(string $message, array $context = []): void     { $this->log('debug', $message, $context); }
-    public function info(string $message, array $context = []): void      { $this->log('info', $message, $context); }
-    public function notice(string $message, array $context = []): void    { $this->log('notice', $message, $context); }
-    public function warning(string $message, array $context = []): void   { $this->log('warning', $message, $context); }
-    public function error(string $message, array $context = []): void     { $this->log('error', $message, $context); }
-    public function critical(string $message, array $context = []): void  { $this->log('critical', $message, $context); }
-    public function alert(string $message, array $context = []): void     { $this->log('alert', $message, $context); }
-    public function emergency(string $message, array $context = []): void { $this->log('emergency', $message, $context); }
+    public function debug(string $message, array $context = []): void
+    {
+        $this->log('debug', $message, $context);
+    }
+    public function info(string $message, array $context = []): void
+    {
+        $this->log('info', $message, $context);
+    }
+    public function notice(string $message, array $context = []): void
+    {
+        $this->log('notice', $message, $context);
+    }
+    public function warning(string $message, array $context = []): void
+    {
+        $this->log('warning', $message, $context);
+    }
+    public function error(string $message, array $context = []): void
+    {
+        $this->log('error', $message, $context);
+    }
+    public function critical(string $message, array $context = []): void
+    {
+        $this->log('critical', $message, $context);
+    }
+    public function alert(string $message, array $context = []): void
+    {
+        $this->log('alert', $message, $context);
+    }
+    public function emergency(string $message, array $context = []): void
+    {
+        $this->log('emergency', $message, $context);
+    }
 
     public function log(string $level, string $message, array $context = []): void
     {
@@ -143,7 +169,9 @@ class Logger
                 continue;
             }
             if (str_starts_with($trimmed, '{') && ($json = json_decode($trimmed, true)) && isset($json['level'], $json['message'])) {
-                if ($current) $entries[] = $current;
+                if ($current) {
+                    $entries[] = $current;
+                }
                 $details = '';
                 if (!empty($json['exception'])) {
                     if (is_array($json['exception'])) {
@@ -165,13 +193,17 @@ class Logger
                     'details' => $details,
                 ];
             } elseif (preg_match('/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\] (\w+)\.([A-Z]+): (.*)$/', $line, $m)) {
-                if ($current) $entries[] = $current;
+                if ($current) {
+                    $entries[] = $current;
+                }
                 $current = ['time' => $m[1], 'env' => $m[2], 'level' => strtolower($m[3]), 'message' => $m[4], 'details' => ''];
             } elseif ($current && $line !== '') {
                 $current['details'] .= $line . "\n";
             }
         }
-        if ($current) $entries[] = $current;
+        if ($current) {
+            $entries[] = $current;
+        }
 
         $entries = array_filter($entries, fn($e) => (self::LEVELS[$e['level']] ?? 0) >= $min);
 

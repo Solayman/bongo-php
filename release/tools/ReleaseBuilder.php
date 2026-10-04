@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Console;
 
 use RuntimeException;
@@ -28,7 +29,9 @@ class ReleaseBuilder
         'database/migrations/2026_10_03_000012_add_email_verified_at_to_users_table.php',
     ];
 
-    public function __construct(protected string $source) {}
+    public function __construct(protected string $source)
+    {
+    }
 
     /** Build into $target (must not exist or be empty); returns the number of files written */
     public function build(string $target): int
@@ -54,7 +57,9 @@ class ReleaseBuilder
         $count += $this->copy("{$this->source}/release/skeleton", $target);
 
         foreach (['storage/logs', 'storage/cache', 'storage/mail', 'public/storage'] as $dir) {
-            if (!is_dir("$target/$dir")) mkdir("$target/$dir", 0775, true);
+            if (!is_dir("$target/$dir")) {
+                mkdir("$target/$dir", 0775, true);
+            }
         }
         return $count;
     }
@@ -63,7 +68,9 @@ class ReleaseBuilder
     protected function copy(string $from, string $to): int
     {
         if (is_file($from)) {
-            if (!is_dir(dirname($to))) mkdir(dirname($to), 0775, true);
+            if (!is_dir(dirname($to))) {
+                mkdir(dirname($to), 0775, true);
+            }
             copy($from, $to);
             return 1;
         }
@@ -72,7 +79,9 @@ class ReleaseBuilder
         foreach ($items as $item) {
             $dest = $to . '/' . substr(str_replace('\\', '/', $item->getPathname()), strlen(str_replace('\\', '/', $from)) + 1);
             if ($item->isDir()) {
-                if (!is_dir($dest)) mkdir($dest, 0775, true);
+                if (!is_dir($dest)) {
+                    mkdir($dest, 0775, true);
+                }
             } else {
                 $count += $this->copy($item->getPathname(), $dest);
             }

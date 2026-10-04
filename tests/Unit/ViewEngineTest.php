@@ -1,4 +1,5 @@
 <?php
+
 namespace Tests\Unit;
 
 use System\Testing\TestCase;
@@ -24,7 +25,9 @@ class ViewEngineTest extends TestCase
 
     public function tearDown(): void
     {
-        foreach (['layout', 'page', 'plain', 'partials/note'] as $f) @unlink("$this->dir/$f.php");
+        foreach (['layout', 'page', 'plain', 'partials/note'] as $f) {
+            @unlink("$this->dir/$f.php");
+        }
         array_map('unlink', glob("$this->dir/cache/*") ?: []);
         @rmdir("$this->dir/cache");
         @rmdir("$this->dir/partials");
@@ -63,7 +66,10 @@ class ViewEngineTest extends TestCase
     {
         file_put_contents("$this->dir/nullable.php", "[{{ \$missing ?? null }}][{{ null }}]");
         $notices = [];
-        set_error_handler(function ($no, $msg) use (&$notices) { $notices[] = $msg; return true; });
+        set_error_handler(function ($no, $msg) use (&$notices) {
+            $notices[] = $msg;
+            return true;
+        });
         try {
             $html = $this->engine->render('nullable');
         } finally {

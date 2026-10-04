@@ -1,4 +1,5 @@
 <?php
+
 namespace System\View;
 
 /**
@@ -6,7 +7,9 @@ namespace System\View;
  */
 class HtmlString implements \Stringable
 {
-    public function __construct(protected string $html) {}
+    public function __construct(protected string $html)
+    {
+    }
 
     public function __toString(): string
     {

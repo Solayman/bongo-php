@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Testing;
 
 use System\Database\DB;
@@ -52,7 +53,9 @@ abstract class HttpTestCase extends TestCase
         }
         if ($this->cookies) {
             $pairs = [];
-            foreach ($this->cookies as $name => $value) $pairs[] = "$name=$value";
+            foreach ($this->cookies as $name => $value) {
+                $pairs[] = "$name=$value";
+            }
             $headerLines[] = 'Cookie: ' . implode('; ', $pairs);
         }
 
@@ -83,15 +86,20 @@ abstract class HttpTestCase extends TestCase
 
         $responseHeaders = [];
         foreach (preg_split('/\r?\n/', $headerText) as $line) {
-            if (!str_contains($line, ':')) continue;
+            if (!str_contains($line, ':')) {
+                continue;
+            }
             [$name, $value] = array_map('trim', explode(':', $line, 2));
             $responseHeaders[strtolower($name)][] = $value;
 
             if (strtolower($name) === 'set-cookie') {
                 [$pair] = explode(';', $value, 2);
                 [$cookieName, $cookieValue] = array_pad(explode('=', $pair, 2), 2, '');
-                if ($cookieValue === 'deleted' || $cookieValue === '') unset($this->cookies[$cookieName]);
-                else $this->cookies[$cookieName] = $cookieValue;
+                if ($cookieValue === 'deleted' || $cookieValue === '') {
+                    unset($this->cookies[$cookieName]);
+                } else {
+                    $this->cookies[$cookieName] = $cookieValue;
+                }
             }
         }
 

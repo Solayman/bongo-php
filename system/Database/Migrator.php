@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Database;
 
 use PDO;
@@ -116,7 +117,9 @@ class Migrator
 
                 $done[] = $name;
                 Log::info('Migrated {migration} (batch {batch})', ['migration' => $name, 'batch' => $batch, 'connection' => $this->connection]);
-                if ($log) $log($name);
+                if ($log) {
+                    $log($name);
+                }
             }
             return $done;
         });
@@ -153,7 +156,9 @@ class Migrator
                 Log::info('Rolled back {migration}', ['migration' => $name, 'connection' => $this->connection]);
 
                 $done[] = $name;
-                if ($log) $log($name);
+                if ($log) {
+                    $log($name);
+                }
             }
             return $done;
         });

@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Console;
 
 /**
@@ -21,11 +22,15 @@ class Packager extends Upgrader
         $config = [];
         foreach (glob("{$this->base}/config/*.php") ?: [] as $file) {
             if (basename($file) !== 'bootstrap.php') {
-                $config[basename($file)] = array_keys((array) (function () use ($file) { return require $file; })());
+                $config[basename($file)] = array_keys((array) (function () use ($file) {
+                    return require $file;
+                })());
             }
         }
 
-        if (!is_dir($outDir)) mkdir($outDir, 0775, true);
+        if (!is_dir($outDir)) {
+            mkdir($outDir, 0775, true);
+        }
         $path = rtrim($outDir, '/\\') . "/bongo-framework-$version.json.gz";
         file_put_contents($path, gzencode(json_encode(['version' => $version, 'files' => $files, 'config' => $config], JSON_UNESCAPED_SLASHES), 9));
         file_put_contents("$path.sha256", hash_file('sha256', $path) . '  ' . basename($path) . "\n");

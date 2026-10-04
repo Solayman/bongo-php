@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Database;
 
 /**
@@ -33,8 +34,11 @@ abstract class HasOneOrMany extends Relation
             $query = $this->newRelatedQuery();
             foreach ($query->whereIn($this->foreignKey, $keys)->get() as $child) {
                 $key = $child->getAttribute($this->foreignKey);
-                if ($this->one) $byParent[$key] ??= $child;
-                else $byParent[$key][] = $child;
+                if ($this->one) {
+                    $byParent[$key] ??= $child;
+                } else {
+                    $byParent[$key][] = $child;
+                }
             }
         }
         foreach ($models as $model) {

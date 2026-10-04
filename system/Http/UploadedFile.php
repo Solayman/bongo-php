@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Http;
 
 use System\Storage\Storage;
@@ -34,7 +35,8 @@ class UploadedFile
         protected int $error,
         protected int $size,
         protected bool $test = false
-    ) {}
+    ) {
+    }
 
     /** Build from one entry of $_FILES */
     public static function fromArray(array $file): self
@@ -96,7 +98,9 @@ class UploadedFile
         if ($this->mime === null) {
             $finfo = function_exists('finfo_open') ? finfo_open(FILEINFO_MIME_TYPE) : false;
             $this->mime = $finfo ? (string) finfo_file($finfo, $this->path) : 'application/octet-stream';
-            if ($finfo) finfo_close($finfo);
+            if ($finfo) {
+                finfo_close($finfo);
+            }
         }
         return $this->mime;
     }

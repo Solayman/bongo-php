@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Database\Schema;
 
 use PDO;
@@ -14,7 +15,9 @@ use System\Database\Connection;
  */
 class SchemaBuilder
 {
-    public function __construct(protected ?string $connection = null) {}
+    public function __construct(protected ?string $connection = null)
+    {
+    }
 
     public function getConnectionName(): ?string
     {
@@ -128,7 +131,9 @@ class SchemaBuilder
         } catch (\PDOException $e) {
             // PostgreSQL: session_replication_role needs a superuser. A normal app user runs the
             // callback with checks on (dropAllTables uses DROP ... CASCADE, so it still works).
-            if (!$this->isPgsql()) throw $e;
+            if (!$this->isPgsql()) {
+                throw $e;
+            }
             $callback();
             return;
         }

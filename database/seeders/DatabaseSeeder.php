@@ -1,4 +1,5 @@
 <?php
+
 namespace Database\Seeders;
 
 use System\Database\DB;

@@ -1,4 +1,5 @@
 <?php
+
 namespace Tests\Unit;
 
 use System\Testing\TestCase;
@@ -22,7 +23,9 @@ class TranslationTest extends TestCase
 
     public function tearDown(): void
     {
-        foreach (['bn.json', 'bn/shop.php', 'en/shop.php'] as $f) @unlink("$this->dir/$f");
+        foreach (['bn.json', 'bn/shop.php', 'en/shop.php'] as $f) {
+            @unlink("$this->dir/$f");
+        }
         @rmdir("$this->dir/bn");
         @rmdir("$this->dir/en");
         @rmdir($this->dir);

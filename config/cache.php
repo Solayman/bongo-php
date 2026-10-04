@@ -1,4 +1,5 @@
 <?php
+
 return [
     // file (default, nothing to install) or redis (connection in config/database.php)
     'driver' => env('CACHE_DRIVER', 'file'),

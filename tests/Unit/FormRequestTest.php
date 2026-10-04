@@ -7,7 +7,10 @@ namespace Tests\Unit\FormRequestProbe {
     {
         public static bool $allowed = true;
 
-        public function authorize(): bool { return self::$allowed; }
+        public function authorize(): bool
+        {
+            return self::$allowed;
+        }
 
         public function rules(): array
         {

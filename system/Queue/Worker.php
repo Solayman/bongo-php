@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Queue;
 
 use System\Container\Container;
@@ -16,7 +17,9 @@ class Worker
 {
     protected bool $stop = false;
 
-    public function __construct(protected ?\Closure $output = null) {}
+    public function __construct(protected ?\Closure $output = null)
+    {
+    }
 
     /**
      * @param array $options queue, sleep, max_jobs, max_time, stop_when_empty, once
@@ -48,7 +51,9 @@ class Worker
             } else {
                 $this->process($row);
                 $processed++;
-                if (!empty($options['once'])) break;
+                if (!empty($options['once'])) {
+                    break;
+                }
             }
 
             if (($maxJobs && $processed >= $maxJobs) || ($maxTime && time() - $started >= $maxTime)) {
@@ -223,6 +228,8 @@ class Worker
 
     protected function say(string $line): void
     {
-        if ($this->output) ($this->output)($line);
+        if ($this->output) {
+            ($this->output)($line);
+        }
     }
 }

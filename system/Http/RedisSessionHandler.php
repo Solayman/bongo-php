@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Http;
 
 use System\Redis\Redis;

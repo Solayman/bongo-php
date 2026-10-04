@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Database;
 
 use PDO;
@@ -19,7 +20,9 @@ class DBConnection
 
     protected int $transactions = 0;
 
-    public function __construct(protected string $name) {}
+    public function __construct(protected string $name)
+    {
+    }
 
     public static function resolve(?string $name = null): self
     {

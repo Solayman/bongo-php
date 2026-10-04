@@ -1,4 +1,5 @@
 <?php
+
 namespace Tests\Unit;
 
 use System\Data\Printable;
@@ -9,8 +10,12 @@ use System\Storage\DownloadResponse;
 use System\Database\Schema\Blueprint;
 use System\Testing\TestCase;
 
-class ReviewAlpha extends Model {}
-class ReviewBeta extends Model {}
+class ReviewAlpha extends Model
+{
+}
+class ReviewBeta extends Model
+{
+}
 
 /** Regression tests for issues found in the 2026-10-04 review */
 class ReviewFixesTest extends TestCase

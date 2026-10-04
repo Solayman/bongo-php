@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Database\Schema;
 
 /**
@@ -6,5 +7,7 @@ namespace System\Database\Schema;
  */
 class Expression
 {
-    public function __construct(public string $sql) {}
+    public function __construct(public string $sql)
+    {
+    }
 }

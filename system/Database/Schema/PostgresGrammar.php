@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Database\Schema;
 
 /**
@@ -124,8 +125,12 @@ trait PostgresGrammar
         };
 
         foreach ($this->columns as $column) {
-            if ($column->unique) $add('UNIQUE', [$column->name], null);
-            if ($column->index || $column->foreign) $add('INDEX', [$column->name], null);
+            if ($column->unique) {
+                $add('UNIQUE', [$column->name], null);
+            }
+            if ($column->index || $column->foreign) {
+                $add('INDEX', [$column->name], null);
+            }
         }
         foreach ($this->indexes as [$type, $columns, $name]) {
             $add($type, $columns, $name);
@@ -153,7 +158,9 @@ trait PostgresGrammar
     {
         $statements = [];
         foreach ($this->columns as $column) {
-            if ($column->onUpdate === null) continue;
+            if ($column->onUpdate === null) {
+                continue;
+            }
             $table = self::wrapPgsql($this->table);
             $rawTable = preg_replace('/[^a-zA-Z0-9_]/', '', $this->table);
             $col = self::wrapPgsql($column->name);
@@ -172,7 +179,9 @@ trait PostgresGrammar
     {
         $definitions = [];
         foreach ($this->columns as $column) {
-            if (!$column->foreign) continue;
+            if (!$column->foreign) {
+                continue;
+            }
             [$table, $references, $onDelete, $onUpdate] = $column->foreign;
             $fkName = "{$this->table}_{$column->name}_foreign";
             $definitions[] = 'CONSTRAINT ' . self::wrapPgsql($fkName)

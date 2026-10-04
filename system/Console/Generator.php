@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Console;
 
 use RuntimeException;
@@ -8,7 +9,9 @@ use RuntimeException;
  */
 class Generator
 {
-    public function __construct(protected string $basePath) {}
+    public function __construct(protected string $basePath)
+    {
+    }
 
     /** make:controller ProductController [--api] → app/Http/Controllers/ProductController.php */
     public function controller(string $name, bool $api = false): string
@@ -306,7 +309,9 @@ HTML) . " (send it: Mail::to(\$email)->subject('...')->view('emails.$file', ['us
     public function test(string $name, bool $unit = false): string
     {
         $class = $this->studly(basename(str_replace('\\', '/', $name)));
-        if (!str_ends_with($class, 'Test')) $class .= 'Test';
+        if (!str_ends_with($class, 'Test')) {
+            $class .= 'Test';
+        }
         $dir = $unit ? 'Unit' : 'Feature';
         $base = $unit ? 'TestCase' : 'HttpTestCase';
         $body = $unit

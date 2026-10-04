@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Cache;
 
 /**
@@ -10,7 +11,9 @@ class FileStore implements Store
     /** Seconds after which an unused .lock file counts as stale */
     protected const LOCK_TTL = 3600;
 
-    public function __construct(protected string $path) {}
+    public function __construct(protected string $path)
+    {
+    }
 
     protected function file(string $key): string
     {
@@ -92,7 +95,9 @@ class FileStore implements Store
     public function ttl(string $key): ?int
     {
         $record = $this->read($key);
-        if ($record === null) return 0;
+        if ($record === null) {
+            return 0;
+        }
         return $record['expires'] === 0 ? null : max(0, $record['expires'] - time());
     }
 
@@ -103,7 +108,9 @@ class FileStore implements Store
         foreach (glob($this->path . '/*/*.cache') ?: [] as $file) {
             if ($expiredOnly) {
                 $record = @unserialize((string) @file_get_contents($file));
-                if (!is_array($record) || $record['expires'] === 0 || $record['expires'] > time()) continue;
+                if (!is_array($record) || $record['expires'] === 0 || $record['expires'] > time()) {
+                    continue;
+                }
             }
             $count += (int) @unlink($file);
         }
@@ -111,7 +118,9 @@ class FileStore implements Store
         // Lock files are held for microseconds; one unused for an hour is left over from an old key
         $staleBefore = time() - self::LOCK_TTL;
         foreach (glob($this->path . '/*.lock') ?: [] as $lock) {
-            if (!$expiredOnly || (int) @filemtime($lock) < $staleBefore) @unlink($lock);
+            if (!$expiredOnly || (int) @filemtime($lock) < $staleBefore) {
+                @unlink($lock);
+            }
         }
         if (!$expiredOnly) {
             foreach (glob($this->path . '/*', GLOB_ONLYDIR) ?: [] as $dir) {
@@ -141,7 +150,9 @@ class FileStore implements Store
     /** @return resource|null */
     protected function lock(string $key)
     {
-        if (!is_dir($this->path)) @mkdir($this->path, 0775, true);
+        if (!is_dir($this->path)) {
+            @mkdir($this->path, 0775, true);
+        }
         $file = $this->path . '/' . sha1($key) . '.lock';
         $handle = @fopen($file, 'c');
         if ($handle) {

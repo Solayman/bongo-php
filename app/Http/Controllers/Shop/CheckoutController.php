@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Shop;
 
 use App\Http\Controllers\Controller;
@@ -11,7 +12,9 @@ use System\Http\Request;
 
 class CheckoutController extends Controller
 {
-    public function __construct(protected Cart $cart) {}
+    public function __construct(protected Cart $cart)
+    {
+    }
 
     /** GET /shop/checkout */
     public function show()

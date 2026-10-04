@@ -1,4 +1,5 @@
 <?php
+
 namespace Tests\Unit;
 
 use System\Console\Generator;
@@ -17,7 +18,9 @@ class GeneratorTest extends TestCase
     public function tearDown(): void
     {
         $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($this->dir, \FilesystemIterator::SKIP_DOTS), \RecursiveIteratorIterator::CHILD_FIRST);
-        foreach ($it as $f) $f->isDir() ? @rmdir($f) : @unlink($f);
+        foreach ($it as $f) {
+            $f->isDir() ? @rmdir($f) : @unlink($f);
+        }
         @rmdir($this->dir);
     }
 

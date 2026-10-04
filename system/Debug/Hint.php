@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Debug;
 
 use Throwable;
@@ -43,7 +44,9 @@ class Hint
             $distance = 3;
             foreach (get_class_methods($m[1]) as $method) {
                 $d = levenshtein(strtolower($m[2]), strtolower($method));
-                if ($d < $distance) [$best, $distance] = [$method, $d];
+                if ($d < $distance) {
+                    [$best, $distance] = [$method, $d];
+                }
             }
             if ($best) {
                 return "Did you mean {$best}()?";

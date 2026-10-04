@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProductRequest;
@@ -100,5 +101,4 @@ class ProductController extends Controller
         flash('success', "Product \"{$product->name}\" deleted.");
         redirect(url('/products'));
     }
-
 }
