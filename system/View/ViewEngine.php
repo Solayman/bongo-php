@@ -22,6 +22,13 @@ class ViewEngine
     protected static ?ViewEngine $shared = null;
     /** Variables every view gets (see share()) */
     protected static array $sharedData = [];
+    /** Package view namespaces: name => folder path */
+    protected static array $namespaces = [];
+
+    public static function addNamespace(string $namespace, string $path): void
+    {
+        self::$namespaces[$namespace] = rtrim($path, '/\\');
+    }
 
     public function __construct(string $viewPath, string $cachePath, protected bool $cache = true)
     {
@@ -330,6 +337,18 @@ class ViewEngine
 
     protected function pathFor(string $view): string
     {
+        if (str_contains($view, '::')) {
+            [$namespace, $relative] = explode('::', $view, 2);
+            $subPath = str_replace('.', '/', $relative) . '.php';
+            // App override takes precedence: resources/views/vendor/<namespace>/<view>.php
+            $override = "{$this->viewPath}/vendor/{$namespace}/{$subPath}";
+            if (is_file($override)) {
+                return $override;
+            }
+            if (isset(self::$namespaces[$namespace])) {
+                return self::$namespaces[$namespace] . "/{$subPath}";
+            }
+        }
         return "{$this->viewPath}/" . str_replace('.', '/', $view) . '.php';
     }
 

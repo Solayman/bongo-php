@@ -19,6 +19,15 @@ spl_autoload_register(function ($class) {
         if (is_file($file)) {
             require_once $file;
         }
+    } elseif (strncmp('Bongo\\Packages\\', $class, 15) === 0) {
+        $parts = explode('\\', substr($class, 15), 2);
+        if (isset($parts[1])) {
+            $pkgName = strtolower((string) preg_replace('/(?<!^)[A-Z]/', '-$0', $parts[0]));
+            $file = BASE_PATH . '/packages/' . $pkgName . '/src/' . str_replace('\\', '/', $parts[1]) . '.php';
+            if (is_file($file)) {
+                require_once $file;
+            }
+        }
     }
 });
 
@@ -155,6 +164,11 @@ register_shutdown_function(function () {
 if (is_file(BASE_PATH . '/app/bootstrap.php')) {
     require BASE_PATH . '/app/bootstrap.php';
 }
+
+// ---------------------------
+// Optional packages boot
+// ---------------------------
+System\Package\PackageManager::boot();
 
 // Debug mode: record queries for the debug footer (see debug_stats())
 define('BONGO_START', $_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true));
