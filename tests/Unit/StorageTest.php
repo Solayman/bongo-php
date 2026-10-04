@@ -88,4 +88,32 @@ class StorageTest extends TestCase
         Storage::disk('local')->deleteDirectory('private_docs');
         @unlink($tmp);
     }
+
+    public function testCustomDriverExtensionAndSet(): void
+    {
+        $customCalled = false;
+        Storage::extend('custom_mock', function (array $config, string $name) use (&$customCalled) {
+            $customCalled = true;
+            return new \System\Storage\Disk($name, array_merge(['root' => BASE_PATH . '/storage/app'], $config));
+        });
+
+        // Set custom disk config in runtime
+        $GLOBALS['config']['storage']['disks']['mock_disk'] = ['driver' => 'custom_mock'];
+
+        $disk = Storage::disk('mock_disk');
+        $this->assertTrue($customCalled);
+        $this->assertTrue($disk instanceof \System\Storage\Disk);
+
+        // Test Storage::set() override
+        $explicit = new \System\Storage\Disk('explicit', ['root' => BASE_PATH . '/storage/app']);
+        Storage::set('explicit_disk', $explicit);
+        $this->assertSame($explicit, Storage::disk('explicit_disk'));
+    }
+
+    public function testTemporaryUrlForwarding(): void
+    {
+        $url = Storage::temporaryUrl('testing/file.txt', time() + 300);
+        $this->assertNotNull($url);
+        $this->assertContains('testing/file.txt', $url);
+    }
 }
