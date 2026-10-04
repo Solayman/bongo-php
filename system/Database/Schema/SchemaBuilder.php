@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Database\Schema;
 
 use PDO;
@@ -14,7 +15,9 @@ use System\Database\Connection;
  */
 class SchemaBuilder
 {
-    public function __construct(protected ?string $connection = null) {}
+    public function __construct(protected ?string $connection = null)
+    {
+    }
 
     public function getConnectionName(): ?string
     {
@@ -55,21 +58,22 @@ class SchemaBuilder
         $this->run($blueprint->toAlterStatements());
     }
 
-    public function drop(string $table): void
+    /** $cascade (PostgreSQL): also drop foreign keys and views that depend on the table */
+    public function drop(string $table, bool $cascade = false): void
     {
-        $this->pdo()->exec('DROP TABLE ' . Blueprint::wrap($table));
+        $this->pdo()->exec('DROP TABLE ' . Blueprint::wrap($table, $this->driver()) . ($cascade && $this->isPgsql() ? ' CASCADE' : ''));
     }
 
     public function dropIfExists(string $table): void
     {
-        $this->pdo()->exec('DROP TABLE IF EXISTS ' . Blueprint::wrap($table));
+        $this->pdo()->exec('DROP TABLE IF EXISTS ' . Blueprint::wrap($table, $this->driver()));
     }
 
     public function rename(string $from, string $to): void
     {
         $sql = match (true) {
-            $this->isSqlite(), $this->isPgsql() => 'ALTER TABLE ' . Blueprint::wrap($from) . ' RENAME TO ' . Blueprint::wrap($to),
-            default => 'RENAME TABLE ' . Blueprint::wrap($from) . ' TO ' . Blueprint::wrap($to),
+            $this->isSqlite(), $this->isPgsql() => 'ALTER TABLE ' . Blueprint::wrap($from, $this->driver()) . ' RENAME TO ' . Blueprint::wrap($to, $this->driver()),
+            default => 'RENAME TABLE ' . Blueprint::wrap($from, $this->driver()) . ' TO ' . Blueprint::wrap($to, $this->driver()),
         };
         $this->pdo()->exec($sql);
     }
@@ -122,7 +126,17 @@ class SchemaBuilder
             default           => 'SET FOREIGN_KEY_CHECKS = 1',
         };
 
-        $pdo->exec($disable);
+        try {
+            $pdo->exec($disable);
+        } catch (\PDOException $e) {
+            // PostgreSQL: session_replication_role needs a superuser. A normal app user runs the
+            // callback with checks on (dropAllTables uses DROP ... CASCADE, so it still works).
+            if (!$this->isPgsql()) {
+                throw $e;
+            }
+            $callback();
+            return;
+        }
         try {
             $callback();
         } finally {

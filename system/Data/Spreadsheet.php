@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Data;
 
 use InvalidArgumentException;
@@ -43,7 +44,8 @@ class Spreadsheet
             ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             : 'text/csv; charset=UTF-8';
 
-        return new DownloadResponse($tmp, $filename, $mime);
+        // The temporary file is deleted once it has been sent
+        return new DownloadResponse($tmp, $filename, [], $mime, deleteAfterSend: true);
     }
 
     /**
@@ -84,7 +86,9 @@ class Spreadsheet
         // Check magic bytes: PK\x03\x04 indicates a ZIP archive (OpenXML .xlsx)
         $fh = @fopen($path, 'rb');
         $magic = $fh ? fread($fh, 4) : '';
-        if ($fh) fclose($fh);
+        if ($fh) {
+            fclose($fh);
+        }
 
         $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
 
@@ -109,10 +113,10 @@ class Spreadsheet
 
         foreach ($normalized as $row) {
             if (!$headersWritten) {
-                fputcsv($fh, array_keys($row));
+                fputcsv($fh, array_map([self::class, 'csvSafe'], array_keys($row)));
                 $headersWritten = true;
             }
-            fputcsv($fh, array_values($row));
+            fputcsv($fh, array_map([self::class, 'csvSafe'], array_values($row)));
         }
 
         rewind($fh);
@@ -120,6 +124,41 @@ class Spreadsheet
         fclose($fh);
 
         return $output;
+    }
+
+    /**
+     * Excel runs a CSV cell that starts with = + - @ as a formula. A customer named
+     * "=HYPERLINK(...)" must stay text, so such cells get a leading apostrophe.
+     * Real numbers (-5, +3.2) are left alone.
+     */
+    public static function csvSafe(mixed $value): mixed
+    {
+        if (is_string($value) && $value !== '' && !is_numeric($value) && str_contains("=+-@\t\r", $value[0])) {
+            return "'" . $value;
+        }
+        return $value;
+    }
+
+    /** Text for an XML cell: invalid UTF-8 replaced, control characters Excel rejects removed */
+    protected static function xmlText(mixed $value): string
+    {
+        $text = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', (string) $value);
+        return htmlspecialchars($text, ENT_XML1 | ENT_SUBSTITUTE, 'UTF-8');
+    }
+
+    /** Unpacked size limit per xlsx part, so a small "zip bomb" upload can't exhaust memory */
+    protected const MAX_XLSX_PART = 50 * 1024 * 1024;
+
+    protected static function zipPart(ZipArchive $zip, string $name): string|false
+    {
+        $stat = $zip->statName($name);
+        if ($stat === false) {
+            return false;
+        }
+        if ($stat['size'] > self::MAX_XLSX_PART) {
+            throw new RuntimeException("The .xlsx part $name unpacks to {$stat['size']} bytes, over the " . self::MAX_XLSX_PART . ' byte limit.');
+        }
+        return $zip->getFromName($name);
     }
 
     /**
@@ -211,7 +250,7 @@ class Spreadsheet
                 $cNum = 0;
                 foreach (array_keys($row) as $header) {
                     $ref = self::colLetter($cNum) . $rNum;
-                    $safe = htmlspecialchars((string) $header, ENT_XML1, 'UTF-8');
+                    $safe = self::xmlText($header);
                     $sheetData .= "<c r=\"$ref\" s=\"1\" t=\"inlineStr\"><is><t>$safe</t></is></c>";
                     $cNum++;
                 }
@@ -225,12 +264,12 @@ class Spreadsheet
             $cNum = 0;
             foreach (array_values($row) as $val) {
                 $ref = self::colLetter($cNum) . $rNum;
-                if (is_int($val) || is_float($val)) {
+                if (is_int($val) || (is_float($val) && is_finite($val))) {
                     $sheetData .= "<c r=\"$ref\"><v>$val</v></c>";
                 } elseif (is_numeric($val) && !str_starts_with((string) $val, '0') && strlen((string) $val) < 15) {
                     $sheetData .= "<c r=\"$ref\"><v>$val</v></c>";
                 } else {
-                    $safe = htmlspecialchars((string) $val, ENT_XML1, 'UTF-8');
+                    $safe = self::xmlText($val);
                     $sheetData .= "<c r=\"$ref\" t=\"inlineStr\"><is><t>$safe</t></is></c>";
                 }
                 $cNum++;
@@ -280,8 +319,11 @@ class Spreadsheet
             $commas = substr_count($firstLine, ',');
             $semis  = substr_count($firstLine, ';');
             $tabs   = substr_count($firstLine, "\t");
-            if ($semis > $commas && $semis > $tabs) $delimiter = ';';
-            elseif ($tabs > $commas && $tabs > $semis) $delimiter = "\t";
+            if ($semis > $commas && $semis > $tabs) {
+                $delimiter = ';';
+            } elseif ($tabs > $commas && $tabs > $semis) {
+                $delimiter = "\t";
+            }
         }
 
         $headers = [];
@@ -289,7 +331,9 @@ class Spreadsheet
 
         while (($data = fgetcsv($fh, 0, $delimiter)) !== false) {
             // Skip empty rows
-            if (count($data) === 1 && $data[0] === null) continue;
+            if (count($data) === 1 && $data[0] === null) {
+                continue;
+            }
 
             if (empty($headers)) {
                 $headers = array_map('trim', $data);
@@ -319,9 +363,9 @@ class Spreadsheet
 
         // 1. Read shared strings if present
         $sharedStrings = [];
-        $sharedXml = $zip->getFromName('xl/sharedStrings.xml');
+        $sharedXml = self::zipPart($zip, 'xl/sharedStrings.xml');
         if ($sharedXml !== false) {
-            $xml = @simplexml_load_string($sharedXml);
+            $xml = @simplexml_load_string($sharedXml, 'SimpleXMLElement', LIBXML_NONET);
             if ($xml && isset($xml->si)) {
                 foreach ($xml->si as $si) {
                     if (isset($si->t)) {
@@ -340,14 +384,14 @@ class Spreadsheet
         }
 
         // 2. Read sheet1.xml
-        $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
+        $sheetXml = self::zipPart($zip, 'xl/worksheets/sheet1.xml');
         $zip->close();
 
         if ($sheetXml === false) {
             return [];
         }
 
-        $xml = @simplexml_load_string($sheetXml);
+        $xml = @simplexml_load_string($sheetXml, 'SimpleXMLElement', LIBXML_NONET);
         if (!$xml || !isset($xml->sheetData->row)) {
             return [];
         }
@@ -380,7 +424,9 @@ class Spreadsheet
                 $cells[$colIndex] = $val;
             }
 
-            if (empty($cells)) continue;
+            if (empty($cells)) {
+                continue;
+            }
 
             // Fill empty intermediate columns
             $maxCol = max(array_keys($cells));

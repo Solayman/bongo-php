@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Console;
 
 use RuntimeException;
@@ -19,7 +20,9 @@ class Upgrader
     /** What an upgrade replaces: the framework. Your app/, routes/, resources/, config/*.php settings, database/ and storage/ are never touched. */
     public const FRAMEWORK_FILES = ['system', 'bongo', 'public/index.php', 'config/bootstrap.php'];
 
-    public function __construct(protected string $base) {}
+    public function __construct(protected string $base)
+    {
+    }
 
     // --- Checking ---------------------------------------------------------
 
@@ -57,7 +60,9 @@ class Upgrader
         foreach (array_keys($package['files']) as $path) {
             $inFramework = false;
             foreach (self::FRAMEWORK_FILES as $allowed) {
-                if ($path === $allowed || str_starts_with($path, "$allowed/")) $inFramework = true;
+                if ($path === $allowed || str_starts_with($path, "$allowed/")) {
+                    $inFramework = true;
+                }
             }
             if (!$inFramework || str_contains($path, '..') || str_contains($path, '\\')) {
                 throw new RuntimeException("The package wants to write outside the framework: $path");
@@ -71,16 +76,24 @@ class Upgrader
         $this->deleteTree("{$this->base}/system");
         foreach ($package['files'] as $path => $content) {
             $target = "{$this->base}/$path";
-            if (!is_dir(dirname($target))) mkdir(dirname($target), 0775, true);
+            if (!is_dir(dirname($target))) {
+                mkdir(dirname($target), 0775, true);
+            }
             file_put_contents($target, base64_decode($content));
         }
-        foreach (glob("{$this->base}/storage/cache/views/*.php") ?: [] as $compiled) @unlink($compiled);
+        foreach (glob("{$this->base}/storage/cache/views/*.php") ?: [] as $compiled) {
+            @unlink($compiled);
+        }
 
         $newConfig = [];
         foreach ((array) ($package['config'] ?? []) as $file => $keys) {
-            $mine = is_file("{$this->base}/config/$file") ? array_keys((array) (function () use ($file) { return require "{$this->base}/config/$file"; })()) : [];
+            $mine = is_file("{$this->base}/config/$file") ? array_keys((array) (function () use ($file) {
+                return require "{$this->base}/config/$file";
+            })()) : [];
             $missing = array_values(array_diff($keys, $mine));
-            if ($missing) $newConfig[$file] = $missing;
+            if ($missing) {
+                $newConfig[$file] = $missing;
+            }
         }
 
         return ['from' => $from, 'to' => (string) $package['version'], 'files' => count($package['files']), 'backup' => $backup, 'newConfig' => $newConfig];
@@ -98,7 +111,9 @@ class Upgrader
         $this->deleteTree("{$this->base}/system");
         foreach ($this->filesUnder($dir) as $file) {
             $target = "{$this->base}/" . substr(str_replace('\\', '/', $file), strlen(str_replace('\\', '/', $dir)) + 1);
-            if (!is_dir(dirname($target))) mkdir(dirname($target), 0775, true);
+            if (!is_dir(dirname($target))) {
+                mkdir(dirname($target), 0775, true);
+            }
             copy($file, $target);
         }
         return trim((string) @file_get_contents("$dir/system/VERSION")) ?: basename($dir);
@@ -126,7 +141,9 @@ class Upgrader
         foreach (self::FRAMEWORK_FILES as $path) {
             foreach ($this->filesUnder("{$this->base}/$path") as $file) {
                 $target = "$dir/" . $this->relative($file);
-                if (!is_dir(dirname($target))) mkdir(dirname($target), 0775, true);
+                if (!is_dir(dirname($target))) {
+                    mkdir(dirname($target), 0775, true);
+                }
                 copy($file, $target);
             }
         }
@@ -135,11 +152,17 @@ class Upgrader
 
     protected function filesUnder(string $path): array
     {
-        if (is_file($path)) return [$path];
-        if (!is_dir($path)) return [];
+        if (is_file($path)) {
+            return [$path];
+        }
+        if (!is_dir($path)) {
+            return [];
+        }
         $files = [];
         foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS)) as $file) {
-            if ($file->isFile()) $files[] = $file->getPathname();
+            if ($file->isFile()) {
+                $files[] = $file->getPathname();
+            }
         }
         sort($files);
         return $files;
@@ -152,9 +175,13 @@ class Upgrader
 
     protected function deleteTree(string $dir): void
     {
-        if (!is_dir($dir)) return;
+        if (!is_dir($dir)) {
+            return;
+        }
         $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS), \RecursiveIteratorIterator::CHILD_FIRST);
-        foreach ($it as $f) $f->isDir() ? @rmdir($f->getPathname()) : @unlink($f->getPathname());
+        foreach ($it as $f) {
+            $f->isDir() ? @rmdir($f->getPathname()) : @unlink($f->getPathname());
+        }
         @rmdir($dir);
     }
 }

@@ -42,14 +42,20 @@ class Model implements \JsonSerializable
         return static::query()->setConnection($connection);
     }
 
+    /** Set by setConnectionName(), per model class (a static property would be shared by all models) */
+    private static array $connectionOverrides = [];
+
     public static function getConnectionName(): ?string
     {
-        return static::$connection;
+        return array_key_exists(static::class, self::$connectionOverrides)
+            ? self::$connectionOverrides[static::class]
+            : static::$connection;
     }
 
+    /** Move only this model class to another connection: User::setConnectionName('tenant') */
     public static function setConnectionName(?string $name): void
     {
-        static::$connection = $name;
+        self::$connectionOverrides[static::class] = $name;
     }
 
     /** Model::withTrashed()->get(), Model::onlyTrashed()->get() */
@@ -121,8 +127,8 @@ class Model implements \JsonSerializable
     public static function query(): QueryBuilder
     {
         $builder = (new QueryBuilder(static::tableName()))->setModel(static::class);
-        if (static::$connection !== null) {
-            $builder->setConnection(static::$connection);
+        if (static::getConnectionName() !== null) {
+            $builder->setConnection(static::getConnectionName());
         }
         return $builder;
     }
@@ -268,7 +274,7 @@ class Model implements \JsonSerializable
     /** Connection used by this specific model instance (null = class static $connection or default) */
     public function getConnection(): ?string
     {
-        return $this->connectionName ?? static::$connection;
+        return $this->connectionName ?? static::getConnectionName();
     }
 
     public function setConnection(?string $name): static

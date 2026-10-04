@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Http;
 
 /**
@@ -61,7 +62,9 @@ class Request
     {
         $all = self::all() + self::files();
         foreach ((array) $keys as $key) {
-            if (!array_key_exists($key, $all)) return false;
+            if (!array_key_exists($key, $all)) {
+                return false;
+            }
         }
         return true;
     }

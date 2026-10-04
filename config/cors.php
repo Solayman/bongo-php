@@ -1,4 +1,5 @@
 <?php
+
 // Cross-Origin Resource Sharing for the "cors" middleware (on the api group by default)
 
 $list = fn(string $value) => array_values(array_filter(array_map('trim', explode(',', $value))));

@@ -1,4 +1,5 @@
 <?php
+
 // config/bootstrap.php
 // Boots the framework: autoloaders, .env, config, helpers, session.
 
@@ -10,10 +11,14 @@ define('BASE_PATH', dirname(__DIR__));
 spl_autoload_register(function ($class) {
     if (strncmp('App\\', $class, 4) === 0) {
         $file = BASE_PATH . '/app/' . str_replace('\\', '/', substr($class, 4)) . '.php';
-        if (is_file($file)) require_once $file;
+        if (is_file($file)) {
+            require_once $file;
+        }
     } elseif (strncmp('System\\', $class, 7) === 0) {
         $file = BASE_PATH . '/system/' . str_replace('\\', '/', substr($class, 7)) . '.php';
-        if (is_file($file)) require_once $file;
+        if (is_file($file)) {
+            require_once $file;
+        }
     }
 });
 
@@ -29,7 +34,9 @@ $envPath = BASE_PATH . '/.env';
 if (file_exists($envPath)) {
     foreach (file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
         $line = trim($line);
-        if ($line === '' || str_starts_with($line, '#') || !str_contains($line, '=')) continue;
+        if ($line === '' || str_starts_with($line, '#') || !str_contains($line, '=')) {
+            continue;
+        }
 
         [$name, $value] = array_map('trim', explode('=', $line, 2));
         // Strip matching surrounding quotes: APP_NAME="My App" -> My App
@@ -50,14 +57,23 @@ if (file_exists($envPath)) {
 // env() helper
 // ---------------------------
 if (!function_exists('env')) {
-    function env($key, $default = null) {
+    function env($key, $default = null)
+    {
         $value = $_ENV[$key] ?? getenv($key);
-        if ($value === false || $value === null) return $default;
+        if ($value === false || $value === null) {
+            return $default;
+        }
 
         $lower = strtolower($value);
-        if ($lower === 'true') return true;
-        if ($lower === 'false') return false;
-        if ($lower === 'null') return null;
+        if ($lower === 'true') {
+            return true;
+        }
+        if ($lower === 'false') {
+            return false;
+        }
+        if ($lower === 'null') {
+            return null;
+        }
 
         return $value;
     }

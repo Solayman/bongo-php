@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Queue;
 
 use System\Container\Container;
@@ -6,17 +7,20 @@ use System\Database\DB;
 use System\Log\Log;
 
 /**
- * Takes jobs from the jobs table and runs them (`php bongo queue:work`).
+ * Takes jobs from the queue and runs them (`php bongo queue:work`).
  *
- * A job is reserved inside a transaction with a row lock, so two workers never
- * run the same job. A job reserved longer than queue.retry_after seconds (the
- * worker crashed) becomes available again.
+ * database: a job is reserved inside a transaction with a row lock.
+ * redis: a job is reserved by one atomic Lua script and kept in a :reserved set.
+ * Either way two workers never run the same job, and a job reserved longer than
+ * queue.retry_after seconds (its worker crashed) becomes available again.
  */
 class Worker
 {
     protected bool $stop = false;
 
-    public function __construct(protected ?\Closure $output = null) {}
+    public function __construct(protected ?\Closure $output = null)
+    {
+    }
 
     /**
      * @param array $options queue, sleep, max_jobs, max_time, stop_when_empty, once
@@ -48,7 +52,9 @@ class Worker
             } else {
                 $this->process($row);
                 $processed++;
-                if (!empty($options['once'])) break;
+                if (!empty($options['once'])) {
+                    break;
+                }
             }
 
             if (($maxJobs && $processed >= $maxJobs) || ($maxTime && time() - $started >= $maxTime)) {
@@ -88,31 +94,48 @@ class Worker
         });
     }
 
+    /**
+     * One atomic step in Redis (a Lua script), so two workers never get the same job:
+     *   1. jobs whose worker died (reserved longer than retry_after) go back to the queue
+     *   2. delayed jobs that are due join the queue
+     *   3. the next job is taken and recorded in :reserved until it finishes
+     * A crash mid-job therefore never loses the job: step 1 brings it back.
+     */
+    protected const REDIS_RESERVE = <<<'LUA'
+        local expired = redis.call('ZRANGEBYSCORE', KEYS[3], '-inf', ARGV[1])
+        for _, item in ipairs(expired) do
+            redis.call('ZREM', KEYS[3], item)
+            redis.call('RPUSH', KEYS[1], item)
+        end
+        local due = redis.call('ZRANGEBYSCORE', KEYS[2], '-inf', ARGV[1])
+        for _, item in ipairs(due) do
+            redis.call('ZREM', KEYS[2], item)
+            redis.call('RPUSH', KEYS[1], item)
+        end
+        local job = redis.call('LPOP', KEYS[1])
+        if job then
+            redis.call('ZADD', KEYS[3], ARGV[2], job)
+        end
+        return job
+        LUA;
+
     protected function reserveRedis(string $queue): ?object
     {
         $redis = \System\Redis\Redis::connection();
-        $prefix = \System\Redis\Redis::prefix();
-        $queueKey = $prefix . 'queue:' . $queue;
-        $delayedKey = $queueKey . ':delayed';
+        $queueKey = \System\Redis\Redis::prefix() . 'queue:' . $queue;
         $now = time();
+        $retryAfter = (int) config('queue.retry_after', 90);
 
-        // Migrate due delayed jobs into the main queue
-        $due = $redis->zRangeByScore($delayedKey, '-inf', (string) $now);
-        if ($due) {
-            foreach ($due as $item) {
-                if ($redis->zRem($delayedKey, $item)) {
-                    $redis->rPush($queueKey, $item);
-                }
-            }
-        }
-
-        $raw = $redis->lPop($queueKey);
-        if (!$raw) {
+        $entry = $redis->eval(self::REDIS_RESERVE, [$queueKey, "$queueKey:delayed", "$queueKey:reserved", $now, $now + $retryAfter], 3);
+        if (!is_string($entry) || $entry === '') {
             return null;
         }
 
-        $data = json_decode($raw, true);
-        if (!is_array($data) || empty($data['job'])) {
+        $data = Queue::verifyRedisEntry($entry);
+        if ($data === null) {
+            // Not written by this app (or tampered with): never unserialize it
+            $redis->zRem("$queueKey:reserved", $entry);
+            Log::warning('Dropped a Redis queue entry with a missing or invalid signature', ['queue' => $queue]);
             return null;
         }
 
@@ -125,7 +148,14 @@ class Worker
             'created_at'   => (int) ($data['created_at'] ?? $now),
             '_driver'      => 'redis',
             '_raw'         => $data,
+            '_entry'       => $entry,
         ];
+    }
+
+    /** The job is finished (done, failed or rescheduled): it is no longer reserved */
+    protected function releaseRedis(object $row): void
+    {
+        \System\Redis\Redis::connection()->zRem(\System\Redis\Redis::prefix() . 'queue:' . $row->queue . ':reserved', $row->_entry);
     }
 
     public function process(object $row): void
@@ -142,7 +172,9 @@ class Worker
 
         try {
             Container::getInstance()->call([$job, 'handle']);
-            if (($row->_driver ?? null) !== 'redis') {
+            if (($row->_driver ?? null) === 'redis') {
+                $this->releaseRedis($row);
+            } else {
                 DB::table('jobs')->where('id', $row->id)->delete();
             }
             $this->say(sprintf('  done in %d ms', (microtime(true) - $start) * 1000));
@@ -159,7 +191,8 @@ class Worker
                 $raw['available_at'] = time() + $delay;
                 $redis = \System\Redis\Redis::connection();
                 $prefix = \System\Redis\Redis::prefix();
-                $redis->zAdd($prefix . 'queue:' . $row->queue . ':delayed', time() + $delay, json_encode($raw));
+                $redis->zAdd($prefix . 'queue:' . $row->queue . ':delayed', time() + $delay, Queue::signRedisEntry($raw));
+                $this->releaseRedis($row);
             } else {
                 DB::table('jobs')->where('id', $row->id)->update(['reserved_at' => null, 'available_at' => time() + $delay]);
             }
@@ -181,6 +214,9 @@ class Worker
                 DB::table('jobs')->where('id', $row->id)->delete();
             }
         });
+        if (($row->_driver ?? null) === 'redis') {
+            $this->releaseRedis($row);
+        }
         try {
             $job?->failed($e);
         } catch (\Throwable $ignored) {
@@ -203,7 +239,7 @@ class Worker
 
         foreach ($query->get() as $failed) {
             if ($isRedis) {
-                $payload = json_encode([
+                $payload = Queue::signRedisEntry([
                     'id'           => bin2hex(random_bytes(8)),
                     'queue'        => $failed->queue,
                     'job'          => $failed->payload,
@@ -223,6 +259,8 @@ class Worker
 
     protected function say(string $line): void
     {
-        if ($this->output) ($this->output)($line);
+        if ($this->output) {
+            ($this->output)($line);
+        }
     }
 }

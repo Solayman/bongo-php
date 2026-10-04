@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Mail;
 
 use RuntimeException;

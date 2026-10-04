@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Debug;
 
 use Throwable;
@@ -12,7 +13,9 @@ class ExceptionPage
 {
     protected const SECRET = '/pass|token|secret|key|auth|cookie|session/i';
 
-    public function __construct(protected Throwable $exception, protected int $status = 500) {}
+    public function __construct(protected Throwable $exception, protected int $status = 500)
+    {
+    }
 
     public function render(): string
     {

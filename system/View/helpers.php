@@ -1,4 +1,5 @@
 <?php
+
 use System\View\ViewEngine;
 
 if (!function_exists('view')) {

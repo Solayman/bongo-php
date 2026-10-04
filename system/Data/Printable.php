@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Data;
 
 use System\Storage\DownloadResponse;
@@ -9,7 +10,7 @@ use System\Storage\DownloadResponse;
  * Solves the classic problem where traditional PHP PDF engines break complex
  * Indic/Bengali scripts, conjuncts (যুক্তাক্ষর), and vowel marks.
  *
- * It generates pixel-perfect, print-optimized HTML5 documents with responsive
+ * It generates print-optimized HTML5 documents with responsive
  * @media print CSS, native font rendering, and an optional headless browser
  * PDF compilation bridge (Google Chrome, Microsoft Edge, Chromium, wkhtmltopdf).
  */
@@ -48,6 +49,10 @@ class Printable
 
     public function badge(string $text, string $color = '#10b981'): self
     {
+        // Only a hex colour may reach the style attribute (no CSS/HTML injection)
+        if (!preg_match('/^#[0-9a-fA-F]{3,8}$/', $color)) {
+            throw new \InvalidArgumentException("badge(): use a hex colour like #10b981, got [$color]");
+        }
         $this->badge = $text;
         $this->badgeColor = $color;
         return $this;
@@ -81,8 +86,9 @@ class Printable
     {
         $this->tableHeaders = $headers;
         $this->tableRows = $rows;
-        $this->tableWidths = $widths;
-        $this->tableAligns = $aligns;
+        // Widths are percentages and aligns a fixed set: nothing else reaches the HTML attributes
+        $this->tableWidths = array_map(fn($w) => max(0, min(100, (int) $w)), $widths);
+        $this->tableAligns = array_map(fn($a) => in_array($a, ['left', 'center', 'right'], true) ? $a : 'left', $aligns);
         return $this;
     }
 
@@ -287,7 +293,7 @@ HTML;
      * Compile this printable document directly into a binary PDF using a local headless browser.
      *
      * Supports Google Chrome, Microsoft Edge, Chromium, or wkhtmltopdf.
-     * Guaranteed 100% pixel-perfect vector font rendering for complex scripts (Bangla, Arabic).
+     * A real browser engine shapes the text, so complex scripts (Bangla, Arabic) keep their ligatures.
      */
     public function toPdf(string $outputPath): bool
     {
@@ -296,7 +302,7 @@ HTML;
             return false;
         }
 
-        $tmpHtml = tempnam(sys_get_temp_dir(), 'bongo_pdf_') . '.html';
+        $tmpHtml = self::tempFile('bongo_pdf_', '.html');
         file_put_contents($tmpHtml, $this->render());
 
         $cmd = '';
@@ -309,7 +315,8 @@ HTML;
                 . ' --print-to-pdf=' . escapeshellarg($outputPath) . ' ' . escapeshellarg($tmpHtml);
         }
 
-        exec($cmd, $output, $code);
+        // 2>&1: the browser's progress messages are captured, not printed
+        exec($cmd . ' 2>&1', $output, $code);
         @unlink($tmpHtml);
 
         return is_file($outputPath) && filesize($outputPath) > 0;
@@ -320,19 +327,28 @@ HTML;
      */
     public function download(string $filename = 'document.pdf'): DownloadResponse
     {
-        $tmpPdf = tempnam(sys_get_temp_dir(), 'bongo_doc_') . '.pdf';
+        // Temporary files hold customer data: each is deleted once it has been sent
+        $tmpPdf = self::tempFile('bongo_doc_', '.pdf');
 
         if ($this->toPdf($tmpPdf)) {
-            return new DownloadResponse($tmpPdf, $filename, 'application/pdf');
+            return new DownloadResponse($tmpPdf, $filename, [], 'application/pdf', deleteAfterSend: true);
         }
 
         // Fallback to printable HTML if no headless browser installed on server
         @unlink($tmpPdf);
-        $tmpHtml = tempnam(sys_get_temp_dir(), 'bongo_doc_') . '.html';
+        $tmpHtml = self::tempFile('bongo_doc_', '.html');
         file_put_contents($tmpHtml, $this->render());
         $htmlName = preg_replace('/\.pdf$/i', '.html', $filename);
 
-        return new DownloadResponse($tmpHtml, $htmlName, 'text/html; charset=UTF-8');
+        return new DownloadResponse($tmpHtml, $htmlName, [], 'text/html; charset=UTF-8', deleteAfterSend: true);
+    }
+
+    /** A new temporary file name with $suffix (tempnam's own empty file is not left behind) */
+    protected static function tempFile(string $prefix, string $suffix): string
+    {
+        $base = tempnam(sys_get_temp_dir(), $prefix);
+        @unlink($base);
+        return $base . $suffix;
     }
 
     /**
@@ -364,7 +380,7 @@ HTML;
         // Check PATH
         $which = PHP_OS_FAMILY === 'Windows' ? 'where' : 'which';
         foreach (['chrome', 'google-chrome', 'chromium', 'msedge', 'wkhtmltopdf'] as $name) {
-            $out = @shell_exec("$which $name 2>nul");
+            $out = @shell_exec("$which $name " . (PHP_OS_FAMILY === 'Windows' ? '2>nul' : '2>/dev/null'));
             if ($out && trim($out) !== '' && is_file(trim(strtok($out, "\r\n")))) {
                 return trim(strtok($out, "\r\n"));
             }
@@ -379,7 +395,7 @@ HTML;
         if (empty($details)) {
             return '';
         }
-        $html = '<div style="flex: 1; min-width: 200px;"><div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6b7280; letter-spacing: 0.05em; margin-bottom: 6px;">' . $label . '</div>';
+        $html = '<div style="flex: 1; min-width: 200px;"><div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6b7280; letter-spacing: 0.05em; margin-bottom: 6px;">' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</div>';
         foreach ($details as $key => $val) {
             $safe = htmlspecialchars((string) $val, ENT_QUOTES, 'UTF-8');
             $html .= ($key === 'name')

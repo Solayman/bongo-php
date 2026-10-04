@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Database;
 
 use PDO;
@@ -39,8 +40,7 @@ class Connection
         }
 
         $db = self::config($name);
-        $driver = $db['driver'] ?? $name;
-        self::$drivers[$name] = $driver;
+        $driver = self::driver($name);
 
         try {
             self::$instances[$name] = match ($driver) {

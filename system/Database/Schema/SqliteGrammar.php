@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Database\Schema;
 
 /**
@@ -23,7 +24,7 @@ trait SqliteGrammar
             if ($column->primary && $column->autoIncrement) {
                 $inlinePrimary = true;
             } elseif ($column->primary) {
-                $primary[] = self::wrap($column->name);
+                $primary[] = $this->wrapName($column->name);
             }
         }
         if ($primary && !$inlinePrimary) {
@@ -34,7 +35,7 @@ trait SqliteGrammar
         }
 
         return [
-            'CREATE TABLE ' . self::wrap($this->table) . " (\n    " . implode(",\n    ", $lines) . "\n)",
+            'CREATE TABLE ' . $this->wrapName($this->table) . " (\n    " . implode(",\n    ", $lines) . "\n)",
             ...$this->sqliteIndexes(),
             ...$this->sqliteTriggers(),
         ];
@@ -42,20 +43,20 @@ trait SqliteGrammar
 
     protected function sqliteAlter(): array
     {
-        $table = 'ALTER TABLE ' . self::wrap($this->table);
+        $table = 'ALTER TABLE ' . $this->wrapName($this->table);
         $statements = [];
 
         foreach ($this->drops as [$kind, $name]) {
             $statements[] = match ($kind) {
-                'column'  => "$table DROP COLUMN " . self::wrap($name),
-                'index'   => 'DROP INDEX ' . self::wrap($name),
+                'column'  => "$table DROP COLUMN " . $this->wrapName($name),
+                'index'   => 'DROP INDEX ' . $this->wrapName($name),
                 'foreign' => throw new \LogicException(
                     "SQLite cannot drop the foreign key [$name] of an existing table. Create a new table without it and copy the rows over."
                 ),
             };
         }
         foreach ($this->renames as [$from, $to]) {
-            $statements[] = "$table RENAME COLUMN " . self::wrap($from) . ' TO ' . self::wrap($to);
+            $statements[] = "$table RENAME COLUMN " . $this->wrapName($from) . ' TO ' . $this->wrapName($to);
         }
         foreach ($this->columns as $column) {
             if ($column->primary) {
@@ -70,7 +71,7 @@ trait SqliteGrammar
 
     protected function sqliteColumn(ColumnDefinition $c, bool $creating): string
     {
-        $name = self::wrap($c->name);
+        $name = $this->wrapName($c->name);
 
         if ($c->primary && $c->autoIncrement) {
             return "$name INTEGER PRIMARY KEY AUTOINCREMENT";
@@ -96,7 +97,7 @@ trait SqliteGrammar
         // Adding a column: the foreign key goes on the column itself
         if (!$creating && $c->foreign) {
             [$table, $references, $onDelete, $onUpdate] = $c->foreign;
-            $sql .= ' REFERENCES ' . self::wrap($table) . ' (' . self::wrap($references) . ") ON DELETE $onDelete ON UPDATE $onUpdate";
+            $sql .= ' REFERENCES ' . $this->wrapName($table) . ' (' . $this->wrapName($references) . ") ON DELETE $onDelete ON UPDATE $onUpdate";
         }
 
         return $sql;
@@ -107,13 +108,17 @@ trait SqliteGrammar
         $statements = [];
         $add = function (string $type, array $columns, ?string $name) use (&$statements) {
             $name ??= $this->table . '_' . implode('_', $columns) . ($type === 'UNIQUE' ? '_unique' : '_index');
-            $statements[] = 'CREATE ' . ($type === 'UNIQUE' ? 'UNIQUE ' : '') . 'INDEX ' . self::wrap($name)
-                . ' ON ' . self::wrap($this->table) . ' (' . implode(', ', array_map([self::class, 'wrap'], $columns)) . ')';
+            $statements[] = 'CREATE ' . ($type === 'UNIQUE' ? 'UNIQUE ' : '') . 'INDEX ' . $this->wrapName($name)
+                . ' ON ' . $this->wrapName($this->table) . ' (' . implode(', ', array_map([$this, 'wrapName'], $columns)) . ')';
         };
 
         foreach ($this->columns as $column) {
-            if ($column->unique) $add('UNIQUE', [$column->name], null);
-            if ($column->index || $column->foreign) $add('INDEX', [$column->name], null);
+            if ($column->unique) {
+                $add('UNIQUE', [$column->name], null);
+            }
+            if ($column->index || $column->foreign) {
+                $add('INDEX', [$column->name], null);
+            }
         }
         foreach ($this->indexes as [$type, $columns, $name]) {
             $add($type, $columns, $name);
@@ -127,10 +132,12 @@ trait SqliteGrammar
     {
         $statements = [];
         foreach ($this->columns as $column) {
-            if ($column->onUpdate === null) continue;
-            $table = self::wrap($this->table);
-            $col = self::wrap($column->name);
-            $statements[] = 'CREATE TRIGGER IF NOT EXISTS ' . self::wrap("{$this->table}_{$column->name}_on_update")
+            if ($column->onUpdate === null) {
+                continue;
+            }
+            $table = $this->wrapName($this->table);
+            $col = $this->wrapName($column->name);
+            $statements[] = 'CREATE TRIGGER IF NOT EXISTS ' . $this->wrapName("{$this->table}_{$column->name}_on_update")
                 . " AFTER UPDATE ON $table FOR EACH ROW WHEN NEW.$col IS OLD.$col"
                 . " BEGIN UPDATE $table SET $col = " . self::sqliteNow() . ' WHERE rowid = NEW.rowid; END';
         }

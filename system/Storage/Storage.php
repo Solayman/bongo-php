@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Storage;
 
 use System\Http\Response;

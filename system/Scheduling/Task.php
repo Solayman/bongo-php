@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Scheduling;
 
 use System\Cache\Cache;
@@ -47,16 +48,46 @@ class Task
         return $this->cron;
     }
 
-    public function everyMinute(): static          { return $this->cron('* * * * *'); }
-    public function everyFiveMinutes(): static     { return $this->cron('*/5 * * * *'); }
-    public function everyTenMinutes(): static      { return $this->cron('*/10 * * * *'); }
-    public function everyFifteenMinutes(): static  { return $this->cron('*/15 * * * *'); }
-    public function everyThirtyMinutes(): static   { return $this->cron('0,30 * * * *'); }
-    public function hourly(): static               { return $this->cron('0 * * * *'); }
-    public function hourlyAt(int $minute): static  { return $this->cron("$minute * * * *"); }
-    public function daily(): static                { return $this->cron('0 0 * * *'); }
-    public function weekly(): static               { return $this->cron('0 0 * * 0'); }
-    public function monthly(): static              { return $this->cron('0 0 1 * *'); }
+    public function everyMinute(): static
+    {
+        return $this->cron('* * * * *');
+    }
+    public function everyFiveMinutes(): static
+    {
+        return $this->cron('*/5 * * * *');
+    }
+    public function everyTenMinutes(): static
+    {
+        return $this->cron('*/10 * * * *');
+    }
+    public function everyFifteenMinutes(): static
+    {
+        return $this->cron('*/15 * * * *');
+    }
+    public function everyThirtyMinutes(): static
+    {
+        return $this->cron('0,30 * * * *');
+    }
+    public function hourly(): static
+    {
+        return $this->cron('0 * * * *');
+    }
+    public function hourlyAt(int $minute): static
+    {
+        return $this->cron("$minute * * * *");
+    }
+    public function daily(): static
+    {
+        return $this->cron('0 0 * * *');
+    }
+    public function weekly(): static
+    {
+        return $this->cron('0 0 * * 0');
+    }
+    public function monthly(): static
+    {
+        return $this->cron('0 0 1 * *');
+    }
 
     public function dailyAt(string $time): static
     {

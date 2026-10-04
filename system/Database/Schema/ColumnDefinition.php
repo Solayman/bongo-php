@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Database\Schema;
 
 /**
@@ -24,7 +25,9 @@ class ColumnDefinition
     /** Foreign key: [table, column, onDelete, onUpdate] */
     public ?array $foreign = null;
 
-    public function __construct(public string $name, public string $type) {}
+    public function __construct(public string $name, public string $type)
+    {
+    }
 
     public function nullable(bool $value = true): static
     {

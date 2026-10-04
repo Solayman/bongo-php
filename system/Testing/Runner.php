@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Testing;
 
 use PDO;
@@ -45,9 +46,13 @@ class Runner
         foreach ($classes as $class) {
             $short = (new \ReflectionClass($class))->getShortName();
             foreach (get_class_methods($class) as $method) {
-                if (!str_starts_with($method, 'test')) continue;
+                if (!str_starts_with($method, 'test')) {
+                    continue;
+                }
                 $name = "$short::$method";
-                if ($filter && stripos($name, $filter) === false) continue;
+                if ($filter && stripos($name, $filter) === false) {
+                    continue;
+                }
 
                 $test = new $class();
                 try {
@@ -143,8 +148,10 @@ class Runner
         \System\Database\Connection::reset();
 
         // Create the test database if needed (a SQLite file is created on connect)
-        if ($db['driver'] !== 'sqlite') {
+        if ($db['driver'] === 'mysql') {
             self::createMysqlDatabase($db);
+        } elseif ($db['driver'] === 'pgsql') {
+            self::createPgsqlDatabase($db);
         }
 
         echo "Test database: {$db['database']}\n";
@@ -165,6 +172,19 @@ class Runner
         $pdo->exec('CREATE DATABASE IF NOT EXISTS `' . str_replace('`', '``', $db['database']) . '` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
     }
 
+    protected static function createPgsqlDatabase(array $db): void
+    {
+        // PostgreSQL has no CREATE DATABASE IF NOT EXISTS: connect to the "postgres" database and check first
+        $pdo = new PDO("pgsql:host={$db['host']};port={$db['port']};dbname=postgres", $db['username'], $db['password'], [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        ]);
+        $exists = $pdo->prepare('SELECT 1 FROM pg_database WHERE datname = ?');
+        $exists->execute([$db['database']]);
+        if (!$exists->fetchColumn()) {
+            $pdo->exec('CREATE DATABASE "' . str_replace('"', '""', $db['database']) . '"');
+        }
+    }
+
     protected static function startServer(): void
     {
         // Find a free port
@@ -178,15 +198,18 @@ class Runner
         foreach (['APP_ENV', 'APP_DEBUG', 'DB_DATABASE', 'APP_KEY', 'LOG_PATH', 'CACHE_PATH', 'MAIL_DRIVER', 'MAIL_PATH', 'SECURITY_CSP'] as $name) {
             $env[$name] = getenv($name);
         }
-        foreach (['DB_CONNECTION', 'DB_SQLITE_PATH', 'CACHE_DRIVER', 'SESSION_DRIVER', 'REDIS_HOST', 'REDIS_PORT', 'REDIS_PREFIX'] as $name) {
-            if (getenv($name) !== false) $env[$name] = getenv($name);
+        foreach (['DB_CONNECTION', 'DB_SQLITE_PATH', 'DB_HOST', 'DB_PORT', 'DB_USERNAME', 'DB_PASSWORD', 'CACHE_DRIVER', 'SESSION_DRIVER', 'QUEUE_DRIVER', 'REDIS_HOST', 'REDIS_PORT', 'REDIS_PREFIX'] as $name) {
+            if (getenv($name) !== false) {
+                $env[$name] = getenv($name);
+            }
         }
         $env['APP_URL'] = self::$baseUrl;
 
         $cmd = [PHP_BINARY, '-S', "127.0.0.1:$port", '-t', base_path('public')];
-        // The server needs the same database driver as this process (e.g. php -d extension=pdo_sqlite bongo test)
-        if (config('database.connections.' . config('database.default') . '.driver') === 'sqlite') {
-            array_splice($cmd, 1, 0, ['-d', 'extension=pdo_sqlite']);
+        // The server needs the same database extension as this process (e.g. php -d extension=pdo_pgsql bongo test)
+        $driver = config('database.connections.' . config('database.default') . '.driver');
+        if (in_array($driver, ['sqlite', 'pgsql'], true) && extension_loaded("pdo_$driver")) {
+            array_splice($cmd, 1, 0, ['-d', "extension=pdo_$driver"]);
         }
         $null = DIRECTORY_SEPARATOR === '\\' ? 'NUL' : '/dev/null';
         self::$server = proc_open($cmd, [0 => ['pipe', 'r'], 1 => ['file', $null, 'w'], 2 => ['file', $null, 'w']], $pipes, BASE_PATH, $env);

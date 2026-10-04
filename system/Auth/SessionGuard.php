@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Auth;
 
 use System\Http\Request;
@@ -102,7 +103,9 @@ class SessionGuard extends Guard
 
     protected function setCookie(string $value, int $expires): void
     {
-        if ($value === '') unset($_COOKIE[$this->cookieName()]);
+        if ($value === '') {
+            unset($_COOKIE[$this->cookieName()]);
+        }
         if (headers_sent() || PHP_SAPI === 'cli') {
             return;
         }

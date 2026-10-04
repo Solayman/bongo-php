@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Scheduling;
 
 /**
@@ -45,7 +46,9 @@ class CronExpression
     {
         $t = \DateTimeImmutable::createFromInterface($from)->setTime((int) $from->format('G'), (int) $from->format('i'))->modify('+1 minute');
         for ($i = 0; $i < 527040; $i++) {
-            if ($this->isDue($t)) return $t;
+            if ($this->isDue($t)) {
+                return $t;
+            }
             $t = $t->modify('+1 minute');
         }
         return null;
@@ -59,7 +62,9 @@ class CronExpression
         $domOk = in_array($dom, $days, true);
         $dowOk = in_array($dow, $weekdays, true) || ($dow === 0 && in_array(7, $weekdays, true));
 
-        if ($domRestricted && $dowRestricted) return $domOk || $dowOk;
+        if ($domRestricted && $dowRestricted) {
+            return $domOk || $dowOk;
+        }
         return $domOk && $dowOk;
     }
 
@@ -77,12 +82,16 @@ class CronExpression
                 [$from, $to] = array_map('intval', explode('-', $m[1]));
             } else {
                 $from = $to = (int) $m[1];
-                if (isset($m[2])) $to = $max; // "5/15" = from 5 every 15
+                if (isset($m[2])) {
+                    $to = $max; // "5/15" = from 5 every 15
+                }
             }
             if ($from < $min || $to > $max || $from > $to) {
                 throw new \InvalidArgumentException("Cron value out of range in [{$this->expression}]");
             }
-            for ($v = $from; $v <= $to; $v += $step) $values[] = $v;
+            for ($v = $from; $v <= $to; $v += $step) {
+                $values[] = $v;
+            }
         }
         return array_values(array_unique($values));
     }

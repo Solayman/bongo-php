@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Scheduling;
 
 use System\Database\DB;
@@ -13,7 +14,9 @@ class Maintenance
     {
         $schedule->call(function () {
             $prune = function (string $table, string $column, $before) {
-                if (Schema::hasTable($table)) DB::table($table)->where($column, '<', $before)->delete();
+                if (Schema::hasTable($table)) {
+                    DB::table($table)->where($column, '<', $before)->delete();
+                }
             };
             $expire = (int) config('auth.passwords.expire', 60) * 60;
             $prune('password_resets', 'created_at', date('Y-m-d H:i:s', time() - $expire));

@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Debug;
 
 /**
@@ -11,7 +12,8 @@ class Dumper
         protected int $maxDepth = 8,
         protected int $maxItems = 200,
         protected int $maxString = 2000
-    ) {}
+    ) {
+    }
 
     /** How many items of a list are shown */
     public function maxItems(): int
@@ -53,12 +55,19 @@ class Dumper
             case is_resource($value):
                 return 'resource(' . get_resource_type($value) . ')';
             case is_array($value):
-                if ($value === []) return '[]';
-                if ($depth >= $this->maxDepth) return 'array(' . count($value) . ') [...]';
+                if ($value === []) {
+                    return '[]';
+                }
+                if ($depth >= $this->maxDepth) {
+                    return 'array(' . count($value) . ') [...]';
+                }
                 $lines = [];
                 $i = 0;
                 foreach ($value as $k => $v) {
-                    if (++$i > $this->maxItems) { $lines[] = "$pad  ... " . (count($value) - $this->maxItems) . ' more'; break; }
+                    if (++$i > $this->maxItems) {
+                        $lines[] = "$pad  ... " . (count($value) - $this->maxItems) . ' more';
+                        break;
+                    }
                     $key = is_int($k) ? $k : '"' . $k . '"';
                     $lines[] = "$pad  $key => " . $this->textValue($v, $depth + 1, $seen);
                 }
@@ -66,8 +75,12 @@ class Dumper
             case is_object($value):
                 $id = spl_object_id($value);
                 $class = get_class($value);
-                if (isset($seen[$id])) return "$class #$id {*recursion*}";
-                if ($depth >= $this->maxDepth) return "$class #$id {...}";
+                if (isset($seen[$id])) {
+                    return "$class #$id {*recursion*}";
+                }
+                if ($depth >= $this->maxDepth) {
+                    return "$class #$id {...}";
+                }
                 $seen[$id] = true;
                 $lines = [];
                 foreach ($this->properties($value) as [$name, $visibility, $v]) {
@@ -97,7 +110,10 @@ class Dumper
     {
         $parts = [];
         foreach ($fields as $name => $v) {
-            if (count($parts) === 3) { $parts[] = '…'; break; }
+            if (count($parts) === 3) {
+                $parts[] = '…';
+                break;
+            }
             if (is_scalar($v) || $v === null) {
                 $parts[] = $name . ': ' . (is_string($v) ? '"' . (mb_strlen($v) > 30 ? mb_substr($v, 0, 30) . '…' : $v) . '"' : var_export($v, true));
             }
@@ -121,12 +137,19 @@ class Dumper
             case is_resource($value):
                 return '<span class="bd-meta">resource(' . $e(get_resource_type($value)) . ')</span>';
             case is_array($value):
-                if ($value === []) return '<span class="bd-meta">[]</span>';
-                if ($depth >= $this->maxDepth) return '<span class="bd-meta">array(' . count($value) . ') [...]</span>';
+                if ($value === []) {
+                    return '<span class="bd-meta">[]</span>';
+                }
+                if ($depth >= $this->maxDepth) {
+                    return '<span class="bd-meta">array(' . count($value) . ') [...]</span>';
+                }
                 $rows = '';
                 $i = 0;
                 foreach ($value as $k => $v) {
-                    if (++$i > $this->maxItems) { $rows .= '<div class="bd-meta">… ' . number_format(count($value) - $this->maxItems) . ' more (showing the first ' . $this->maxItems . ')</div>'; break; }
+                    if (++$i > $this->maxItems) {
+                        $rows .= '<div class="bd-meta">… ' . number_format(count($value) - $this->maxItems) . ' more (showing the first ' . $this->maxItems . ')</div>';
+                        break;
+                    }
                     $key = is_int($k) ? '<span class="bd-num">' . $k . '</span>' : '<span class="bd-key">"' . $e($k) . '"</span>';
                     $rows .= "<div>$key => " . $this->htmlValue($v, $depth + 1, $seen, $i <= self::OPEN_FIRST) . '</div>';
                 }
@@ -136,15 +159,21 @@ class Dumper
             case is_object($value):
                 $id = spl_object_id($value);
                 $class = $e(get_class($value));
-                if (isset($seen[$id])) return "<span class=\"bd-type\">$class</span> <span class=\"bd-meta\">#$id *recursion*</span>";
-                if ($depth >= $this->maxDepth) return "<span class=\"bd-type\">$class</span> <span class=\"bd-meta\">#$id {...}</span>";
+                if (isset($seen[$id])) {
+                    return "<span class=\"bd-type\">$class</span> <span class=\"bd-meta\">#$id *recursion*</span>";
+                }
+                if ($depth >= $this->maxDepth) {
+                    return "<span class=\"bd-type\">$class</span> <span class=\"bd-meta\">#$id {...}</span>";
+                }
                 $seen[$id] = true;
                 $rows = '';
                 $fields = [];
                 foreach ($this->properties($value) as [$name, $visibility, $v]) {
                     $badge = $visibility === 'public' ? '' : '<span class="bd-vis">' . $visibility . '</span> ';
                     $rows .= '<div>' . $badge . '<span class="bd-key">' . $e($name) . '</span>: ' . $this->htmlValue($v, $depth + 1, $seen) . '</div>';
-                    if ($visibility === 'public') $fields[$name] = $v;
+                    if ($visibility === 'public') {
+                        $fields[$name] = $v;
+                    }
                 }
                 $isOpen = $depth < 2 && $open;
                 return '<details' . ($isOpen ? ' open' : '') . "><summary><span class=\"bd-type\">$class</span> <span class=\"bd-meta\">#$id</span>"
@@ -158,7 +187,9 @@ class Dumper
     public static function styles(): string
     {
         static $printed = false;
-        if ($printed) return '';
+        if ($printed) {
+            return '';
+        }
         $printed = true;
         return '<style>
 .bongo-dump{font:13px/1.5 ui-monospace,Consolas,monospace;background:#1e1f2b;color:#e6e6e6;padding:12px 16px;border-radius:8px;margin:8px 0;overflow:auto;text-align:left;white-space:pre-wrap}
@@ -180,7 +211,9 @@ class Dumper
     public function plain($value, int $depth = 0, array $seen = [])
     {
         if (is_array($value)) {
-            if ($depth >= $this->maxDepth) return '[...]';
+            if ($depth >= $this->maxDepth) {
+                return '[...]';
+            }
             $out = [];
             $i = 0;
             foreach ($value as $k => $v) {
@@ -195,14 +228,22 @@ class Dumper
         }
         if (is_object($value)) {
             $id = spl_object_id($value);
-            if (isset($seen[$id]) || $depth >= $this->maxDepth) return get_class($value) . ' {...}';
+            if (isset($seen[$id]) || $depth >= $this->maxDepth) {
+                return get_class($value) . ' {...}';
+            }
             $seen[$id] = true;
             $out = ['@class' => get_class($value)];
-            foreach ($this->properties($value) as [$name, , $v]) $out[$name] = $this->plain($v, $depth + 1, $seen);
+            foreach ($this->properties($value) as [$name, , $v]) {
+                $out[$name] = $this->plain($v, $depth + 1, $seen);
+            }
             return $out;
         }
-        if (is_resource($value)) return 'resource(' . get_resource_type($value) . ')';
-        if (is_string($value)) return $this->cut($value);
+        if (is_resource($value)) {
+            return 'resource(' . get_resource_type($value) . ')';
+        }
+        if (is_string($value)) {
+            return $this->cut($value);
+        }
         return $value;
     }
 
@@ -260,9 +301,13 @@ class Dumper
         $context = ['at' => 'unknown', 'in' => null, 'class' => null, 'request' => self::request()];
 
         foreach ($trace as $i => $frame) {
-            if (!isset($frame['file'])) continue;
+            if (!isset($frame['file'])) {
+                continue;
+            }
             $file = str_replace('\\', '/', $frame['file']);
-            if (str_ends_with($file, 'system/Debug/Dumper.php') || str_ends_with($file, 'system/Support/helpers.php')) continue;
+            if (str_ends_with($file, 'system/Debug/Dumper.php') || str_ends_with($file, 'system/Support/helpers.php')) {
+                continue;
+            }
 
             $base = defined('BASE_PATH') ? str_replace('\\', '/', BASE_PATH) . '/' : '';
             $context['at'] = ($base && str_starts_with($file, $base) ? substr($file, strlen($base)) : $file) . ':' . $frame['line'];

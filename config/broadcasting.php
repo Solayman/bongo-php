@@ -1,4 +1,5 @@
 <?php
+
 return [
     // Where `php bongo websocket:serve` listens (0.0.0.0 = every network interface)
     'host' => env('BROADCAST_HOST', '127.0.0.1'),

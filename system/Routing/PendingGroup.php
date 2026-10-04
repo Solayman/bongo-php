@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Routing;
 
 /**
@@ -8,7 +9,9 @@ class PendingGroup
 {
     protected array $attributes = [];
 
-    public function __construct(protected Router $router) {}
+    public function __construct(protected Router $router)
+    {
+    }
 
     public function prefix(string $prefix): static
     {

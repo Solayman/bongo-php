@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Notifications;
 
 use RuntimeException;
@@ -43,7 +44,9 @@ class Notify
     protected static function mail(object $notifiable, Message $message): void
     {
         if (!$message->to) {
-            if (empty($notifiable->email)) throw new RuntimeException('Cannot email this notification: the recipient has no email');
+            if (empty($notifiable->email)) {
+                throw new RuntimeException('Cannot email this notification: the recipient has no email');
+            }
             $message->to((string) $notifiable->email, $notifiable->name ?? null);
         }
         $message->send();
@@ -52,7 +55,9 @@ class Notify
     protected static function sms(object $notifiable, string $text): void
     {
         $phone = (string) ($notifiable->phone ?? '');
-        if ($phone === '') throw new RuntimeException('Cannot send an SMS: the recipient has no phone number');
+        if ($phone === '') {
+            throw new RuntimeException('Cannot send an SMS: the recipient has no phone number');
+        }
         $url = (string) config('notifications.sms.url', '');
         if ($url === '') {
             Log::info('SMS to {phone}: {text}', ['phone' => $phone, 'text' => $text]);
@@ -62,7 +67,9 @@ class Notify
         $fields = (array) config('notifications.sms.fields', ['to' => 'to', 'text' => 'text']);
         $data = [$fields['to'] ?? 'to' => $phone, $fields['text'] ?? 'text' => $text] + (array) config('notifications.sms.extra', []);
         $request = Http::timeout(15)->retry(2, 500);
-        if ($token = (string) config('notifications.sms.token', '')) $request->withToken($token);
+        if ($token = (string) config('notifications.sms.token', '')) {
+            $request->withToken($token);
+        }
         $request->post($url, $data)->throw();
     }
 

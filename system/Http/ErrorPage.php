@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Http;
 
 use Throwable;
@@ -21,7 +22,9 @@ class ErrorPage
 
         // API clients get JSON, browsers get a page
         if (Request::wantsJson()) {
-            if (!headers_sent()) header('Content-Type: application/json');
+            if (!headers_sent()) {
+                header('Content-Type: application/json');
+            }
             $body = ['error' => ['status' => $status, 'message' => $message]];
             if ($exception) {
                 $body['error']['exception'] = get_class($exception) . ': ' . $exception->getMessage();

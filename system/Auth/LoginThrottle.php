@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Auth;
 
 use System\Database\DB;
@@ -13,7 +14,8 @@ class LoginThrottle
     public function __construct(
         protected int $maxAttempts = 5,
         protected int $decayMinutes = 15
-    ) {}
+    ) {
+    }
 
     protected function key(string $email, string $ip): string
     {

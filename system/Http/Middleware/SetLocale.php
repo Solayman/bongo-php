@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Http\Middleware;
 
 use System\Http\Request;
@@ -35,12 +36,16 @@ class SetLocale
         $header = (string) Request::header('Accept-Language', '');
         $candidates = [];
         foreach (explode(',', $header) as $i => $part) {
-            if (!preg_match('/^\s*([a-zA-Z]{1,8})(?:-[a-zA-Z0-9]{1,8})*\s*(?:;\s*q=([0-9.]+))?/', $part, $m)) continue;
+            if (!preg_match('/^\s*([a-zA-Z]{1,8})(?:-[a-zA-Z0-9]{1,8})*\s*(?:;\s*q=([0-9.]+))?/', $part, $m)) {
+                continue;
+            }
             $candidates[] = [strtolower($m[1]), isset($m[2]) ? (float) $m[2] : 1.0, $i];
         }
         usort($candidates, fn($a, $b) => [$b[1], $a[2]] <=> [$a[1], $b[2]]);
         foreach ($candidates as [$lang]) {
-            if (in_array($lang, $supported, true)) return $lang;
+            if (in_array($lang, $supported, true)) {
+                return $lang;
+            }
         }
         return null;
     }

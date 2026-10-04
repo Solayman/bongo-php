@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Database\Schema;
 
 /**
@@ -21,7 +22,9 @@ class Blueprint
     public string $collation = 'utf8mb4_unicode_ci';
 
     /** $driver: "mysql", "sqlite", or "pgsql" (Schema passes the current connection's driver) */
-    public function __construct(public string $table, public string $driver = 'mysql') {}
+    public function __construct(public string $table, public string $driver = 'mysql')
+    {
+    }
 
     // ------------------------------------------------------------------
     // Column types
@@ -149,7 +152,9 @@ class Blueprint
 
     public function dropColumn(string ...$columns): void
     {
-        foreach ($columns as $column) $this->drops[] = ['column', $column];
+        foreach ($columns as $column) {
+            $this->drops[] = ['column', $column];
+        }
     }
 
     public function dropIndex(string $name): void
@@ -198,7 +203,9 @@ class Blueprint
 
         foreach ($this->columns as $column) {
             $lines[] = $this->columnSql($column);
-            if ($column->primary) $primary[] = self::wrap($column->name);
+            if ($column->primary) {
+                $primary[] = $this->wrapName($column->name);
+            }
         }
         if ($primary) {
             $lines[] = 'PRIMARY KEY (' . implode(', ', $primary) . ')';
@@ -210,7 +217,7 @@ class Blueprint
             $lines[] = $definition;
         }
 
-        return 'CREATE TABLE ' . self::wrap($this->table) . " (\n    " . implode(",\n    ", $lines) . "\n)"
+        return 'CREATE TABLE ' . $this->wrapName($this->table) . " (\n    " . implode(",\n    ", $lines) . "\n)"
             . " ENGINE={$this->engine} DEFAULT CHARSET={$this->charset} COLLATE={$this->collation}";
     }
 
@@ -220,18 +227,20 @@ class Blueprint
 
         foreach ($this->drops as [$kind, $name]) {
             $parts[] = match ($kind) {
-                'column'  => 'DROP COLUMN ' . self::wrap($name),
-                'index'   => 'DROP INDEX ' . self::wrap($name),
-                'foreign' => 'DROP FOREIGN KEY ' . self::wrap($name),
+                'column'  => 'DROP COLUMN ' . $this->wrapName($name),
+                'index'   => 'DROP INDEX ' . $this->wrapName($name),
+                'foreign' => 'DROP FOREIGN KEY ' . $this->wrapName($name),
             };
         }
         foreach ($this->renames as [$from, $to]) {
-            $parts[] = 'RENAME COLUMN ' . self::wrap($from) . ' TO ' . self::wrap($to);
+            $parts[] = 'RENAME COLUMN ' . $this->wrapName($from) . ' TO ' . $this->wrapName($to);
         }
         foreach ($this->columns as $column) {
             $parts[] = 'ADD COLUMN ' . $this->columnSql($column)
-                . ($column->after ? ' AFTER ' . self::wrap($column->after) : '');
-            if ($column->primary) $parts[] = 'ADD PRIMARY KEY (' . self::wrap($column->name) . ')';
+                . ($column->after ? ' AFTER ' . $this->wrapName($column->after) : '');
+            if ($column->primary) {
+                $parts[] = 'ADD PRIMARY KEY (' . $this->wrapName($column->name) . ')';
+            }
         }
         foreach ($this->indexDefinitions() as $definition) {
             $parts[] = 'ADD ' . $definition;
@@ -240,18 +249,28 @@ class Blueprint
             $parts[] = 'ADD ' . $definition;
         }
 
-        return $parts ? 'ALTER TABLE ' . self::wrap($this->table) . "\n    " . implode(",\n    ", $parts) : null;
+        return $parts ? 'ALTER TABLE ' . $this->wrapName($this->table) . "\n    " . implode(",\n    ", $parts) : null;
     }
 
     protected function columnSql(ColumnDefinition $c): string
     {
-        $sql = self::wrap($c->name) . ' ' . $c->type;
-        if ($c->unsigned) $sql .= ' UNSIGNED';
+        $sql = $this->wrapName($c->name) . ' ' . $c->type;
+        if ($c->unsigned) {
+            $sql .= ' UNSIGNED';
+        }
         $sql .= $c->nullable ? ' NULL' : ' NOT NULL';
-        if ($c->autoIncrement) $sql .= ' AUTO_INCREMENT';
-        if ($c->hasDefault) $sql .= ' DEFAULT ' . self::value($c->default);
-        if ($c->onUpdate) $sql .= ' ON UPDATE ' . $c->onUpdate;
-        if ($c->comment !== null) $sql .= ' COMMENT ' . self::quote($c->comment);
+        if ($c->autoIncrement) {
+            $sql .= ' AUTO_INCREMENT';
+        }
+        if ($c->hasDefault) {
+            $sql .= ' DEFAULT ' . self::value($c->default);
+        }
+        if ($c->onUpdate) {
+            $sql .= ' ON UPDATE ' . $c->onUpdate;
+        }
+        if ($c->comment !== null) {
+            $sql .= ' COMMENT ' . self::quote($c->comment);
+        }
         return $sql;
     }
 
@@ -260,8 +279,12 @@ class Blueprint
         $definitions = [];
 
         foreach ($this->columns as $column) {
-            if ($column->unique) $definitions[] = $this->indexSql('UNIQUE', [$column->name], null);
-            if ($column->index || $column->foreign) $definitions[] = $this->indexSql('INDEX', [$column->name], null);
+            if ($column->unique) {
+                $definitions[] = $this->indexSql('UNIQUE', [$column->name], null);
+            }
+            if ($column->index || $column->foreign) {
+                $definitions[] = $this->indexSql('INDEX', [$column->name], null);
+            }
         }
         foreach ($this->indexes as [$type, $columns, $name]) {
             $definitions[] = $this->indexSql($type, $columns, $name);
@@ -274,21 +297,29 @@ class Blueprint
     {
         $name ??= $this->table . '_' . implode('_', $columns) . ($type === 'UNIQUE' ? '_unique' : '_index');
         $keyword = $type === 'UNIQUE' ? 'UNIQUE KEY' : 'INDEX';
-        return "$keyword " . self::wrap($name) . ' (' . implode(', ', array_map([self::class, 'wrap'], $columns)) . ')';
+        return "$keyword " . $this->wrapName($name) . ' (' . implode(', ', array_map([$this, 'wrapName'], $columns)) . ')';
     }
 
     protected function foreignDefinitions(): array
     {
         $definitions = [];
         foreach ($this->columns as $column) {
-            if (!$column->foreign) continue;
+            if (!$column->foreign) {
+                continue;
+            }
             [$table, $references, $onDelete, $onUpdate] = $column->foreign;
-            $definitions[] = 'CONSTRAINT ' . self::wrap("{$this->table}_{$column->name}_foreign")
-                . ' FOREIGN KEY (' . self::wrap($column->name) . ')'
-                . ' REFERENCES ' . self::wrap($table) . ' (' . self::wrap($references) . ")"
+            $definitions[] = 'CONSTRAINT ' . $this->wrapName("{$this->table}_{$column->name}_foreign")
+                . ' FOREIGN KEY (' . $this->wrapName($column->name) . ')'
+                . ' REFERENCES ' . $this->wrapName($table) . ' (' . $this->wrapName($references) . ")"
                 . " ON DELETE $onDelete ON UPDATE $onUpdate";
         }
         return $definitions;
+    }
+
+    /** Quote a table/column name for this blueprint's database (not the default connection's) */
+    public function wrapName(string $identifier): string
+    {
+        return self::wrap($identifier, $this->driver);
     }
 
     public static function wrap(string $identifier, ?string $driver = null): string

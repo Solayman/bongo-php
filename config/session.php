@@ -1,4 +1,5 @@
 <?php
+
 return [
     // file (PHP's default) or redis (shared by every server; connection in config/database.php)
     'driver' => env('SESSION_DRIVER', 'file'),

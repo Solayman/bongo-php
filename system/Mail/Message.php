@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Mail;
 
 /**
@@ -18,7 +19,9 @@ class Message
     /** [name, mime, base64 content] */
     public array $attachments = [];
 
-    public function __construct(protected ?Mailer $mailer = null) {}
+    public function __construct(protected ?Mailer $mailer = null)
+    {
+    }
 
     public function to(string $email, ?string $name = null): static
     {
