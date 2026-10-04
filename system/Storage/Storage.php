@@ -19,6 +19,21 @@ class Storage
     /** @var array<string, Disk> */
     protected static array $disks = [];
 
+    /** @var array<string, callable> */
+    protected static array $customDrivers = [];
+
+    /** Register a custom storage driver creator */
+    public static function extend(string $driver, callable $callback): void
+    {
+        self::$customDrivers[$driver] = $callback;
+    }
+
+    /** Explicitly set or mock a disk instance */
+    public static function set(string $name, Disk $disk): void
+    {
+        self::$disks[$name] = $disk;
+    }
+
     /** Retrieve a disk instance by name (defaults to config('storage.default', 'public')) */
     public static function disk(?string $name = null): Disk
     {
@@ -42,9 +57,17 @@ class Storage
                     'root' => BASE_PATH . '/storage/app',
                     'visibility' => 'private',
                 ];
+            } elseif ($name === 's3' && is_file(BASE_PATH . '/config/s3.php')) {
+                $config = (array) config('s3', []);
+                $config['driver'] ??= 's3';
             } else {
                 throw new \InvalidArgumentException("Storage disk [$name] is not configured.");
             }
+        }
+
+        $driver = (string) ($config['driver'] ?? 'local');
+        if (isset(self::$customDrivers[$driver])) {
+            return self::$disks[$name] = (self::$customDrivers[$driver])($config, $name);
         }
 
         return self::$disks[$name] = new Disk($name, $config);
@@ -130,8 +153,18 @@ class Storage
         return self::disk()->deleteDirectory($directory);
     }
 
+    public static function temporaryUrl(string $relative, mixed $expiration, array $options = []): string
+    {
+        $disk = self::disk();
+        if (method_exists($disk, 'temporaryUrl')) {
+            return $disk->temporaryUrl($relative, $expiration, $options);
+        }
+        return (string) $disk->url($relative);
+    }
+
     public static function reset(): void
     {
         self::$disks = [];
+        self::$customDrivers = [];
     }
 }
