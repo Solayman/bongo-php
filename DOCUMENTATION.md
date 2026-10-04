@@ -3039,5 +3039,133 @@ Complete API development suite for professional APIs on Bongo PHP Framework. Inc
   php bongo make:resource UserCollection --collection
   ```
 
+#### 16. `settings` — Dynamic Application & Store Settings
+Zero-dependency, type-safe application configuration and store settings manager for Bongo MVC. Persists dynamic settings in the database with in-memory & persistent caching, type casting (boolean, integer, float, json, string), CLI commands, and a Blade `@setting` directive.
+* **Install:** `php bongo add settings && php bongo migrate`
+* **API Usage:**
+  ```php
+  use Bongo\Packages\Settings\Setting;
+
+  // Retrieve setting (with optional fallback)
+  $siteName = setting('site.name', 'My Store');
+  $taxRate = setting('shop.tax_rate', 0.05);
+
+  // Set single setting (auto-detects type)
+  setting()->set('site.name', 'Acme Store');
+  setting()->set('shop.enabled', true);
+
+  // Batch update
+  setting([
+      'currency' => 'USD',
+      'min_order_amount' => 50,
+  ]);
+
+  // Static facade
+  Setting::get('site.logo', '/img/logo.png');
+  Setting::forget('temporary_flag');
+  ```
+* **Template Directive:**
+  ```html
+  <h1>@setting('site.name')</h1>
+  ```
+* **CLI Commands:**
+  ```bash
+  php bongo setting:get site.name
+  php bongo setting:set site.name "My Application"
+  php bongo setting:list
+  php bongo setting:clear
+  ```
+
+#### 17. `seo` — Search Engine Optimization, OpenGraph, JSON-LD & Dynamic XML Sitemap
+Complete Search Engine Optimization suite for public websites, blogs, SaaS, and stores. Fluent metadata builder, OpenGraph, Twitter Cards, Schema.org JSON-LD structured data, and dynamic XML Sitemap generator adhering to `sitemaps.org` 0.9.
+* **Install:** `php bongo add seo`
+* **API Usage:**
+  ```php
+  use Bongo\Packages\Seo\Seo;
+  use Bongo\Packages\Seo\Sitemap;
+
+  // 1. Controller / Action SEO metadata
+  Seo::title('Wireless Headphones')
+     ->description('High-fidelity audio with active noise cancellation.')
+     ->keywords(['audio', 'headphones', 'wireless'])
+     ->canonical('https://example.com/products/headphones')
+     ->image('https://example.com/img/headphones.jpg', width: 1200, height: 630)
+     ->schema('Product', [
+         'name' => 'Wireless Headphones',
+         'offers' => [
+             '@type' => 'Offer',
+             'price' => '199.99',
+             'priceCurrency' => 'USD',
+         ],
+     ]);
+
+  // 2. Generate XML Sitemap
+  $sitemap = new Sitemap();
+  $sitemap->add('https://example.com', '2026-10-04', 1.0, 'daily')
+          ->add('https://example.com/about', '2026-10-01', 0.8, 'monthly');
+  $sitemap->save('public/sitemap.xml');
+  ```
+* **Layout Integration:**
+  ```html
+  <head>
+      @seo
+  </head>
+  ```
+* **CLI Command:**
+  ```bash
+  php bongo sitemap:generate
+  ```
+
+#### 18. `activity-log` — Enterprise Audit Trail & Model Activity Logger
+Zero-dependency audit trail and model activity logging package. Automatically tracks user actions, model lifecycle events (with old vs new attribute diffs), client IP addresses, User-Agents, and automated pruning.
+* **Install:** `php bongo add activity-log && php bongo migrate`
+* **API Usage:**
+  ```php
+  use Bongo\Packages\ActivityLog\ActivityLog;
+  use Bongo\Packages\ActivityLog\Models\Activity;
+
+  // 1. Fluent manual activity logging
+  activity('orders')
+      ->performedOn($order)
+      ->causedBy($user)
+      ->withProperties(['status' => 'shipped', 'carrier' => 'DHL'])
+      ->log('Order marked as shipped');
+
+  // 2. Automated model diff tracking (via LogsActivity trait)
+  $order->status = 'completed';
+  $order->recordActivity('updated');
+  // Automatically records attribute changes ('old' vs 'attributes')
+
+  // 3. Querying activities
+  $orderLogs = Activity::forSubject($order)->get();
+  $userActions = Activity::causedBy($user)->get();
+  ```
+* **CLI Pruning Command:**
+  ```bash
+  php bongo activity:clean --days=60
+  ```
+
+#### 19. `health` — Application Health Checks & Production Uptime Monitoring
+Zero-dependency production health check suite for uptime monitors (BetterUptime, Pingdom, UptimeRobot), load balancers, and Kubernetes probes. Monitors database latency, storage write/read/delete, disk space, cache responsiveness, and Redis.
+* **Install:** `php bongo add health`
+* **Endpoints:**
+  * `GET /health` (or `/api/health`) -> Returns HTTP 200 (healthy/warning) or HTTP 503 (unhealthy) with JSON status.
+  * Supports `HEALTH_SECRET_TOKEN` to mask detailed telemetry from unauthenticated callers.
+* **Custom Checks:**
+  ```php
+  use Bongo\Packages\Health\Checks\CheckResult;
+  use Bongo\Packages\Health\Health;
+
+  Health::check(function () {
+      return file_exists('/var/run/worker.pid');
+  }, name: 'worker');
+  ```
+* **CLI Command:**
+  ```bash
+  php bongo health:check
+  php bongo health:check --json
+  ```
+
+
 
 

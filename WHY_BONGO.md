@@ -247,7 +247,7 @@ Architectural trade-offs compared objectively across common PHP ecosystems:
 ### Current Architectural Boundaries
 * **Supported Databases:** Native first-class support for **MySQL / MariaDB**, **PostgreSQL (`pgsql`)**, and **SQLite**.
 * **Queue Drivers:** High-reliability Database and Redis queue drivers are built in (with delayed retry sets and failed job tracking).
-* **Official Package Ecosystem:** Zero-dependency package manager (`System\Package`) and official package suite (`sslcommerz`, `bkash`, `nagad`, `stripe`, `sms`, `s3`, `social-login`, `two-factor`, `image`, `backup`, `permission`, `zip`, `ftp`, `paypal`, `api-tools`) in `Solayman/bongo-php-packages`. Standard web patterns can also integrate optional Composer packages.
+* **Official Package Ecosystem:** Zero-dependency package manager (`System\Package`) and official package suite (`sslcommerz`, `bkash`, `nagad`, `stripe`, `sms`, `s3`, `social-login`, `two-factor`, `image`, `backup`, `permission`, `zip`, `ftp`, `paypal`, `api-tools`, `settings`, `seo`, `activity-log`, `health`) in `Solayman/bongo-php-packages`. Standard web patterns can also integrate optional Composer packages.
 
 ---
 

@@ -31,4 +31,8 @@ return [
     // 'ftp',            // Zero-dependency FTP and FTPS driver for Storage facade
     // 'paypal',         // PayPal REST API v2 Checkout, orders, refunds, and webhooks
     // 'api-tools',      // API Resources (JSON transformers), OpenAPI 3.0 docs, rate limiting
+    // 'settings',       // Dynamic application & store settings in database with type casting & caching
+    // 'seo',             // Search Engine Optimization (SEO), OpenGraph, Twitter Cards, Schema JSON-LD, XML Sitemap
+    // 'activity-log',    // Enterprise audit trail & model activity logger with old/new attribute diffs
+    // 'health',          // Application health checks & uptime monitoring for database, storage, cache, and redis
 ];
