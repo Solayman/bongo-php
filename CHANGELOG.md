@@ -73,7 +73,12 @@ Every notable change to the Bongo PHP Framework. Versions follow [semantic versi
 - Starter skeleton metrics and documentation synchronized: updated fresh starter skeleton documentation to reflect accurate footprint (~800 KB, 183 files) and documented direct end-user distribution via the `release` branch (`git clone -b release`).
 - Query values are bound with their real types (int, null, bool with native `\PDO::PARAM_BOOL` for pgsql).
 - Framework autoloader optimized with direct prefix checks (`strncmp`) and `is_file()` lookups.
-- **PSR-12 coding standard** for the whole codebase (formatting only, #97). Rules in `phpcs.xml`; check with `php phpcs.phar` (0 errors required, see CONTRIBUTING).
+- **PSR-12 coding standard** for the whole codebase (formatting only, #97). Rules in `phpcs.xml`; check with `php phpcs.phar` (0 errors required, see CONTRIBUTING). Enforced across all 20 packages with `declare(strict_types=1);` in 100% of source files.
+- **Package code optimizations & N+1 elimination**:
+  - `permission`: Eliminated N+1 queries in `HasRoles::hasPermissionViaRole()` and `getAllPermissions()` using a single batched O(1) query (`WHERE rhp.role_id IN (...)`) and model resolution (`whereIn`). Extracted shared `HasPermissions` trait, removing 100+ lines of duplicate code between `Role` and `HasRoles`.
+  - `settings`: Eliminated N+1 queries in `SettingsManager::set(array)` by batch-fetching existing records via `Setting::whereIn()`. Added `SettingsManager::load(array $keys)` for single-query cache pre-loading.
+  - `activity-log`: Extracted polymorphic helper `ActivityLogger::resolveMorph()`, eliminating duplicate morph extraction across models and loggers.
+  - Package test suite updated to 174 passing tests (741 assertions, 0 failures).
 - `php bongo test` now runs on **PostgreSQL** too: it creates the test database and loads `pdo_pgsql` in the test server (#95).
 - Docs corrected (#99): measured numbers only (122 files, ~16,000 lines, ~570 KB, 349 tests), no "Blade" wording, correct controller path, unique section numbers in DOCUMENTATION.md, `php bongo help` instead of a non-existent `list`. CLAUDE.md and GEMINI.md record the verified review status.
 
