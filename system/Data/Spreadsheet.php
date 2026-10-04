@@ -32,20 +32,16 @@ class Spreadsheet
     public static function download(iterable $rows, string $filename, array $columns = []): DownloadResponse
     {
         $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-        $tmp = tempnam(sys_get_temp_dir(), 'bongo_sheet_');
-
-        if ($ext === 'xlsx') {
-            $binary = self::toXlsx($rows, $columns);
-            file_put_contents($tmp, $binary);
-            $mime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-        } else {
-            if ($ext === '') {
-                $filename .= '.csv';
-            }
-            $csv = self::toCsv($rows, $columns);
-            file_put_contents($tmp, $csv);
-            $mime = 'text/csv; charset=UTF-8';
+        if ($ext === '') {
+            $filename .= '.csv';
+            $ext = 'csv';
         }
+        $tmp = tempnam(sys_get_temp_dir(), 'bongo_sheet_');
+        file_put_contents($tmp, self::content($rows, $ext, $columns));
+
+        $mime = ($ext === 'xlsx')
+            ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            : 'text/csv; charset=UTF-8';
 
         return new DownloadResponse($tmp, $filename, $mime);
     }
@@ -55,15 +51,19 @@ class Spreadsheet
      */
     public static function store(iterable $rows, string $path, array $columns = [], ?string $disk = null): string
     {
-        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
-        $content = ($ext === 'xlsx')
+        Storage::disk($disk)->put($path, self::content($rows, $path, $columns));
+        return $path;
+    }
+
+    /**
+     * Generate in-memory content (.xlsx binary or .csv text) based on extension or filename.
+     */
+    public static function content(iterable $rows, string $extensionOrPath, array $columns = []): string
+    {
+        $ext = strtolower(pathinfo($extensionOrPath, PATHINFO_EXTENSION) ?: $extensionOrPath);
+        return ($ext === 'xlsx')
             ? self::toXlsx($rows, $columns)
             : self::toCsv($rows, $columns);
-
-        $diskInstance = Storage::disk($disk);
-        $diskInstance->put($path, $content);
-
-        return $path;
     }
 
     /**
@@ -296,11 +296,7 @@ class Spreadsheet
                 continue;
             }
 
-            $row = [];
-            foreach ($headers as $idx => $key) {
-                $row[$key] = $data[$idx] ?? '';
-            }
-            $rows[] = $row;
+            $rows[] = self::mapRow($headers, $data);
         }
 
         fclose($fh);
@@ -398,14 +394,20 @@ class Spreadsheet
                 continue;
             }
 
-            $row = [];
-            foreach ($headers as $idx => $key) {
-                $row[$key] = $denseRow[$idx] ?? '';
-            }
-            $rows[] = $row;
+            $rows[] = self::mapRow($headers, $denseRow);
         }
 
         return $rows;
+    }
+
+    /** Map positional values into an associative row keyed by headers */
+    protected static function mapRow(array $headers, array $values): array
+    {
+        $row = [];
+        foreach ($headers as $idx => $key) {
+            $row[$key] = $values[$idx] ?? '';
+        }
+        return $row;
     }
 
     /**
