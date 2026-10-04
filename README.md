@@ -167,7 +167,7 @@ Bongo includes an exhaustive set of full-stack batteries out of the box:
 | **Database & ORM** | MySQL/MariaDB and SQLite query builder, transactions, Active Record models, relationships (`hasOne`, `hasMany`, `belongsToMany`), eager loading, soft deletes, tracked schema migrations with rollback, and seeders. |
 | **Authentication & Access** | Multi-guard authentication (Session and stateless JWT), password hashing with Argon2id + pepper, account lockout, "Remember me", password reset flows, signed email verification, and authorization policies (`Gate` / `Policy`). |
 | **Validation & Uploads** | 35+ validation rules, array wildcards (`items.*.qty`), conditional rules, and upload validation inspected via real magic bytes (preventing extension spoofing). |
-| **Async & Background** | Database-driven job queues, worker daemon (`php bongo queue:work`), task scheduler (execute recurring jobs without server cron in dev via `php bongo schedule:work`), and queued background mail. |
+| **Async & Background** | High-throughput job queues (Database and Redis drivers), worker daemon (`php bongo queue:work`), task scheduler (execute recurring jobs without server cron in dev via `php bongo schedule:work`), and queued background mail. |
 | **Communication** | Built-in SMTP mailer, HTML/text templates, attachments, notifications (Mail, SMS, Slack), and an HTTP client with retry policies (`Http::get/post`). |
 | **Real-Time WebSockets** | Native PHP WebSocket server (`php bongo websocket:serve`) with channel multiplexing and public/private subscriptions. |
 | **Developer Ergonomics** | Collapsible zero-freeze `dd()` / `dump()` profiling, actionable debug exception screens with auto-fix hints, browser mailbox inspector, and interactive shell (`php bongo tinker`). |
@@ -187,7 +187,7 @@ Bongo includes an exhaustive set of full-stack batteries out of the box:
 | `GET /api/products` | REST endpoint with JWT auth | 40 | 0.45 MB | **9.4 ms** |
 | `GET /shop` | Complex relational catalog | 56 | 0.65 MB | **18.9 ms** |
 
-*Note: Latency tested with OpCache disabled (worst-case baseline). With OpCache enabled on production servers, response times are even faster. Running `php bongo config:cache` improves bootstrap time by **36%**.*
+*Note: Latency tested with OpCache disabled (worst-case baseline). With OpCache enabled on production servers, response times are even faster. Running `php bongo config:cache` improves bootstrap time by **36%**, and `php bongo route:cache` precompiles route dispatching into zero-overhead static lookups.*
 
 ---
 
@@ -206,6 +206,8 @@ php bongo websocket:serve   # Start WebSocket daemon
 php bongo queue:work        # Run background queue worker
 php bongo schedule:work     # Run scheduled tasks locally
 php bongo config:cache      # Cache configuration for production
+php bongo route:cache       # Precompile registered routes for faster dispatching
+php bongo view:cache        # Precompile and lint all templates ahead of time
 php bongo upgrade           # Safely upgrade framework with auto-backup & rollback
 ```
 

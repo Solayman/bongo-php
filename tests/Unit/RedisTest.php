@@ -111,4 +111,47 @@ class RedisTest extends TestCase
         $handler->destroy($id);
         $this->assertSame('', $handler->read($id));
     }
+
+    public function testRedisQueueDriver(): void
+    {
+        if ($this->redis === null) {
+            $this->assertTrue(true);
+            return;
+        }
+
+        $prevDriver = config('queue.driver');
+        $GLOBALS['config']['queue']['driver'] = 'redis';
+
+        try {
+            $prefix = \System\Redis\Redis::prefix();
+            $queueKey = $prefix . 'queue:default';
+            $this->redis->del($queueKey);
+            $this->redis->del($queueKey . ':delayed');
+
+            $job = new class extends \System\Queue\Job {
+                public static bool $ran = false;
+                public function handle(): void {
+                    self::$ran = true;
+                }
+            };
+            $job::$ran = false;
+
+            $id = \System\Queue\Queue::push($job);
+            $this->assertNotNull($id);
+
+            $stats = \System\Queue\Queue::stats('default');
+            $this->assertSame(1, $stats['pending']);
+
+            $worker = new \System\Queue\Worker();
+            $processed = $worker->work(['once' => true, 'queue' => 'default']);
+
+            $this->assertSame(1, $processed);
+            $this->assertTrue($job::$ran);
+
+            $statsAfter = \System\Queue\Queue::stats('default');
+            $this->assertSame(0, $statsAfter['pending']);
+        } finally {
+            $GLOBALS['config']['queue']['driver'] = $prevDriver;
+        }
+    }
 }

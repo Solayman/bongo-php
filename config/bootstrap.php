@@ -8,18 +8,12 @@ define('BASE_PATH', dirname(__DIR__));
 // Autoloaders: App\ -> app/, System\ -> system/
 // ---------------------------
 spl_autoload_register(function ($class) {
-    $map = [
-        'App\\'    => BASE_PATH . '/app/',
-        'System\\' => BASE_PATH . '/system/',
-    ];
-    foreach ($map as $prefix => $baseDir) {
-        if (strncmp($prefix, $class, strlen($prefix)) === 0) {
-            $file = $baseDir . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
-            if (file_exists($file)) {
-                require_once $file;
-            }
-            return;
-        }
+    if (strncmp('App\\', $class, 4) === 0) {
+        $file = BASE_PATH . '/app/' . str_replace('\\', '/', substr($class, 4)) . '.php';
+        if (is_file($file)) require_once $file;
+    } elseif (strncmp('System\\', $class, 7) === 0) {
+        $file = BASE_PATH . '/system/' . str_replace('\\', '/', substr($class, 7)) . '.php';
+        if (is_file($file)) require_once $file;
     }
 });
 
@@ -97,6 +91,7 @@ function load_config_files(): array
 }
 
 define('CONFIG_CACHE', BASE_PATH . '/storage/cache/config.php');
+define('ROUTE_CACHE', BASE_PATH . '/storage/cache/routes.php');
 $GLOBALS['config'] = getenv('BONGO_CONFIG_CACHE') !== '0' && is_file(CONFIG_CACHE) ? require CONFIG_CACHE : load_config_files();
 
 // ---------------------------

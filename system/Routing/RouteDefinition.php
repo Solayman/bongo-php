@@ -59,6 +59,11 @@ class RouteDefinition
     /** Parameters as [name => value] when the path matches, otherwise null */
     public function match(string $path): ?array
     {
+        // Fast path for static routes without parameters
+        if (!str_contains($this->path, '{')) {
+            return $this->path === $path ? [] : null;
+        }
+
         if (!preg_match($this->regex(), $path, $m)) {
             return null;
         }

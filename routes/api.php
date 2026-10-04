@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\ProductController;
 use System\Routing\Route;
 
@@ -10,13 +11,7 @@ use System\Routing\Route;
  * Return an array from a route to send JSON.
  */
 
-Route::get('/health', function () {
-    return [
-        'status' => 'ok',
-        'app'    => config('app.name'),
-        'time'   => date(DATE_ATOM),
-    ];
-})->name('health');
+Route::get('/health', [HealthController::class, 'index'])->name('health');
 
 // JWT authentication
 Route::post('/auth/login', [AuthController::class, 'login'])->name('auth.login');

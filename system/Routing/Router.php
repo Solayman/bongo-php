@@ -50,6 +50,13 @@ class Router
      */
     public static function fromConfig(): self
     {
+        if (defined('ROUTE_CACHE') && getenv('BONGO_ROUTE_CACHE') !== '0' && is_file(ROUTE_CACHE)) {
+            $cached = require ROUTE_CACHE;
+            if (is_array($cached)) {
+                return self::fromCache($cached);
+            }
+        }
+
         $router = new self(
             [],
             (array) config('app.middleware', []),
@@ -62,6 +69,59 @@ class Router
         }
 
         return $router;
+    }
+
+    /**
+     * Restore router instance from cached route data
+     */
+    public static function fromCache(array $data): self
+    {
+        $router = new self(
+            [],
+            (array) ($data['middleware'] ?? []),
+            (array) ($data['groups'] ?? []),
+            (array) ($data['global'] ?? [])
+        );
+
+        foreach ($data['routes'] ?? [] as $r) {
+            $route = new RouteDefinition($r['methods'], $r['path'], $r['action']);
+            $route->name = $r['name'] ?? null;
+            $route->middleware = (array) ($r['middleware'] ?? []);
+            $route->withoutMiddleware = (array) ($r['withoutMiddleware'] ?? []);
+            $route->wheres = (array) ($r['wheres'] ?? []);
+            $router->routes[] = $route;
+        }
+
+        return $router;
+    }
+
+    /**
+     * Export serializable route data for caching
+     */
+    public function toCache(): array
+    {
+        $routes = [];
+        foreach ($this->routes as $route) {
+            if ($route->action instanceof \Closure) {
+                throw new RuntimeException("Route [{$route->path}] uses a Closure action and cannot be cached. Use a [Controller::class, 'method'] action instead.");
+            }
+            $routes[] = [
+                'methods'           => $route->methods,
+                'path'              => $route->path,
+                'action'            => $route->action,
+                'name'              => $route->name,
+                'middleware'        => $route->middleware,
+                'withoutMiddleware' => $route->withoutMiddleware,
+                'wheres'            => $route->wheres,
+            ];
+        }
+
+        return [
+            'routes'     => $routes,
+            'middleware' => $this->middleware,
+            'groups'     => $this->groups,
+            'global'     => $this->global,
+        ];
     }
 
     /**
