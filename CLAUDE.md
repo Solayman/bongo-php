@@ -124,7 +124,7 @@ The following high-priority features and optimizations were recently implemented
   * **Application Overrides:** `resources/views/vendor/<name>/` and `lang/vendor/<name>/` take precedence over package assets, surviving updates.
   * **CLI Commands:** `add`, `package:install`, `package:update`, `package:remove`, `package:list`, `package:publish`, `package:diff`, and `package:test`.
   * **Storage Extensibility & Bootstrapping:** Package `bootstrap.php` runner on framework boot; `Storage::extend()`, `Storage::set()`, and `Storage::temporaryUrl()`.
-  * **Official Packages Suite (`Solayman/bongo-php-packages`):** 15 packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`, `nagad`, `stripe`, `two-factor`, `image`, `backup`, `permission`, `zip`, `ftp`, `paypal`, `api-tools`) with 125 passing package tests.
+  * **Official Packages Suite (`Solayman/bongo-php-packages`):** 19 packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`, `nagad`, `stripe`, `two-factor`, `image`, `backup`, `permission`, `zip`, `ftp`, `paypal`, `api-tools`, `settings`, `seo`, `activity-log`, `health`) with 158 passing package tests.
   * **Testing:** 11 unit tests in `tests/Unit/PackageTest.php` (43 assertions), 6 tests in `tests/Unit/StorageTest.php` (31 assertions). Full core test suite: **368 tests passing (1845 assertions) across MySQL, PostgreSQL 18, and SQLite**.
 
 ---
@@ -238,7 +238,7 @@ Claude reviewed **every feature from PRs #78–#94** line by line and ran the fu
 | Printable HTML/PDF (#88) | ✅ Verified, **fixed in #96** | All attributes are validated or escaped; temp files deleted; Chrome output captured. |
 | Code style | ✅ **PSR-12, 0 errors** (#97) | Rules in `phpcs.xml`. Check with `php phpcs.phar` (see CONTRIBUTING). |
 | Docs (#78–#94) | ✅ Corrected (#99) | Real numbers only, no "Blade" wording, correct paths, unique section numbers. |
-| Package Subsystem & Official Suite (Phases A, B, C, D) | ✅ **Complete, 15 packages, 125 package tests** | Pure-PHP manager (`System\Package`), SHA-256 verification, update diff safety, app overrides, `bootstrap.php` runner, storage extensibility (`Storage::extend()`, `Storage::temporaryUrl()`), and 15 official packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`, `nagad`, `stripe`, `two-factor`, `image`, `backup`, `permission`, `zip`, `ftp`, `paypal`, `api-tools`). |
+| Package Subsystem & Official Suite (Phases A, B, C, D) | ✅ **Complete, 19 packages, 158 package tests** | Pure-PHP manager (`System\Package`), SHA-256 verification, update diff safety, app overrides, `bootstrap.php` runner, storage extensibility (`Storage::extend()`, `Storage::temporaryUrl()`), and 19 official packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`, `nagad`, `stripe`, `two-factor`, `image`, `backup`, `permission`, `zip`, `ftp`, `paypal`, `api-tools`, `settings`, `seo`, `activity-log`, `health`). |
 
 **Test results at review end:** 368 tests pass on MySQL, PostgreSQL 18 and SQLite.
 
