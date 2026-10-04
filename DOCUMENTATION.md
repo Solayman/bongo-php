@@ -108,8 +108,8 @@ lang/                    Translations: bn.json, bn/messages.php, ...
 storage/logs/            Log files (git-ignored)
 system/                  Framework core (namespace System\)
   Auth/                  Auth (guards), SessionGuard, JwtGuard, UserProvider, LoginThrottle, PasswordBroker
-  Database/              Connection, DB (transactions, query log), QueryBuilder, Model, HasMany, BelongsTo, Migration, Migrator
-  Database/Schema/       Schema, Blueprint, ColumnDefinition, Expression
+  Database/              Connection, DBConnection, DB (transactions, query log), QueryBuilder, Model, HasMany, BelongsTo, Migration, Migrator
+  Database/Schema/       Schema, SchemaBuilder, Blueprint, ColumnDefinition, Expression
   Cache/                 Cache, FileStore, RateLimiter
   Console/               Generator (make:*)
   Container/             Container (DI, autowiring, method injection, model binding)
@@ -965,6 +965,125 @@ PHP needs the appropriate PDO driver enabled (`pdo_mysql`, `pdo_pgsql`, or `pdo_
 | JSON Type | `JSON` | Native `JSONB` | `TEXT` |
 
 `php bongo test` uses `storage/testing/database.sqlite` when `DB_CONNECTION=sqlite`, so your real database file is never touched.
+
+### Simultaneous Multi-Database & Multi-Tenancy
+
+Bongo supports querying and managing multiple databases simultaneously in the same request. Configure any number of named connections in `config/database.php`:
+
+```php
+'connections' => [
+    'mysql' => [
+        'driver'   => 'mysql',
+        'host'     => env('DB_HOST', '127.0.0.1'),
+        'database' => env('DB_DATABASE', 'bongo'),
+        // ...
+    ],
+    'analytics' => [
+        'driver'   => 'pgsql',
+        'host'     => env('DB_ANALYTICS_HOST', '127.0.0.1'),
+        'database' => 'bongo_analytics',
+        // ...
+    ],
+    'tenant_1' => [
+        'driver'   => 'sqlite',
+        'database' => storage_path('tenants/tenant_1.sqlite'),
+    ],
+],
+```
+
+#### Querying a Specific Connection
+```php
+use System\Database\DB;
+
+// Query builder on named connection
+$events = DB::connection('analytics')->table('events')->where('type', 'click')->get();
+
+// Raw queries on named connection
+$users = DB::connection('tenant_1')->raw('SELECT * FROM users WHERE active = ?', [1]);
+
+// Query logging tracks the exact connection name for every executed statement
+DB::enableQueryLog();
+// ...
+DB::getQueryLog(); // [['connection' => 'analytics', 'sql' => '...', 'bindings' => [...], 'ms' => 1.2], ...]
+```
+
+#### Isolated Transactions & Savepoints
+Each database connection maintains its own isolated transaction and savepoint lifecycle:
+```php
+$tenant = DB::connection('tenant_1');
+
+$tenant->transaction(function () use ($tenant) {
+    $tenant->table('invoices')->insert([...]);
+    $tenant->table('credits')->decrement('balance', 50);
+});
+
+// Or manual control on a specific connection
+$tenant->beginTransaction();
+$tenant->commit();
+$tenant->rollBack();
+```
+
+#### Model Connection Routing
+Models can target a dedicated connection statically, dynamically via `on()`, or on individual instances:
+```php
+class AuditLog extends Model
+{
+    // Every query on AuditLog automatically routes to the analytics database
+    protected static ?string $connection = 'analytics';
+}
+
+// Or dynamically target a connection on any model:
+$users = User::on('tenant_1')->where('status', 'active')->get();
+$user  = User::on('tenant_1')->create(['name' => 'Alice']);
+
+// Retrieved models remember their source connection for updates/deletes:
+$user->name = 'Alice Smith';
+$user->save();   // updates on tenant_1
+
+// Relationships across models inherit the parent connection automatically
+$orders = $user->orders; // queries orders on tenant_1
+```
+
+#### Schema Operations on Specific Connections
+```php
+use System\Database\Schema\Blueprint;
+use System\Database\Schema\Schema;
+
+Schema::connection('analytics')->create('reports', function (Blueprint $table) {
+    $table->id();
+    $table->string('report_name');
+    $table->timestamps();
+});
+
+Schema::connection('analytics')->hasTable('reports');
+Schema::connection('analytics')->dropIfExists('reports');
+```
+
+#### Dynamic Runtime Connections (Multi-Tenant SaaS)
+Register or remove tenant databases on the fly without changing config files:
+```php
+use System\Database\Connection;
+
+Connection::addConnection("tenant_{$id}", [
+    'driver'   => 'sqlite',
+    'database' => storage_path("tenants/{$id}.sqlite"),
+]);
+
+// Query immediately:
+$data = DB::connection("tenant_{$id}")->table('settings')->first();
+
+Connection::removeConnection("tenant_{$id}");
+```
+
+#### Migrations on Named Connections
+Target specific databases using the `--database` CLI flag:
+```bash
+php bongo migrate --database=analytics
+php bongo migrate:status --database=analytics
+php bongo migrate:rollback --database=analytics
+php bongo migrate:fresh --database=tenant_1 --seed
+php bongo db:seed --database=tenant_1
+```
 
 ### Query builder
 

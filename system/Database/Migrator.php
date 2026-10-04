@@ -16,14 +16,19 @@ class Migrator
 
     protected PDO $pdo;
 
-    public function __construct(protected string $path)
+    public function __construct(protected string $path, protected ?string $connection = null)
     {
-        $this->pdo = Connection::getInstance();
+        $this->pdo = Connection::getInstance($this->connection);
+    }
+
+    public function getConnectionName(): ?string
+    {
+        return $this->connection ?? Connection::getDefaultConnection();
     }
 
     public function ensureTable(): void
     {
-        if (Connection::isSqlite()) {
+        if (Connection::isSqlite($this->connection)) {
             $this->pdo->exec('CREATE TABLE IF NOT EXISTS ' . self::TABLE . ' (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 migration TEXT NOT NULL UNIQUE,
@@ -32,7 +37,7 @@ class Migrator
             )');
             return;
         }
-        if (Connection::isPgsql()) {
+        if (Connection::isPgsql($this->connection)) {
             $this->pdo->exec('CREATE TABLE IF NOT EXISTS ' . self::TABLE . ' (
                 id SERIAL PRIMARY KEY,
                 migration VARCHAR(255) NOT NULL UNIQUE,
@@ -98,19 +103,30 @@ class Migrator
         $batch = ($ran ? max($ran) : 0) + 1;
         $done = [];
 
-        foreach ($this->files() as $name => $file) {
-            if (isset($ran[$name])) {
-                continue;
+        $prevDefault = Connection::getDefaultConnection();
+        if ($this->connection !== null) {
+            Connection::setDefaultConnection($this->connection);
+        }
+
+        try {
+            foreach ($this->files() as $name => $file) {
+                if (isset($ran[$name])) {
+                    continue;
+                }
+
+                $this->resolve($file)->up();
+
+                $stmt = $this->pdo->prepare('INSERT INTO ' . self::TABLE . ' (migration, batch) VALUES (?, ?)');
+                $stmt->execute([$name, $batch]);
+
+                $done[] = $name;
+                Log::info('Migrated {migration} (batch {batch})', ['migration' => $name, 'batch' => $batch, 'connection' => $this->connection]);
+                if ($log) $log($name);
             }
-
-            $this->resolve($file)->up();
-
-            $stmt = $this->pdo->prepare('INSERT INTO ' . self::TABLE . ' (migration, batch) VALUES (?, ?)');
-            $stmt->execute([$name, $batch]);
-
-            $done[] = $name;
-            Log::info('Migrated {migration} (batch {batch})', ['migration' => $name, 'batch' => $batch]);
-            if ($log) $log($name);
+        } finally {
+            if ($this->connection !== null) {
+                Connection::setDefaultConnection($prevDefault);
+            }
         }
 
         return $done;
@@ -136,17 +152,28 @@ class Migrator
         $files = $this->files();
         $done = [];
 
-        foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $name) {
-            if (!isset($files[$name])) {
-                throw new RuntimeException("Cannot roll back [$name]: its file is missing from database/migrations");
+        $prevDefault = Connection::getDefaultConnection();
+        if ($this->connection !== null) {
+            Connection::setDefaultConnection($this->connection);
+        }
+
+        try {
+            foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $name) {
+                if (!isset($files[$name])) {
+                    throw new RuntimeException("Cannot roll back [$name]: its file is missing from database/migrations");
+                }
+
+                $this->resolve($files[$name])->down();
+                $this->pdo->prepare('DELETE FROM ' . self::TABLE . ' WHERE migration = ?')->execute([$name]);
+                Log::info('Rolled back {migration}', ['migration' => $name, 'connection' => $this->connection]);
+
+                $done[] = $name;
+                if ($log) $log($name);
             }
-
-            $this->resolve($files[$name])->down();
-            $this->pdo->prepare('DELETE FROM ' . self::TABLE . ' WHERE migration = ?')->execute([$name]);
-            Log::info('Rolled back {migration}', ['migration' => $name]);
-
-            $done[] = $name;
-            if ($log) $log($name);
+        } finally {
+            if ($this->connection !== null) {
+                Connection::setDefaultConnection($prevDefault);
+            }
         }
 
         return $done;
@@ -157,15 +184,16 @@ class Migrator
      */
     public function dropAllTables(): array
     {
-        $tables = Schema\Schema::tables();
+        $schema = Schema\Schema::connection($this->connection);
+        $tables = $schema->tables();
 
-        Schema\Schema::withoutForeignKeyChecks(function () use ($tables) {
+        $schema->withoutForeignKeyChecks(function () use ($tables, $schema) {
             foreach ($tables as $table) {
-                Schema\Schema::drop($table);
+                $schema->drop($table);
             }
         });
 
-        Log::warning('Dropped all tables', ['tables' => $tables]);
+        Log::warning('Dropped all tables', ['tables' => $tables, 'connection' => $this->connection]);
         return $tables;
     }
 

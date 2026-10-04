@@ -16,7 +16,15 @@ abstract class Relation
         protected string $otherKey
     ) {
         $this->query = $related::query();
+        if ($parent->getConnection() !== null && $related::getConnectionName() === null) {
+            $this->query->setConnection($parent->getConnection());
+        }
         $this->constrain();
+    }
+
+    public function getQuery(): QueryBuilder
+    {
+        return $this->query;
     }
 
     /** Limit the query to rows related to $parent */

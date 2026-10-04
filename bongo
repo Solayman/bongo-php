@@ -23,7 +23,8 @@ $optionValue = function (string $name, $default = null) use ($options) {
     return $default;
 };
 
-$migrator = fn() => new Migrator(base_path('database/migrations'));
+$databaseOption = $optionValue('database');
+$migrator = fn(?string $conn = null) => new Migrator(base_path('database/migrations'), $conn ?? $databaseOption);
 
 try {
     switch ($command) {
@@ -171,24 +172,25 @@ try {
             break;
 
         case 'migrate:fresh':
-            $database = config('database.connections.' . config('database.default') . '.database');
+            $targetConn = $databaseOption ?? config('database.default');
+            $database = config("database.connections.{$targetConn}.database");
             if (!$hasOption('force')) {
-                echo "This drops ALL tables in database [$database]. Type the database name to continue: ";
-                if (trim((string) fgets(STDIN)) !== $database) {
+                echo "This drops ALL tables in database [$database] (connection: $targetConn). Type the database name to continue: ";
+                if (trim((string) fgets(STDIN)) !== (string) $database) {
                     echo "Cancelled.\n";
                     exit(1);
                 }
             }
-            $migrator = $migrator();
-            foreach ($migrator->dropAllTables() as $table) echo "Dropped: $table\n";
-            $migrator->migrate(fn($name) => print("Migrated: $name\n"));
+            $freshMigrator = $migrator($targetConn);
+            foreach ($freshMigrator->dropAllTables() as $table) echo "Dropped: $table\n";
+            $freshMigrator->migrate(fn($name) => print("Migrated: $name\n"));
             if ($hasOption('seed')) {
-                runSeeder();
+                runSeeder($targetConn);
             }
             break;
 
         case 'db:seed':
-            runSeeder();
+            runSeeder($databaseOption);
             break;
 
         case 'key:generate':
@@ -499,12 +501,12 @@ try {
                 'down [--message=] [--retry=60] [--secret=]' => 'Maintenance mode: visitors see "back soon" (503)',
                 'up' => 'Leave maintenance mode',
                 'upgrade [--check|--from=file|--rollback]' => 'Update the framework files only (backup first)',
-                'migrate' => 'Run pending database/migrations/*.php',
-                'migrate:status' => 'Show which migrations have run (and their batch)',
-                'migrate:rollback [--step=1]' => 'Undo the last batch(es) of migrations',
-                'migrate:fresh [--force] [--seed]' => 'Drop all tables, migrate (and seed)',
+                'migrate [--database=]' => 'Run pending database/migrations/*.php',
+                'migrate:status [--database=]' => 'Show which migrations have run (and their batch)',
+                'migrate:rollback [--step=1] [--database=]' => 'Undo the last batch(es) of migrations',
+                'migrate:fresh [--force] [--seed] [--database=]' => 'Drop all tables, migrate (and seed)',
                 'make:migration <name>' => 'Create a migration file, e.g. create_posts_table',
-                'db:seed' => 'Run database/seeders/DatabaseSeeder.php',
+                'db:seed [--database=]' => 'Run database/seeders/DatabaseSeeder.php',
                 'key:generate [--show] [--force]' => 'Create APP_KEY in .env (password pepper + encryption)',
                 'route:list [filter]' => 'Show every route with its name, action and middleware',
                 'tinker' => 'Interactive PHP shell with the app loaded',
@@ -559,11 +561,21 @@ try {
     exit(1);
 }
 
-function runSeeder(): void
+function runSeeder(?string $database = null): void
 {
     require_once base_path('database/seeders/DatabaseSeeder.php');
-    (new Database\Seeders\DatabaseSeeder())->run();
-    echo "Database seeded.\n";
+    $prev = System\Database\Connection::getDefaultConnection();
+    if ($database !== null) {
+        System\Database\Connection::setDefaultConnection($database);
+    }
+    try {
+        (new Database\Seeders\DatabaseSeeder())->run();
+        echo "Database seeded" . ($database ? " on connection [$database]" : "") . ".\n";
+    } finally {
+        if ($database !== null) {
+            System\Database\Connection::setDefaultConnection($prev);
+        }
+    }
 }
 
 /** @return array<string, System\Console\Command> */

@@ -43,10 +43,11 @@ class BelongsToMany extends Relation
     /** Add links (already linked ids are skipped) */
     public function attach(int|array $ids): void
     {
+        $conn = $this->query->getConnection();
         $existing = $this->linkedIds();
         foreach ((array) $ids as $id) {
             if (!in_array((int) $id, $existing, true)) {
-                DB::table($this->pivot)->insert([$this->parentKey => $this->parent->getKey(), $this->relatedKey => (int) $id]);
+                DB::table($this->pivot, $conn)->insert([$this->parentKey => $this->parent->getKey(), $this->relatedKey => (int) $id]);
             }
         }
     }
@@ -54,7 +55,8 @@ class BelongsToMany extends Relation
     /** Remove some links, or all of them */
     public function detach(int|array|null $ids = null): void
     {
-        $query = DB::table($this->pivot)->where($this->parentKey, $this->parent->getKey());
+        $conn = $this->query->getConnection();
+        $query = DB::table($this->pivot, $conn)->where($this->parentKey, $this->parent->getKey());
         if ($ids !== null) {
             $query->whereIn($this->relatedKey, array_map('intval', (array) $ids));
         }
@@ -75,7 +77,8 @@ class BelongsToMany extends Relation
 
     protected function linkedIds(): array
     {
-        return array_map('intval', DB::table($this->pivot)->where($this->parentKey, $this->parent->getKey())->pluck($this->relatedKey));
+        $conn = $this->query->getConnection();
+        return array_map('intval', DB::table($this->pivot, $conn)->where($this->parentKey, $this->parent->getKey())->pluck($this->relatedKey));
     }
 
     public function eagerLoad(array $models, string $name): void
@@ -84,7 +87,11 @@ class BelongsToMany extends Relation
         $grouped = [];
         if ($ids) {
             $table = ($this->related)::tableName();
-            $rows = ($this->related)::query()
+            $query = ($this->related)::query();
+            if ($this->query->getConnection() !== null && ($this->related)::getConnectionName() === null) {
+                $query->setConnection($this->query->getConnection());
+            }
+            $rows = $query
                 ->select("$table.*", "{$this->pivot}.{$this->parentKey} AS __pivot_parent")
                 ->join($this->pivot, "{$this->pivot}.{$this->relatedKey}", '=', "$table." . ($this->related)::primaryKey())
                 ->whereIn("{$this->pivot}.{$this->parentKey}", $ids)

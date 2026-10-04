@@ -12,65 +12,133 @@ use RuntimeException;
  */
 class Connection
 {
-    private static ?PDO $pdo = null;
-    /** Asked on every query (SQL dialect), so remembered */
-    private static ?string $driver = null;
+    /** @var array<string, PDO> Cached PDO connection instances by connection name */
+    private static array $instances = [];
+    /** @var array<string, string> Cached driver names by connection name */
+    private static array $drivers = [];
+    /** @var array<string, array> Runtime registered connection configurations */
+    private static array $runtimeConfigs = [];
+    private static ?string $defaultConnection = null;
 
-    public static function getInstance(): PDO
+    public static function getDefaultConnection(): string
     {
-        if (self::$pdo) {
-            return self::$pdo;
+        return self::$defaultConnection ??= (string) (config('database.default') ?? 'mysql');
+    }
+
+    public static function setDefaultConnection(?string $name): void
+    {
+        self::$defaultConnection = $name;
+    }
+
+    public static function getInstance(?string $name = null): PDO
+    {
+        $name = $name ?? self::getDefaultConnection();
+
+        if (isset(self::$instances[$name])) {
+            return self::$instances[$name];
         }
 
-        $db = self::config();
+        $db = self::config($name);
+        $driver = $db['driver'] ?? $name;
+        self::$drivers[$name] = $driver;
 
         try {
-            self::$pdo = match (self::driver()) {
+            self::$instances[$name] = match ($driver) {
                 'sqlite' => self::connectSqlite($db),
                 'pgsql'  => self::connectPgsql($db),
                 default  => self::connectMysql($db),
             };
         } catch (PDOException $e) {
-            \System\Log\Log::critical('Database connection failed: ' . $e->getMessage(), ['driver' => self::driver(), 'database' => $db['database'] ?? null]);
-            // Throw instead of die() so callers can catch it and show a friendly error
-            throw new RuntimeException('Database Connection Failed: ' . $e->getMessage(), 0, $e);
+            \System\Log\Log::critical('Database connection failed: ' . $e->getMessage(), [
+                'connection' => $name,
+                'driver'     => $driver,
+                'database'   => $db['database'] ?? null,
+            ]);
+            throw new RuntimeException("Database Connection [$name] Failed: " . $e->getMessage(), 0, $e);
         }
 
-        return self::$pdo;
+        return self::$instances[$name];
     }
 
-    /** "mysql", "sqlite", or "pgsql" */
-    public static function driver(): string
+    /** "mysql", "sqlite", or "pgsql" for the given or default connection */
+    public static function driver(?string $name = null): string
     {
-        return self::$driver ??= self::config()['driver'] ?? 'mysql';
+        $name = $name ?? self::getDefaultConnection();
+        return self::$drivers[$name] ??= (string) (self::config($name)['driver'] ?? 'mysql');
     }
 
-    public static function isMysql(): bool
+    public static function isMysql(?string $name = null): bool
     {
-        return self::driver() === 'mysql';
+        return self::driver($name) === 'mysql';
     }
 
-    public static function isSqlite(): bool
+    public static function isSqlite(?string $name = null): bool
     {
-        return self::driver() === 'sqlite';
+        return self::driver($name) === 'sqlite';
     }
 
-    public static function isPgsql(): bool
+    public static function isPgsql(?string $name = null): bool
     {
-        return self::driver() === 'pgsql';
+        return self::driver($name) === 'pgsql';
     }
 
-    /** Forget the connection, e.g. after changing config('database') */
-    public static function reset(): void
+    /** Manually set a mock or active PDO instance for a connection (useful in tests) */
+    public static function setInstance(string $name, PDO $pdo, ?string $driver = null): void
     {
-        self::$pdo = null;
-        self::$driver = null;
+        self::$instances[$name] = $pdo;
+        if ($driver !== null) {
+            self::$drivers[$name] = $driver;
+        }
     }
 
-    protected static function config(): array
+    /** Register a dynamic database connection configuration at runtime (e.g. for multi-tenancy) */
+    public static function addConnection(string $name, array $config): void
     {
+        self::$runtimeConfigs[$name] = $config;
+        unset(self::$instances[$name], self::$drivers[$name]);
+    }
+
+    public static function hasConnection(string $name): bool
+    {
+        if (isset(self::$runtimeConfigs[$name])) {
+            return true;
+        }
+        $all = config('database.connections');
+        return is_array($all) && isset($all[$name]);
+    }
+
+    public static function removeConnection(string $name): void
+    {
+        self::reset($name);
+        unset(self::$runtimeConfigs[$name]);
+    }
+
+    /** Forget one connection or all connections */
+    public static function reset(?string $name = null): void
+    {
+        if ($name === null) {
+            self::$instances = [];
+            self::$drivers = [];
+            self::$defaultConnection = null;
+        } else {
+            unset(self::$instances[$name], self::$drivers[$name]);
+        }
+        if (class_exists(DBConnection::class, false)) {
+            DBConnection::reset($name);
+        }
+    }
+
+    protected static function config(?string $name = null): array
+    {
+        $name = $name ?? self::getDefaultConnection();
+        if (isset(self::$runtimeConfigs[$name])) {
+            return self::$runtimeConfigs[$name];
+        }
         $config = config('database');
-        return $config['connections'][$config['default']];
+        if (!isset($config['connections'][$name])) {
+            throw new RuntimeException("Database connection [$name] is not configured in config/database.php.");
+        }
+        return $config['connections'][$name];
     }
 
     protected static function options(): array

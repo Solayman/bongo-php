@@ -34,6 +34,7 @@ class QueryBuilder
     /** Soft deletes: "products.deleted_at" when the model uses them; trashed rows are without / with / only */
     protected ?string $softDeleteColumn = null;
     protected string $trashed = 'without';
+    protected ?string $connection = null;
 
     protected const OPERATORS = ['=', '!=', '<>', '<', '>', '<=', '>=', 'LIKE', 'NOT LIKE'];
 
@@ -42,15 +43,41 @@ class QueryBuilder
         $this->table = $table;
     }
 
+    public function setConnection(?string $connection): self
+    {
+        $this->connection = $connection;
+        return $this;
+    }
+
+    public function getConnection(): ?string
+    {
+        return $this->connection;
+    }
+
     protected function pdo(): PDO
     {
-        return Connection::getInstance();
+        return Connection::getInstance($this->connection);
     }
 
     /** Prepare + execute, recorded in the query log when it is enabled */
     protected function run(string $sql, array $bindings): \PDOStatement
     {
-        return DB::run($sql, $bindings);
+        return DB::connection($this->connection)->run($sql, $bindings);
+    }
+
+    protected function isPgsql(): bool
+    {
+        return Connection::isPgsql($this->connection);
+    }
+
+    protected function isSqlite(): bool
+    {
+        return Connection::isSqlite($this->connection);
+    }
+
+    protected function isMysql(): bool
+    {
+        return Connection::isMysql($this->connection);
     }
 
     public function table(): string
@@ -321,7 +348,7 @@ class QueryBuilder
     /** Shared lock: others can read but not change the rows until the transaction ends */
     public function sharedLock(): self
     {
-        $this->lock = Connection::isPgsql() ? ' FOR SHARE' : ' LOCK IN SHARE MODE';
+        $this->lock = $this->isPgsql() ? ' FOR SHARE' : ' LOCK IN SHARE MODE';
         return $this;
     }
 
@@ -398,10 +425,10 @@ class QueryBuilder
             $sql .= " LIMIT {$this->limit}";
         }
         if ($this->offset !== null) {
-            $sql .= ($this->limit === null && Connection::isSqlite() ? ' LIMIT -1' : '') . " OFFSET {$this->offset}";
+            $sql .= ($this->limit === null && $this->isSqlite() ? ' LIMIT -1' : '') . " OFFSET {$this->offset}";
         }
         // SQLite locks the whole file during a write transaction, so row locks are not needed (or valid)
-        return $sql . (Connection::isSqlite() ? '' : ($this->lock ?? ''));
+        return $sql . ($this->isSqlite() ? '' : ($this->lock ?? ''));
     }
 
     /** All bindings in SQL order */
@@ -419,7 +446,13 @@ class QueryBuilder
         $stmt = $this->run($this->toSql(), $this->getBindings());
 
         if ($this->model !== null) {
-            $models = array_map(fn($row) => ($this->model)::hydrate($row), $stmt->fetchAll(PDO::FETCH_ASSOC));
+            $models = array_map(function ($row) {
+                $model = ($this->model)::hydrate($row);
+                if ($this->connection !== null) {
+                    $model->setConnection($this->connection);
+                }
+                return $model;
+            }, $stmt->fetchAll(PDO::FETCH_ASSOC));
             if ($this->eager && $models) {
                 ($this->model)::eagerLoad($models, $this->eager);
             }
@@ -596,10 +629,10 @@ class QueryBuilder
         }
         $sql = "INSERT INTO {$this->table} (" . implode(',', $columns) . ') VALUES '
             . implode(',', array_fill(0, count($rows), $placeholders));
-        if (Connection::isSqlite()) {
+        if ($this->isSqlite()) {
             $target = $uniqueBy ? '(' . implode(', ', (array) $uniqueBy) . ')' : '';
             $sql .= " ON CONFLICT $target DO UPDATE SET " . implode(', ', array_map(fn($c) => "$c = excluded.$c", $update ?? $columns));
-        } elseif (Connection::isPgsql()) {
+        } elseif ($this->isPgsql()) {
             $candidates = array_values(array_diff($columns, $update ?? []));
             $targetCols = $uniqueBy ? (array) $uniqueBy : (in_array('id', $columns, true) ? ['id'] : ($candidates ?: [$columns[0]]));
             $target = '(' . implode(', ', array_map(fn($c) => '"' . str_replace('"', '""', $c) . '"', $targetCols)) . ')';
@@ -632,6 +665,20 @@ class QueryBuilder
         return $this;
     }
 
+    /** Create a new model instance on this connection and save it */
+    public function create(array $attributes = []): Model
+    {
+        if ($this->model === null) {
+            throw new \LogicException('create() on QueryBuilder requires a model context');
+        }
+        $model = new ($this->model)($attributes);
+        if ($this->connection !== null) {
+            $model->setConnection($this->connection);
+        }
+        $model->save();
+        return $model;
+    }
+
     public function insert(array $data): bool
     {
         $columns = implode(',', array_keys($data));
@@ -643,7 +690,7 @@ class QueryBuilder
     /** Insert and return the new auto-increment id */
     public function insertGetId(array $data, string $idColumn = 'id'): int
     {
-        if (Connection::isPgsql()) {
+        if ($this->isPgsql()) {
             $columns = implode(',', array_keys($data));
             $placeholders = implode(',', array_fill(0, count($data), '?'));
             $sql = "INSERT INTO {$this->table} ($columns) VALUES ($placeholders) RETURNING \"$idColumn\"";
@@ -703,14 +750,14 @@ class QueryBuilder
 
     public function truncate(): bool
     {
-        if (Connection::isSqlite()) {
+        if ($this->isSqlite()) {
             $this->run("DELETE FROM {$this->table}", []);
             // Restart the ids at 1 (sqlite_sequence only exists once an AUTOINCREMENT table does)
             try {
                 $this->run('DELETE FROM sqlite_sequence WHERE name = ?', [$this->table]);
             } catch (\PDOException) {
             }
-        } elseif (Connection::isPgsql()) {
+        } elseif ($this->isPgsql()) {
             $this->run("TRUNCATE TABLE {$this->table} RESTART IDENTITY CASCADE", []);
         } else {
             $this->run("TRUNCATE TABLE {$this->table}", []);

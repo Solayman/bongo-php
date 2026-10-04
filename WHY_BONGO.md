@@ -179,7 +179,7 @@ Security mechanisms are embedded directly into the framework foundation:
 | Domain | Integrated Capabilities |
 |---|---|
 | **HTTP Layer** | Attribute routing, route groups, named parameters, middleware pipelines, signed URLs, form requests |
-| **Data & ORM** | MySQL/MariaDB, PostgreSQL (`pgsql`), and SQLite support, query builder, transactions, relations (`hasOne`, `hasMany`, `belongsToMany`), soft deletes, schema migrations, and seeders |
+| **Data & ORM** | MySQL/MariaDB, PostgreSQL (`pgsql`), and SQLite support, simultaneous multi-database & multi-tenancy (`DB::connection()`, `Model::on()`), isolated transactions, query builder, relations (`hasOne`, `hasMany`, `belongsToMany`), soft deletes, schema migrations, and seeders |
 | **Storage & Files** | Multi-disk storage (`public` vs private `local`), streaming file downloads (`Storage::download()`), magic-byte upload validation |
 | **Spreadsheets & Docs** | Unified CSV and Excel `.xlsx` import/export (`Spreadsheet::read()`, `Spreadsheet::download()`) with UTF-8 BOM, and printable vector documents/PDFs (`Printable::invoice()`) with flawless Bangla and multilingual typography |
 | **Identity & Access** | Multi-guard authentication (Session & JWT), authorization gates, policies, password reset flows, email verification |
@@ -236,7 +236,7 @@ Architectural trade-offs compared objectively across common PHP ecosystems:
 Yes. Bongo does not require Composer, but it remains fully compatible with it. If `vendor/autoload.php` exists, the framework automatically registers the autoloader.
 
 **Is Bongo suitable for production workloads?**  
-Bongo includes 319 automated test cases, strict type hinting, regression suites, and production security verification (`php bongo security:check`). As a v0.9.x release, core interfaces are stable while feature expansion continues.
+Bongo includes 340 automated test cases, strict type hinting, regression suites, and production security verification (`php bongo security:check`). As a v0.9.x release, core interfaces are stable while feature expansion continues.
 
 **How does framework maintenance and upgrading work?**  
 The framework provides an isolated upgrade utility (`php bongo upgrade`) that verifies cryptographic SHA-256 checksums, creates an automated pre-upgrade backup, and patches core `system/` components without touching application files. Upgrades can be reversed using `php bongo upgrade --rollback`.
