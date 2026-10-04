@@ -194,7 +194,7 @@ Bongo includes an exhaustive set of full-stack batteries out of the box:
 | **Extensible CLI** | Pure-PHP CLI with custom console commands (`php bongo make:command <Name>`), base `Command` class, and automatic discovery from `app/Commands/`. |
 | **Communication** | Built-in SMTP mailer, HTML/text templates, attachments, notifications (Mail, SMS, Slack), and an HTTP client with retry policies (`Http::get/post`). |
 | **Real-Time WebSockets** | Native PHP WebSocket server (`php bongo websocket:serve`) with channel multiplexing and public/private subscriptions. |
-| **Packages & Ecosystem** | Zero-dependency package manager (`System\Package`), update diff safety, app override priority, and official production packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`). |
+| **Packages & Ecosystem** | Zero-dependency package manager (`System\Package`), update diff safety, app override priority, and official production packages (`sslcommerz`, `bkash`, `nagad`, `sms`, `s3`, `social-login`). |
 | **Developer Ergonomics** | Collapsible zero-freeze `dd()` / `dump()` profiling, actionable debug exception screens with auto-fix hints, browser mailbox inspector, and interactive shell (`php bongo tinker`). |
 | **Security Auditing** | `php bongo security:check` scans server configuration, permissions, security headers, and production readiness before launch. |
 | **Multilingual (I18n)** | Shipped with bilingual support for **English** and **Bengali (বাংলা)** across validation errors and UI text. Extensible via JSON dictionaries. |
