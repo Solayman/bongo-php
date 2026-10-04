@@ -24,7 +24,11 @@ class Runner
         self::prepareEnvironment();
         self::prepareDatabase();
 
-        $files = array_merge(glob("$testsPath/Unit/*Test.php") ?: [], glob("$testsPath/Feature/*Test.php") ?: []);
+        $files = array_merge(
+            glob("$testsPath/*Test.php") ?: [],
+            glob("$testsPath/Unit/*Test.php") ?: [],
+            glob("$testsPath/Feature/*Test.php") ?: []
+        );
         $before = get_declared_classes();
         foreach ($files as $file) {
             require_once $file;

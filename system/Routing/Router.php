@@ -69,6 +69,8 @@ class Router
             $router->loadFile(base_path($file['file']), $file);
         }
 
+        \System\Package\PackageManager::loadRoutes($router);
+
         return $router;
     }
 
