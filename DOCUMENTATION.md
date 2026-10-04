@@ -2419,7 +2419,7 @@ The admin and customer logins are separate guards, so one browser can be signed 
 
 ## 15. Official Package Subsystem
 
-Bongo includes an integrated, zero-dependency package manager and runtime loader designed for optional first-party and community extensions (e.g. `sslcommerz`, `bkash`, `nagad`, `stripe`, `sms`, `s3`, `social-login`, `two-factor`, `image`, `backup`).
+Bongo includes an integrated, zero-dependency package manager and runtime loader designed for optional first-party and community extensions (e.g. `sslcommerz`, `bkash`, `nagad`, `stripe`, `sms`, `s3`, `social-login`, `two-factor`, `image`, `backup`, `permission`, `zip`, `ftp`, `paypal`, `api-tools`).
 
 ### Core Design & Principles
 - **Zero Required Dependencies:** No Composer or Node.js runtime required. The package installer is pure PHP using native HTTP streams, JSON parsing, and `hash_file('sha256', ...)`.
@@ -2832,6 +2832,211 @@ Zero-dependency multi-database and application asset backup engine. Backs up MyS
 
   # Clean old backups
   php bongo backup:clean --keep=5
+  ```
+
+#### 11. `permission` — Role-Based Access Control (RBAC) & Permissions Management
+Zero-dependency role and permission management subsystem for Bongo applications. Provides granular user authorization, role-to-permission mapping, super-admin bypass, direct user permissions, HTTP route middleware (`role` and `permission`), and console management commands.
+* **Install:** `php bongo add permission`
+* **Run Migration:** `php bongo migrate` (creates `roles`, `permissions`, `role_has_permissions`, `model_has_roles`, and `model_has_permissions` tables)
+* **Configuration (`.env`):**
+  ```ini
+  PERMISSION_SUPER_ADMIN_ROLE=super-admin
+  ```
+* **API Usage:**
+  ```php
+  use Bongo\Packages\Permission\Models\Role;
+  use Bongo\Packages\Permission\Models\PermissionModel;
+
+  // 1. Create Roles and Permissions
+  $adminRole = Role::create(['name' => 'admin', 'description' => 'Administrator']);
+  $editPosts = PermissionModel::create(['name' => 'edit-posts']);
+
+  // 2. Assign Permission to Role
+  $adminRole->givePermissionTo('edit-posts');
+
+  // 3. User Authorization via HasRoles Trait in User Model
+  $user->assignRole('admin');
+  $user->hasRole('admin');            // true
+  $user->hasAnyRole(['admin', 'editor']); // true
+  $user->can('edit-posts');           // true (via role)
+
+  // 4. Direct Permission Assignment
+  $user->givePermissionTo('publish-posts');
+  $user->hasDirectPermission('publish-posts'); // true
+  ```
+* **Route Middleware:**
+  ```php
+  use System\Routing\Route;
+
+  // Protect routes by role (pipe-delimited for alternatives)
+  Route::middleware('role:admin|editor')->group(function () {
+      Route::get('/admin/dashboard', [AdminController::class, 'index']);
+  });
+
+  // Protect routes by specific permission
+  Route::middleware('permission:edit-posts')->post('/posts/{id}', [PostController::class, 'update']);
+  ```
+* **CLI Commands:**
+  ```bash
+  php bongo role:create editor --description="Content Editor"
+  php bongo permission:create edit-posts --description="Edit blog posts"
+  php bongo role:assign 1 admin
+  ```
+
+#### 12. `zip` — Pure-PHP ZIP Compression, Extraction & Archive Inspection
+Zero-dependency ZIP archive creation, streaming download, and extraction engine written in pure PHP. Features a fluent builder interface, recursive directory compression, password protection, in-place archive inspection and file deletion, and built-in protection against Zip-Slip path traversal attacks.
+* **Install:** `php bongo add zip`
+* **API Usage:**
+  ```php
+  use Bongo\Packages\Zip\Zip;
+
+  // 1. Fluent Archive Creation
+  Zip::create('storage/backups/export.zip')
+      ->add('storage/app/documents')
+      ->addFile('storage/app/reports/annual.pdf', 'reports/annual.pdf')
+      ->addFromString('metadata.json', json_encode(['version' => '1.0']))
+      ->exclude(['*.log', 'tmp/*'])
+      ->save();
+
+  // 2. In-Place Archive Inspection & Extraction
+  $reader = Zip::open('storage/backups/export.zip');
+  $files = $reader->list();             // List all entries with file size and timestamp
+  $hasConfig = $reader->has('config.json');
+  $contents = $reader->read('metadata.json');
+
+  // Extract with automatic Zip-Slip path traversal protection
+  $reader->extractTo('storage/extracted/');
+
+  // 3. Streaming HTTP Download
+  return Zip::download('storage/backups/export.zip', 'user_export.zip');
+  ```
+* **CLI Commands:**
+  ```bash
+  # Compress directory
+  php bongo zip:make storage/app/archive.zip public/uploads --exclude="*.tmp"
+
+  # List archive contents
+  php bongo zip:list storage/app/archive.zip
+
+  # Extract archive
+  php bongo zip:extract storage/app/archive.zip storage/extracted/
+  ```
+
+#### 13. `ftp` — Zero-Dependency FTP & FTPS Storage Disk
+Extends Bongo's `Storage` facade with native FTP and FTPS (FTP over SSL/TLS) filesystem driver support. Supports passive/active mode, directory creation, file uploading, streaming, deletion, and file size/timestamp retrieval. Automatically falls back to raw pure-PHP stream sockets if `ext-ftp` is absent.
+* **Install:** `php bongo add ftp`
+* **Configuration (`.env`):**
+  ```ini
+  FTP_HOST=ftp.example.com
+  FTP_PORT=21
+  FTP_USERNAME=ftpuser
+  FTP_PASSWORD=secret
+  FTP_ROOT=/public_html
+  FTP_SSL=false
+  FTP_PASSIVE=true
+  FTP_TIMEOUT=30
+  ```
+* **API Usage:**
+  ```php
+  use System\Storage\Storage;
+
+  // FTP disk is automatically registered into Bongo's Storage facade
+  Storage::disk('ftp')->put('backups/db.sql', $sqlDump);
+  $content = Storage::disk('ftp')->get('backups/db.sql');
+  $exists  = Storage::disk('ftp')->exists('backups/db.sql');
+  $size    = Storage::disk('ftp')->size('backups/db.sql');
+
+  // Streaming download from remote FTP server
+  return Storage::disk('ftp')->download('backups/db.sql', 'db_backup.sql');
+  ```
+* **CLI Health Check:** `php bongo ftp:check`
+
+#### 14. `paypal` — PayPal REST API v2 Checkout, Orders, Refunds & Webhooks
+Production-ready PayPal payment gateway client utilizing the official PayPal REST API v2 Checkout. Supports hosted redirect approvals, order creation, payment capture, authorization holds, partial/full refunds, and cryptographically verified webhooks via pure PHP without external Composer libraries.
+* **Install:** `php bongo add paypal`
+* **Run Migration:** `php bongo migrate` (creates `paypal_orders` table for audit and verification)
+* **Configuration (`.env`):**
+  ```ini
+  PAYPAL_MODE=sandbox          # sandbox or live
+  PAYPAL_CLIENT_ID=your_client_id
+  PAYPAL_CLIENT_SECRET=your_client_secret
+  PAYPAL_WEBHOOK_ID=your_webhook_id
+  PAYPAL_CURRENCY=USD
+  PAYPAL_RETURN_URL=/paypal/success
+  PAYPAL_CANCEL_URL=/paypal/cancel
+  ```
+* **API Usage:**
+  ```php
+  use Bongo\Packages\Paypal\Paypal;
+
+  // 1. Create Order & Redirect to PayPal Checkout
+  $order = Paypal::create([
+      'amount'       => 49.99,
+      'currency'     => 'USD',
+      'description'  => 'Annual Membership',
+      'reference_id' => 'ORDER-1044',
+  ]);
+  $approvalUrl = Paypal::approvalUrl($order);
+  header('Location: ' . $approvalUrl);
+
+  // 2. Capture Approved Order
+  $capture = Paypal::capture($orderId);
+  if (($capture['status'] ?? '') === 'COMPLETED') {
+      $captureId = $capture['purchase_units'][0]['payments']['captures'][0]['id'];
+  }
+
+  // 3. Issue Full or Partial Refund
+  $refund = Paypal::issueRefund($captureId, 25.00, 'USD', 'Customer return');
+  ```
+* **Template Components & Routes:**
+  * Component: `<x-paypal::checkout-button :amount="49.99" :currency="'USD'" />`
+  * Partial: `@include('paypal::checkout-button')`
+  * Routes: `/paypal/checkout` (POST), `/paypal/success` (GET), `/paypal/cancel` (GET), `/paypal/webhook` (POST)
+* **CLI Health Check:** `php bongo paypal:check`
+
+#### 15. `api-tools` — API Resources, OpenAPI 3.0 Documentation & Rate Limiting
+Complete API development suite for professional APIs on Bongo PHP Framework. Includes Eloquent-style `JsonResource` and `ResourceCollection` transformers with conditional inclusion, standardized `ApiResponse` formatting, automatic OpenAPI 3.0 (Swagger UI & Redoc) documentation generation, and sliding window API rate limiting middleware.
+* **Install:** `php bongo add api-tools`
+* **Interactive Documentation:**
+  Access live interactive documentation in the browser:
+  * **Swagger UI:** `/api/docs`
+  * **Redoc:** `/api/redoc`
+  * **OpenAPI 3.0 Spec:** `/api/openapi.json`
+* **API Usage:**
+  ```php
+  use App\Http\Resources\UserResource;
+  use Bongo\Packages\ApiTools\ApiResponse;
+
+  // 1. Transform Models with JsonResource
+  return UserResource::make(User::find(1));
+
+  // 2. Paginated Resource Collections (auto-includes links & meta)
+  return UserResource::collection(User::paginate(15));
+
+  // 3. Standardized API Responses
+  return ApiResponse::success($userData, 'Profile updated successfully');
+  return ApiResponse::error('Validation failed', 422, ['email' => ['Invalid']]);
+  return ApiResponse::paginated($paginatedUsers, UserResource::class);
+  ```
+* **API Rate Limiting Middleware:**
+  ```php
+  use System\Routing\Route;
+
+  Route::middleware('api-throttle:60,1')->group(function () {
+      Route::get('/api/users', [UserController::class, 'index']);
+  });
+  ```
+* **CLI Commands:**
+  ```bash
+  # Pretty table listing all registered API endpoints
+  php bongo api:routes
+
+  # Export OpenAPI 3.0 specification JSON file
+  php bongo api:docs --out=public/docs/openapi.json
+
+  # Generate a new API resource class
+  php bongo make:resource UserResource
+  php bongo make:resource UserCollection --collection
   ```
 
 
