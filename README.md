@@ -152,7 +152,7 @@ $this->get('/products')
     ->assertSee('Yoga Mat');
 ```
 ```bash
-php bongo test              # Runs 312 unit and HTTP integration tests on isolated DB
+php bongo test              # Runs 319 unit and HTTP integration tests on isolated DB
 ```
 
 ---
@@ -164,7 +164,7 @@ Bongo includes an exhaustive set of full-stack batteries out of the box:
 | Component | Capabilities |
 |---|---|
 | **HTTP & Routing** | RESTful verb routing (`get`, `post`, `put`, `patch`, `delete`), route groups, route prefixing, named parameters, signed URLs, CORS, security headers, middleware stacks, and form requests (`make:request`). |
-| **Database & ORM** | MySQL/MariaDB and SQLite query builder, transactions, Active Record models, relationships (`hasOne`, `hasMany`, `belongsToMany`), eager loading, soft deletes, tracked schema migrations with rollback, and seeders. |
+| **Database & ORM** | MySQL/MariaDB, PostgreSQL (`pgsql`), and SQLite query builder, transactions, Active Record models, relationships (`hasOne`, `hasMany`, `belongsToMany`), eager loading, soft deletes, tracked schema migrations with rollback, and seeders. |
 | **Authentication & Access** | Multi-guard authentication (Session and stateless JWT), password hashing with Argon2id + pepper, account lockout, "Remember me", password reset flows, signed email verification, and authorization policies (`Gate` / `Policy`). |
 | **Validation & Uploads** | 35+ validation rules, array wildcards (`items.*.qty`), conditional rules, and upload validation inspected via real magic bytes (preventing extension spoofing). |
 | **Async & Background** | High-throughput job queues (Database and Redis drivers), worker daemon (`php bongo queue:work`), task scheduler (execute recurring jobs without server cron in dev via `php bongo schedule:work`), and queued background mail. |
@@ -229,8 +229,8 @@ php bongo make:notification OrderShippedNotification
 ## 📋 System Requirements
 
 * **PHP 8.0+**
-* Extensions: `pdo_mysql` (or `pdo_sqlite`), `openssl`, `mbstring`
-* Database: MySQL / MariaDB (5.7+) or SQLite (3.x+)
+* Extensions: `pdo_mysql`, `pdo_pgsql`, or `pdo_sqlite`; `openssl`, `mbstring`
+* Database: MySQL / MariaDB (5.7+), PostgreSQL (12+), or SQLite (3.x+)
 * Web Server: Apache (with `mod_rewrite`), Nginx, or PHP built-in server
 
 ---

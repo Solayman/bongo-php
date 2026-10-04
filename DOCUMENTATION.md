@@ -806,25 +806,39 @@ Custom error pages: `resources/views/errors/{404,405,419,...}.php`.
 
 ## 8. Database
 
-### MySQL or SQLite
+### MySQL, PostgreSQL, or SQLite
 
-MySQL is the default. For a small app, a demo or tests without a database server, use SQLite: the whole database is one file.
+MySQL is the default. PostgreSQL (`pgsql`) is supported natively for high-concurrency enterprise workloads. For a small app, a demo or tests without a database server, use SQLite: the whole database is one file.
 
 ```ini
-# .env
+# .env for PostgreSQL
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=bongo
+DB_USERNAME=postgres
+DB_PASSWORD=secret
+DB_SCHEMA=public      # optional, default is public
+DB_SSLMODE=prefer     # optional, prefer/require/disable
+
+# .env for SQLite
 DB_CONNECTION=sqlite
 DB_SQLITE_PATH=D:/projects/shop/database/database.sqlite   # optional, this is the default place
 ```
 
-PHP needs the `pdo_sqlite` extension (`extension=pdo_sqlite` in php.ini). Then run `php bongo migrate` as usual. Migrations, models and the query builder are the same for both databases. The few differences:
+PHP needs the appropriate PDO driver enabled (`pdo_mysql`, `pdo_pgsql`, or `pdo_sqlite` in php.ini). Then run `php bongo migrate` as usual. Migrations, models and the query builder are identical across all three engines.
 
-| | MySQL | SQLite |
-|---|---|---|
-| `->after('column')` | places the new column | ignored (new columns go last) |
-| `$table->dropForeign()` | works | not supported, so copy the table instead |
-| `lockForUpdate()` / `sharedLock()` | row locks | ignored (a write locks the whole file) |
-| `upsert()` | `ON DUPLICATE KEY` | `ON CONFLICT` (same result) |
-| Raw SQL in `DB::raw()` | MySQL functions | write SQL both understand, or check `Connection::driver()` |
+| Feature | MySQL | PostgreSQL (`pgsql`) | SQLite |
+|---|---|---|---|
+| Auto-increment PK | `BIGINT UNSIGNED AUTO_INCREMENT` | `BIGSERIAL PRIMARY KEY` | `INTEGER PRIMARY KEY AUTOINCREMENT` |
+| Identifier Quoting | Backticks `` `col` `` | Double quotes `"col"` | Backticks / Quotes |
+| `->after('column')` | Places the new column | Ignored (columns append to table) | Ignored (new columns go last) |
+| `$table->dropForeign()` | Works | Works (`DROP CONSTRAINT`) | Not supported (copy table instead) |
+| `lockForUpdate()` / `sharedLock()` | `FOR UPDATE` / `LOCK IN SHARE MODE` | `FOR UPDATE` / `FOR SHARE` | Ignored (write locks whole database) |
+| `upsert()` | `ON DUPLICATE KEY UPDATE` | `ON CONFLICT (...) DO UPDATE` | `ON CONFLICT (...) DO UPDATE` |
+| Truncate Table | `TRUNCATE TABLE` | `TRUNCATE TABLE ... RESTART IDENTITY CASCADE` | `DELETE` + reset sequence |
+| Boolean Type | `TINYINT(1)` | Native `BOOLEAN` | `TINYINT(1)` |
+| JSON Type | `JSON` | Native `JSONB` | `TEXT` |
 
 `php bongo test` uses `storage/testing/database.sqlite` when `DB_CONNECTION=sqlite`, so your real database file is never touched.
 

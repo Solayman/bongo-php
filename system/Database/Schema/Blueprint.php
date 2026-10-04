@@ -8,6 +8,7 @@ namespace System\Database\Schema;
 class Blueprint
 {
     use SqliteGrammar;
+    use PostgresGrammar;
 
     /** @var ColumnDefinition[] */
     protected array $columns = [];
@@ -19,7 +20,7 @@ class Blueprint
     public string $charset = 'utf8mb4';
     public string $collation = 'utf8mb4_unicode_ci';
 
-    /** $driver: "mysql" or "sqlite" (Schema passes the current connection's driver) */
+    /** $driver: "mysql", "sqlite", or "pgsql" (Schema passes the current connection's driver) */
     public function __construct(public string $table, public string $driver = 'mysql') {}
 
     // ------------------------------------------------------------------
@@ -173,17 +174,21 @@ class Blueprint
     /** Every statement Schema::create() runs, for the current driver */
     public function toCreateStatements(): array
     {
-        return $this->driver === 'sqlite' ? $this->sqliteCreate() : [$this->toCreateSql()];
+        return match ($this->driver) {
+            'sqlite' => $this->sqliteCreate(),
+            'pgsql'  => $this->pgsqlCreate(),
+            default  => [$this->toCreateSql()],
+        };
     }
 
     /** Every statement Schema::table() runs, for the current driver */
     public function toAlterStatements(): array
     {
-        if ($this->driver === 'sqlite') {
-            return $this->sqliteAlter();
-        }
-        $sql = $this->toAlterSql();
-        return $sql === null ? [] : [$sql];
+        return match ($this->driver) {
+            'sqlite' => $this->sqliteAlter(),
+            'pgsql'  => $this->pgsqlAlter(),
+            default  => ($sql = $this->toAlterSql()) === null ? [] : [$sql],
+        };
     }
 
     public function toCreateSql(): string
@@ -286,8 +291,12 @@ class Blueprint
         return $definitions;
     }
 
-    public static function wrap(string $identifier): string
+    public static function wrap(string $identifier, ?string $driver = null): string
     {
+        $driver ??= \System\Database\Connection::driver();
+        if ($driver === 'pgsql') {
+            return '"' . str_replace('"', '""', $identifier) . '"';
+        }
         return '`' . str_replace('`', '``', $identifier) . '`';
     }
 

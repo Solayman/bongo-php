@@ -41,9 +41,10 @@ class Schema
 
     public static function rename(string $from, string $to): void
     {
-        $sql = Connection::isSqlite()
-            ? 'ALTER TABLE ' . Blueprint::wrap($from) . ' RENAME TO ' . Blueprint::wrap($to)
-            : 'RENAME TABLE ' . Blueprint::wrap($from) . ' TO ' . Blueprint::wrap($to);
+        $sql = match (true) {
+            Connection::isSqlite(), Connection::isPgsql() => 'ALTER TABLE ' . Blueprint::wrap($from) . ' RENAME TO ' . Blueprint::wrap($to),
+            default => 'RENAME TABLE ' . Blueprint::wrap($from) . ' TO ' . Blueprint::wrap($to),
+        };
         Connection::getInstance()->exec($sql);
     }
 
@@ -56,6 +57,10 @@ class Schema
     {
         if (Connection::isSqlite()) {
             $stmt = Connection::getInstance()->prepare('SELECT COUNT(*) FROM pragma_table_info(?) WHERE name = ?');
+        } elseif (Connection::isPgsql()) {
+            $stmt = Connection::getInstance()->prepare(
+                'SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = ? AND column_name = ?'
+            );
         } else {
             $stmt = Connection::getInstance()->prepare(
                 'SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?'
@@ -68,9 +73,11 @@ class Schema
     /** Names of every table in the database, sorted */
     public static function tables(): array
     {
-        $sql = Connection::isSqlite()
-            ? "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
-            : 'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = \'BASE TABLE\' ORDER BY TABLE_NAME';
+        $sql = match (true) {
+            Connection::isSqlite() => "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+            Connection::isPgsql()  => "SELECT table_name FROM information_schema.tables WHERE table_schema = current_schema() AND table_type = 'BASE TABLE' ORDER BY table_name",
+            default                => "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME",
+        };
         return Connection::getInstance()->query($sql)->fetchAll(\PDO::FETCH_COLUMN);
     }
 
@@ -78,11 +85,22 @@ class Schema
     public static function withoutForeignKeyChecks(callable $callback): void
     {
         $pdo = Connection::getInstance();
-        $pdo->exec(Connection::isSqlite() ? 'PRAGMA foreign_keys = OFF' : 'SET FOREIGN_KEY_CHECKS = 0');
+        $disable = match (true) {
+            Connection::isSqlite() => 'PRAGMA foreign_keys = OFF',
+            Connection::isPgsql()  => "SET session_replication_role = 'replica'",
+            default                => 'SET FOREIGN_KEY_CHECKS = 0',
+        };
+        $enable = match (true) {
+            Connection::isSqlite() => 'PRAGMA foreign_keys = ON',
+            Connection::isPgsql()  => "SET session_replication_role = 'origin'",
+            default                => 'SET FOREIGN_KEY_CHECKS = 1',
+        };
+
+        $pdo->exec($disable);
         try {
             $callback();
         } finally {
-            $pdo->exec(Connection::isSqlite() ? 'PRAGMA foreign_keys = ON' : 'SET FOREIGN_KEY_CHECKS = 1');
+            $pdo->exec($enable);
         }
     }
 

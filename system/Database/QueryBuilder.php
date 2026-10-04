@@ -321,7 +321,7 @@ class QueryBuilder
     /** Shared lock: others can read but not change the rows until the transaction ends */
     public function sharedLock(): self
     {
-        $this->lock = ' LOCK IN SHARE MODE';
+        $this->lock = Connection::isPgsql() ? ' FOR SHARE' : ' LOCK IN SHARE MODE';
         return $this;
     }
 
@@ -574,11 +574,12 @@ class QueryBuilder
 
     /**
      * Insert rows, or update them when the unique key already exists (one query):
-     *   DB::table('products')->upsert([['sku' => 'A1', 'price' => 5], ...], ['price']);
+     *   DB::table('products')->upsert([['sku' => 'A1', 'price' => 5], ...], ['price'], ['sku']);
      * $update: the columns to change for existing rows (default: every column given).
-     * Returns how many rows MySQL reports as affected.
+     * $uniqueBy: the conflict target columns (for PostgreSQL/SQLite; default: 'id' or first column).
+     * Returns how many rows were affected.
      */
-    public function upsert(array $rows, ?array $update = null): int
+    public function upsert(array $rows, ?array $update = null, array|string|null $uniqueBy = null): int
     {
         if ($rows === []) {
             return 0;
@@ -596,7 +597,13 @@ class QueryBuilder
         $sql = "INSERT INTO {$this->table} (" . implode(',', $columns) . ') VALUES '
             . implode(',', array_fill(0, count($rows), $placeholders));
         if (Connection::isSqlite()) {
-            $sql .= ' ON CONFLICT DO UPDATE SET ' . implode(', ', array_map(fn($c) => "$c = excluded.$c", $update ?? $columns));
+            $target = $uniqueBy ? '(' . implode(', ', (array) $uniqueBy) . ')' : '';
+            $sql .= " ON CONFLICT $target DO UPDATE SET " . implode(', ', array_map(fn($c) => "$c = excluded.$c", $update ?? $columns));
+        } elseif (Connection::isPgsql()) {
+            $candidates = array_values(array_diff($columns, $update ?? []));
+            $targetCols = $uniqueBy ? (array) $uniqueBy : (in_array('id', $columns, true) ? ['id'] : ($candidates ?: [$columns[0]]));
+            $target = '(' . implode(', ', array_map(fn($c) => '"' . str_replace('"', '""', $c) . '"', $targetCols)) . ')';
+            $sql .= " ON CONFLICT $target DO UPDATE SET " . implode(', ', array_map(fn($c) => "\"$c\" = EXCLUDED.\"$c\"", $update ?? $columns));
         } else {
             $sql .= ' ON DUPLICATE KEY UPDATE ' . implode(', ', array_map(fn($c) => "$c = VALUES($c)", $update ?? $columns));
         }
@@ -634,8 +641,16 @@ class QueryBuilder
     }
 
     /** Insert and return the new auto-increment id */
-    public function insertGetId(array $data): int
+    public function insertGetId(array $data, string $idColumn = 'id'): int
     {
+        if (Connection::isPgsql()) {
+            $columns = implode(',', array_keys($data));
+            $placeholders = implode(',', array_fill(0, count($data), '?'));
+            $sql = "INSERT INTO {$this->table} ($columns) VALUES ($placeholders) RETURNING \"$idColumn\"";
+            $stmt = $this->run($sql, array_values($data));
+            return (int) $stmt->fetchColumn();
+        }
+
         $this->insert($data);
         return (int) $this->pdo()->lastInsertId();
     }
@@ -645,8 +660,8 @@ class QueryBuilder
     {
         $this->assertHasWhere($all, 'update');
 
-        // SQLite does not accept "table.column" on the left of SET
-        $column = fn($col) => Connection::isSqlite() && str_starts_with($col, "{$this->table}.") ? substr($col, strlen($this->table) + 1) : $col;
+        // SQLite and PostgreSQL do not accept "table.column" on the left of SET
+        $column = fn($col) => str_starts_with($col, "{$this->table}.") ? substr($col, strlen($this->table) + 1) : $col;
         $set = implode(',', array_map(fn($col) => $column($col) . ' = ?', array_keys($data)));
         $this->run("UPDATE {$this->table} SET $set" . $this->compileWheres(), [...array_values($data), ...$this->bindings]);
         return true;
@@ -695,6 +710,8 @@ class QueryBuilder
                 $this->run('DELETE FROM sqlite_sequence WHERE name = ?', [$this->table]);
             } catch (\PDOException) {
             }
+        } elseif (Connection::isPgsql()) {
+            $this->run("TRUNCATE TABLE {$this->table} RESTART IDENTITY CASCADE", []);
         } else {
             $this->run("TRUNCATE TABLE {$this->table}", []);
         }
