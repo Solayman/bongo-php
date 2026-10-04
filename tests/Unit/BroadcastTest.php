@@ -1,4 +1,5 @@
 <?php
+
 namespace Tests\Unit;
 
 use System\Broadcasting\Broadcast;
@@ -42,7 +43,9 @@ class BroadcastTest extends TestCase
         $this->server = proc_open(
             [PHP_BINARY, BASE_PATH . '/bongo', 'websocket:serve', "--port={$this->port}"],
             [0 => ['pipe', 'r'], 1 => ['file', $null, 'w'], 2 => ['file', $null, 'w']],
-            $pipes, BASE_PATH, getenv() + ['BROADCAST_ALLOWED_ORIGINS' => 'http://good.test']
+            $pipes,
+            BASE_PATH,
+            getenv() + ['BROADCAST_ALLOWED_ORIGINS' => 'http://good.test']
         );
         $GLOBALS['config']['broadcasting']['host'] = '127.0.0.1';
         $GLOBALS['config']['broadcasting']['port'] = $this->port;
@@ -87,7 +90,9 @@ class BroadcastTest extends TestCase
         while (($frame = Frame::decode($buffer)) === null) {
             $chunk = fread($socket, 8192);
             if ($chunk === '' || $chunk === false) {
-                if (feof($socket) || stream_get_meta_data($socket)['timed_out']) return null;
+                if (feof($socket) || stream_get_meta_data($socket)['timed_out']) {
+                    return null;
+                }
                 continue;
             }
             $buffer .= $chunk;

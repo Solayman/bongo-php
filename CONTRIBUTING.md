@@ -15,6 +15,7 @@ Thank you for helping. Bug reports, fixes, docs and translations are all welcome
 3. **Friendly for developers.** Familiar patterns, clear error messages that say how to fix the problem, and short docs with examples.
 4. **Written from scratch.** Don't copy code from other frameworks. Common ideas (routes, controllers, migrations) are fine.
 5. **Log through the framework logger** (`logger()`, `Log::...`), not `error_log()` or `echo`.
+6. **PSR-12 code style.** The rules are in [`phpcs.xml`](phpcs.xml). PHP_CodeSniffer is not a dependency: download `phpcs.phar` / `phpcbf.phar` from [its releases](https://github.com/PHPCSStandards/PHP_CodeSniffer/releases), then run `php phpcs.phar` to check and `php phpcbf.phar` to fix. Every change must have **0 errors**.
 
 ## Making a change
 
@@ -22,6 +23,8 @@ Thank you for helping. Bug reports, fixes, docs and translations are all welcome
 git checkout -b fix/short-description
 php bongo test                      # all tests must pass (MySQL)
 DB_CONNECTION=sqlite php -d extension=pdo_sqlite bongo test   # and on SQLite, for database changes
+DB_CONNECTION=pgsql DB_PORT=5432 DB_USERNAME=postgres DB_PASSWORD=secret php -d extension=pdo_pgsql bongo test   # and PostgreSQL
+php phpcs.phar                      # PSR-12: 0 errors
 ```
 
 - **One pull request per fix or feature.** Small PRs are reviewed faster.

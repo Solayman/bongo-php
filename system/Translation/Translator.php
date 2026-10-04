@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Translation;
 
 /**
@@ -23,7 +24,8 @@ class Translator
         protected string $path,
         protected string $locale = 'en',
         protected string $fallback = 'en'
-    ) {}
+    ) {
+    }
 
     public function getLocale(): string
     {

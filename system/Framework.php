@@ -1,4 +1,5 @@
 <?php
+
 namespace System;
 
 /**
@@ -21,7 +22,9 @@ class Framework
         $bytes = 0;
         $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(__DIR__, \FilesystemIterator::SKIP_DOTS));
         foreach ($it as $file) {
-            if ($file->getExtension() !== 'php') continue;
+            if ($file->getExtension() !== 'php') {
+                continue;
+            }
             $files++;
             $bytes += $file->getSize();
             $lines += substr_count((string) file_get_contents($file->getPathname()), "\n");

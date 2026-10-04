@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use System\Auth\PasswordBroker;
@@ -7,7 +8,9 @@ use System\Http\Session;
 
 class PasswordResetController extends Controller
 {
-    public function __construct(protected PasswordBroker $broker) {}
+    public function __construct(protected PasswordBroker $broker)
+    {
+    }
 
     /** GET /forgot-password */
     public function showForgot()

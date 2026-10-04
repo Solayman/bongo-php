@@ -1,4 +1,5 @@
 <?php
+
 namespace Tests\Unit;
 
 use System\Auth\PasswordBroker;
@@ -17,7 +18,9 @@ class PasswordBrokerTest extends TestCase
     {
         $broker = new PasswordBroker();
         $sent = [];
-        $capture = function ($user, $link, $token) use (&$sent) { $sent[] = $token; };
+        $capture = function ($user, $link, $token) use (&$sent) {
+            $sent[] = $token;
+        };
 
         $email = 'unit-throttle-' . bin2hex(random_bytes(3)) . '@example.com';
         for ($i = 0; $i < 3; $i++) {

@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Routing;
 
 use RuntimeException;
@@ -145,13 +146,34 @@ class Router
     // Registration
     // ------------------------------------------------------------------
 
-    public function get(string $path, array|\Closure $action): RouteDefinition     { return $this->add(['GET'], $path, $action); }
-    public function post(string $path, array|\Closure $action): RouteDefinition    { return $this->add(['POST'], $path, $action); }
-    public function put(string $path, array|\Closure $action): RouteDefinition     { return $this->add(['PUT'], $path, $action); }
-    public function patch(string $path, array|\Closure $action): RouteDefinition   { return $this->add(['PATCH'], $path, $action); }
-    public function delete(string $path, array|\Closure $action): RouteDefinition  { return $this->add(['DELETE'], $path, $action); }
-    public function options(string $path, array|\Closure $action): RouteDefinition { return $this->add(['OPTIONS'], $path, $action); }
-    public function any(string $path, array|\Closure $action): RouteDefinition     { return $this->add(self::VERBS, $path, $action); }
+    public function get(string $path, array|\Closure $action): RouteDefinition
+    {
+        return $this->add(['GET'], $path, $action);
+    }
+    public function post(string $path, array|\Closure $action): RouteDefinition
+    {
+        return $this->add(['POST'], $path, $action);
+    }
+    public function put(string $path, array|\Closure $action): RouteDefinition
+    {
+        return $this->add(['PUT'], $path, $action);
+    }
+    public function patch(string $path, array|\Closure $action): RouteDefinition
+    {
+        return $this->add(['PATCH'], $path, $action);
+    }
+    public function delete(string $path, array|\Closure $action): RouteDefinition
+    {
+        return $this->add(['DELETE'], $path, $action);
+    }
+    public function options(string $path, array|\Closure $action): RouteDefinition
+    {
+        return $this->add(['OPTIONS'], $path, $action);
+    }
+    public function any(string $path, array|\Closure $action): RouteDefinition
+    {
+        return $this->add(self::VERBS, $path, $action);
+    }
 
     public function match(array $methods, string $path, array|\Closure $action): RouteDefinition
     {
@@ -227,7 +249,9 @@ class Router
         if ($this->namedCount !== count($this->routes)) {
             $this->named = [];
             foreach ($this->routes as $route) {
-                if ($route->name !== null && $route->name !== '') $this->named[$route->name] ??= $route;
+                if ($route->name !== null && $route->name !== '') {
+                    $this->named[$route->name] ??= $route;
+                }
             }
             $this->namedCount = count($this->routes);
         }
@@ -399,7 +423,9 @@ class Router
             return;
         }
         if (is_array($result) || $result instanceof \JsonSerializable) {
-            if (!headers_sent()) header('Content-Type: application/json');
+            if (!headers_sent()) {
+                header('Content-Type: application/json');
+            }
             echo json_encode($result);
         } elseif (is_string($result)) {
             echo $result;

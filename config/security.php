@@ -1,4 +1,5 @@
 <?php
+
 return [
     // Proxies/load balancers whose X-Forwarded-For / X-Forwarded-Proto headers are trusted.
     // Comma-separated IPs, e.g. TRUSTED_PROXIES=127.0.0.1,10.0.0.5 ("*" = any; only behind a proxy you control)

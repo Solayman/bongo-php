@@ -1,4 +1,5 @@
 <?php
+
 namespace Tests\Unit;
 
 use System\Http\UploadedFile;
@@ -12,7 +13,9 @@ class ValidationRulesTest extends TestCase
 
     public function tearDown(): void
     {
-        foreach ($this->temp as $file) @unlink($file);
+        foreach ($this->temp as $file) {
+            @unlink($file);
+        }
     }
 
     protected function png(int $w = 4, int $h = 4): string
@@ -132,11 +135,19 @@ class ValidationRulesTest extends TestCase
     public function testCustomRulesAsClosuresAndClasses(): void
     {
         $even = function (string $attribute, $value, callable $fail) {
-            if ((int) $value % 2 !== 0) $fail('The :attribute must be even.');
+            if ((int) $value % 2 !== 0) {
+                $fail('The :attribute must be even.');
+            }
         };
         $upper = new class implements \System\Validation\Rule {
-            public function passes(string $attribute, mixed $value, array $data): bool { return strtoupper($value) === $value; }
-            public function message(): string { return 'The :attribute must be uppercase.'; }
+            public function passes(string $attribute, mixed $value, array $data): bool
+            {
+                return strtoupper($value) === $value;
+            }
+            public function message(): string
+            {
+                return 'The :attribute must be uppercase.';
+            }
         };
         $rules = ['seats' => ['required', 'integer', $even], 'code' => ['nullable', $upper]];
 
@@ -155,8 +166,12 @@ class ValidationRulesTest extends TestCase
 
     public function testCustomMessagesAndAttributeNames(): void
     {
-        $errors = Validator::make(['email' => '', 'qty' => 0], ['email' => 'required', 'qty' => 'integer|min:1'],
-            ['email.required' => 'We need your :attribute to send the receipt.'], ['qty' => 'quantity']);
+        $errors = Validator::make(
+            ['email' => '', 'qty' => 0],
+            ['email' => 'required', 'qty' => 'integer|min:1'],
+            ['email.required' => 'We need your :attribute to send the receipt.'],
+            ['qty' => 'quantity']
+        );
         $this->assertSame('We need your email to send the receipt.', $errors['email']);
         $this->assertSame('The quantity must be at least 1.', $errors['qty']);
     }

@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Scheduling;
 
 use System\Queue\Job;
@@ -27,7 +28,9 @@ class Schedule
     {
         $task = $this->tasks[] = new Task(function () use ($command, $arguments) {
             $cmd = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(BASE_PATH . '/bongo') . ' ' . escapeshellarg($command);
-            foreach ($arguments as $arg) $cmd .= ' ' . escapeshellarg((string) $arg);
+            foreach ($arguments as $arg) {
+                $cmd .= ' ' . escapeshellarg((string) $arg);
+            }
             exec($cmd . ' 2>&1', $output, $code);
             if ($code !== 0) {
                 throw new \RuntimeException("bongo $command exited with $code: " . implode("\n", array_slice($output, -5)));

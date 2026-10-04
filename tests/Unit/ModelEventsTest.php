@@ -10,17 +10,54 @@ namespace Tests\Unit\EventsProbe {
         protected array $casts = ['id' => 'int', 'views' => 'int'];
         public static array $log = [];
 
-        protected function saving()   { self::$log[] = 'saving'; }
-        protected function creating() { self::$log[] = 'creating'; $this->slug ??= strtolower(str_replace(' ', '-', (string) $this->title)); }
-        protected function created()  { self::$log[] = 'created'; }
-        protected function updating() { self::$log[] = 'updating'; if ($this->title === 'locked') return false; }
-        protected function updated()  { self::$log[] = 'updated'; }
-        protected function saved()    { self::$log[] = 'saved'; }
-        protected function deleting() { self::$log[] = 'deleting'; if ($this->status === 'keep') return false; }
-        protected function deleted()  { self::$log[] = 'deleted'; }
+        protected function saving()
+        {
+            self::$log[] = 'saving';
+        }
+        protected function creating()
+        {
+            self::$log[] = 'creating';
+            $this->slug ??= strtolower(str_replace(' ', '-', (string) $this->title));
+        }
+        protected function created()
+        {
+            self::$log[] = 'created';
+        }
+        protected function updating()
+        {
+            self::$log[] = 'updating';
+            if ($this->title === 'locked') {
+                return false;
+            }
+        }
+        protected function updated()
+        {
+            self::$log[] = 'updated';
+        }
+        protected function saved()
+        {
+            self::$log[] = 'saved';
+        }
+        protected function deleting()
+        {
+            self::$log[] = 'deleting';
+            if ($this->status === 'keep') {
+                return false;
+            }
+        }
+        protected function deleted()
+        {
+            self::$log[] = 'deleted';
+        }
 
-        public function scopePublished($query) { $query->where('status', 'published'); }
-        public function scopePopular($query, int $min = 100) { $query->where('views', '>=', $min); }
+        public function scopePublished($query)
+        {
+            $query->where('status', 'published');
+        }
+        public function scopePopular($query, int $min = 100)
+        {
+            $query->where('views', '>=', $min);
+        }
     }
 }
 

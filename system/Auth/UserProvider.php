@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Auth;
 
 use System\Database\DB;
@@ -14,7 +15,8 @@ class UserProvider
         protected string $table = 'users',
         protected array $where = [],
         protected string $identifier = 'email'
-    ) {}
+    ) {
+    }
 
     public static function fromConfig(string $name): self
     {

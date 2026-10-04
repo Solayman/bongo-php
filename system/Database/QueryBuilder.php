@@ -475,7 +475,9 @@ class QueryBuilder
         // Reuse a matching select() expression ("COUNT(*) AS n" for pluck('n'))
         $expression = function (string $name) {
             foreach ($this->columns as $selected) {
-                if ($selected !== '*' && self::resultKey($selected) === self::resultKey($name)) return $selected;
+                if ($selected !== '*' && self::resultKey($selected) === self::resultKey($name)) {
+                    return $selected;
+                }
             }
             return $name;
         };
@@ -593,7 +595,7 @@ class QueryBuilder
      */
     public function chunk(int $size, callable $callback): void
     {
-        for ($page = 0; ; $page++) {
+        for ($page = 0;; $page++) {
             $rows = (clone $this)->limit($size)->offset($page * $size)->get();
             if (!$rows || $callback($rows, $page + 1) === false || count($rows) < $size) {
                 return;
@@ -743,7 +745,9 @@ class QueryBuilder
     {
         $this->assertHasWhere(false, 'increment');
         $set = ["$column = $column + ?"];
-        foreach (array_keys($extra) as $col) $set[] = "$col = ?";
+        foreach (array_keys($extra) as $col) {
+            $set[] = "$col = ?";
+        }
         $this->run("UPDATE {$this->table} SET " . implode(', ', $set) . $this->compileWheres(), [$amount, ...array_values($extra), ...$this->bindings]);
         return true;
     }

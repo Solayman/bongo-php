@@ -1,4 +1,5 @@
 <?php
+
 return [
     // SMS: an HTTP gateway that takes a POST. Without a URL, SMS messages are written to the log.
     'sms' => [

@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Database\Schema;
 
 /**
@@ -112,8 +113,12 @@ trait SqliteGrammar
         };
 
         foreach ($this->columns as $column) {
-            if ($column->unique) $add('UNIQUE', [$column->name], null);
-            if ($column->index || $column->foreign) $add('INDEX', [$column->name], null);
+            if ($column->unique) {
+                $add('UNIQUE', [$column->name], null);
+            }
+            if ($column->index || $column->foreign) {
+                $add('INDEX', [$column->name], null);
+            }
         }
         foreach ($this->indexes as [$type, $columns, $name]) {
             $add($type, $columns, $name);
@@ -127,7 +132,9 @@ trait SqliteGrammar
     {
         $statements = [];
         foreach ($this->columns as $column) {
-            if ($column->onUpdate === null) continue;
+            if ($column->onUpdate === null) {
+                continue;
+            }
             $table = $this->wrapName($this->table);
             $col = $this->wrapName($column->name);
             $statements[] = 'CREATE TRIGGER IF NOT EXISTS ' . $this->wrapName("{$this->table}_{$column->name}_on_update")

@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Auth;
 
 use System\Database\DB;

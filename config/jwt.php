@@ -1,4 +1,5 @@
 <?php
+
 return [
     // Minutes an access token is valid
     'ttl' => (int) env('JWT_TTL', 60),

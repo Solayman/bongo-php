@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Auth;
 
 use Closure;
@@ -79,10 +80,18 @@ class Gate
     /** Checks for another user: Gate::forUser($customer)->allows('view', $order) */
     public static function forUser(?object $user): object
     {
-        return new class($user) {
-            public function __construct(protected ?object $user) {}
-            public function allows(string $ability, mixed ...$arguments): bool { return Gate::checkFor($this->user, $ability, $arguments); }
-            public function denies(string $ability, mixed ...$arguments): bool { return !$this->allows($ability, ...$arguments); }
+        return new class ($user) {
+            public function __construct(protected ?object $user)
+            {
+            }
+            public function allows(string $ability, mixed ...$arguments): bool
+            {
+                return Gate::checkFor($this->user, $ability, $arguments);
+            }
+            public function denies(string $ability, mixed ...$arguments): bool
+            {
+                return !$this->allows($ability, ...$arguments);
+            }
         };
     }
 
@@ -118,27 +127,37 @@ class Gate
     protected static function check(string $ability, array $arguments, ?object $user): bool
     {
         foreach (self::$before as $callback) {
-            if ($user === null && !self::acceptsGuests($callback)) continue;
+            if ($user === null && !self::acceptsGuests($callback)) {
+                continue;
+            }
             $result = $callback($user, $ability, ...$arguments);
-            if ($result !== null) return (bool) $result;
+            if ($result !== null) {
+                return (bool) $result;
+            }
         }
 
         // A policy method for the first argument's class wins over a plain ability
         if ($arguments && ($policy = self::policyFor($arguments[0]))) {
             if (method_exists($policy, 'before')) {
                 $result = $policy->before($user, $ability, ...$arguments);
-                if ($result !== null) return (bool) $result;
+                if ($result !== null) {
+                    return (bool) $result;
+                }
             }
             $method = lcfirst(str_replace(['-', '_'], '', ucwords($ability, '-_')));   // "force-delete" → forceDelete
             if (method_exists($policy, $method)) {
-                if ($user === null && !self::acceptsGuests([$policy, $method])) return false;
+                if ($user === null && !self::acceptsGuests([$policy, $method])) {
+                    return false;
+                }
                 return (bool) $policy->$method($user, ...$arguments);
             }
         }
 
         if (isset(self::$abilities[$ability])) {
             $callback = self::$abilities[$ability];
-            if ($user === null && !self::acceptsGuests($callback)) return false;
+            if ($user === null && !self::acceptsGuests($callback)) {
+                return false;
+            }
             return (bool) $callback($user, ...$arguments);
         }
 

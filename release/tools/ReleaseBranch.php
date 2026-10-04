@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Console;
 
 use RuntimeException;
@@ -10,7 +11,9 @@ use RuntimeException;
  */
 class ReleaseBranch
 {
-    public function __construct(protected string $repo, protected string $branch = 'release') {}
+    public function __construct(protected string $repo, protected string $branch = 'release')
+    {
+    }
 
     /** Returns the new commit's short hash */
     public function update(): string
@@ -35,7 +38,9 @@ class ReleaseBranch
 
             // Replace everything in the branch with the new build
             foreach (scandir($tree) as $item) {
-                if ($item !== '.' && $item !== '..' && $item !== '.git') $this->deleteTree("$tree/$item");
+                if ($item !== '.' && $item !== '..' && $item !== '.git') {
+                    $this->deleteTree("$tree/$item");
+                }
             }
             $this->copyTree($build, $tree);
             $this->git('add -A', $tree);
@@ -75,10 +80,17 @@ class ReleaseBranch
 
     protected function deleteTree(string $path): void
     {
-        if (is_file($path)) { @unlink($path); return; }
-        if (!is_dir($path)) return;
+        if (is_file($path)) {
+            @unlink($path);
+            return;
+        }
+        if (!is_dir($path)) {
+            return;
+        }
         $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS), \RecursiveIteratorIterator::CHILD_FIRST);
-        foreach ($it as $f) $f->isDir() ? @rmdir($f->getPathname()) : @unlink($f->getPathname());
+        foreach ($it as $f) {
+            $f->isDir() ? @rmdir($f->getPathname()) : @unlink($f->getPathname());
+        }
         @rmdir($path);
     }
 }

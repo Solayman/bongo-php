@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Jobs;
 
 use System\Database\DB;
@@ -13,7 +14,9 @@ class SendLowStockReport extends Job
 {
     public int $tries = 2;
 
-    public function __construct(public int $threshold = 10) {}
+    public function __construct(public int $threshold = 10)
+    {
+    }
 
     public function handle(): void
     {

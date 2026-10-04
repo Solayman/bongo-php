@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Container;
 
 use Closure;
@@ -216,7 +217,9 @@ class Container
             return $value;
         }
         if ($value === null || $value === '') {
-            if ($param->allowsNull()) return null;
+            if ($param->allowsNull()) {
+                return null;
+            }
             throw new HttpException(404, (new ReflectionClass($class))->getShortName() . ' not found');
         }
         return $class::findOrFail($value);

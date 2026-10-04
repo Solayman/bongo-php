@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
@@ -81,7 +82,9 @@ class AuthController extends Controller
     /** Never send the password hash */
     protected function publicUser(?object $user): ?array
     {
-        if (!$user) return null;
+        if (!$user) {
+            return null;
+        }
         $data = (array) $user;
         unset($data['password']);
         return $data;

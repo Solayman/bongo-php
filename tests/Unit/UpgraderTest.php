@@ -1,4 +1,5 @@
 <?php
+
 namespace Tests\Unit;
 
 require_once BASE_PATH . "/release/tools/commands.php";
@@ -21,7 +22,9 @@ class UpgraderTest extends TestCase
     public function tearDown(): void
     {
         $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($this->tmp, \FilesystemIterator::SKIP_DOTS), \RecursiveIteratorIterator::CHILD_FIRST);
-        foreach ($it as $f) $f->isDir() ? @rmdir($f) : @unlink($f);
+        foreach ($it as $f) {
+            $f->isDir() ? @rmdir($f) : @unlink($f);
+        }
         @rmdir($this->tmp);
     }
 

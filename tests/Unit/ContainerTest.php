@@ -1,15 +1,43 @@
 <?php
 
 namespace Tests\Unit\ContainerProbe {
-    interface Gateway { public function name(): string; }
-    class FakeGateway implements Gateway { public function name(): string { return 'fake'; } }
-    class Clock { public int $created; public function __construct() { $this->created = random_int(1, PHP_INT_MAX); } }
+    interface Gateway
+    {
+        public function name(): string;
+    }
+    class FakeGateway implements Gateway
+    {
+        public function name(): string
+        {
+            return 'fake';
+        }
+    }
+    class Clock
+    {
+        public int $created;
+        public function __construct()
+        {
+            $this->created = random_int(1, PHP_INT_MAX);
+        }
+    }
     class Checkout
     {
-        public function __construct(public Gateway $gateway, public Clock $clock, public int $retries = 3) {}
+        public function __construct(public Gateway $gateway, public Clock $clock, public int $retries = 3)
+        {
+        }
     }
-    class Loop1 { public function __construct(Loop2 $x) {} }
-    class Loop2 { public function __construct(Loop1 $x) {} }
+    class Loop1
+    {
+        public function __construct(Loop2 $x)
+        {
+        }
+    }
+    class Loop2
+    {
+        public function __construct(Loop1 $x)
+        {
+        }
+    }
 }
 
 namespace Tests\Unit {

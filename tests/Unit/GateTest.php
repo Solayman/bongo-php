@@ -3,7 +3,9 @@
 namespace Tests\Unit\GateProbe {
     class Post
     {
-        public function __construct(public int $authorId, public bool $locked = false) {}
+        public function __construct(public int $authorId, public bool $locked = false)
+        {
+        }
     }
 
     class PostPolicy

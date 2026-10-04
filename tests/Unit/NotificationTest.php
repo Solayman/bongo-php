@@ -7,11 +7,25 @@ namespace Tests\Unit\NotifyProbe {
 
     class OrderShipped extends Notification
     {
-        public function __construct(public string $number, public array $channels = ['mail', 'sms', 'slack']) {}
-        public function via(object $user): array { return $this->channels; }
-        public function toMail(object $user): Message { return Mail::message()->subject("Order {$this->number} shipped")->text('On its way!'); }
-        public function toSms(object $user): string { return "Order {$this->number} shipped"; }
-        public function toSlack(object $user): string { return "Shipped {$this->number} to {$user->name}"; }
+        public function __construct(public string $number, public array $channels = ['mail', 'sms', 'slack'])
+        {
+        }
+        public function via(object $user): array
+        {
+            return $this->channels;
+        }
+        public function toMail(object $user): Message
+        {
+            return Mail::message()->subject("Order {$this->number} shipped")->text('On its way!');
+        }
+        public function toSms(object $user): string
+        {
+            return "Order {$this->number} shipped";
+        }
+        public function toSlack(object $user): string
+        {
+            return "Shipped {$this->number} to {$user->name}";
+        }
     }
 }
 

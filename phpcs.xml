@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<!--
+  Coding standard for Bongo: PSR-12.
+  Check:  php phpcs.phar        Fix:  php phpcbf.phar
+  (PHP_CodeSniffer is not a dependency: download the .phar files from
+   https://github.com/PHPCSStandards/PHP_CodeSniffer/releases when you need them.)
+-->
+<ruleset name="Bongo">
+    <description>PSR-12 for the Bongo PHP Framework</description>
+
+    <file>system</file>
+    <file>app</file>
+    <file>config</file>
+    <file>database</file>
+    <file>routes</file>
+    <file>tests</file>
+    <file>release/tools</file>
+    <file>public/index.php</file>
+    <file>bongo</file>
+
+    <arg name="extensions" value="php"/>
+    <arg name="colors"/>
+    <arg value="sp"/>
+
+    <rule ref="PSR12">
+        <!-- Git stores LF; a Windows checkout may show CRLF -->
+        <exclude name="Generic.Files.LineEndings"/>
+        <!-- bootstrap.php and helpers.php declare functions and run setup on purpose -->
+        <exclude name="PSR1.Files.SideEffects.FoundWithSymbols"/>
+    </rule>
+
+    <!-- Tests keep their small fixture classes (fake jobs, models) next to the test that uses them -->
+    <rule ref="PSR1.Classes.ClassDeclaration.MultipleClasses">
+        <exclude-pattern>tests/*</exclude-pattern>
+    </rule>
+
+    <!-- Long lines are a warning, not an error (SQL, messages and URLs read better on one line) -->
+    <rule ref="Generic.Files.LineLength">
+        <properties>
+            <property name="lineLimit" value="150"/>
+            <property name="absoluteLineLimit" value="0"/>
+        </properties>
+    </rule>
+</ruleset>

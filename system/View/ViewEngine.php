@@ -1,4 +1,5 @@
 <?php
+
 namespace System\View;
 
 /**
@@ -93,7 +94,9 @@ class ViewEngine
     public function firstExisting(array $views): string
     {
         foreach ($views as $view) {
-            if ($this->exists($view)) return $view;
+            if ($this->exists($view)) {
+                return $view;
+            }
         }
         throw new ViewException('None of these views exist: ' . implode(', ', $views));
     }
@@ -117,7 +120,9 @@ class ViewEngine
         $list = [];
         foreach ($classes as $key => $value) {
             if (is_int($key)) {
-                if ($value !== null && $value !== '') $list[] = (string) $value;
+                if ($value !== null && $value !== '') {
+                    $list[] = (string) $value;
+                }
             } elseif ($value) {
                 $list[] = $key;
             }
@@ -204,7 +209,9 @@ class ViewEngine
         foreach ($files as $file) {
             $path = str_replace('\\', '/', $file->getPathname());
             // Skip non-templates, and compiled files when the cache lives inside the view folder
-            if ($file->getExtension() !== 'php' || str_starts_with($path, str_replace('\\', '/', $this->cachePath) . '/')) continue;
+            if ($file->getExtension() !== 'php' || str_starts_with($path, str_replace('\\', '/', $this->cachePath) . '/')) {
+                continue;
+            }
             $relative = substr($path, strlen(str_replace('\\', '/', $this->viewPath)) + 1);
             $view = str_replace('/', '.', substr($relative, 0, -4));
             try {
@@ -313,7 +320,9 @@ class ViewEngine
 
         // Remove older compiled versions of the same template
         foreach (glob($this->cachePath . '/' . $prefix . '_*.php') ?: [] as $old) {
-            if ($old !== $target) @unlink($old);
+            if ($old !== $target) {
+                @unlink($old);
+            }
         }
 
         return $target;

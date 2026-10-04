@@ -81,7 +81,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/system/mail/{id}', [SystemController::class, 'mail'])->name('system.mail')->middleware('can:manage-system');
     Route::get('/system/error-test', [SystemController::class, 'errorTest'])->name('system.error-test');
     Route::get('/system/dump-test', [SystemController::class, 'dumpTest'])->name('system.dump-test');
-
 });
 
 // Storefront for customers (the "customer" guard; separate from the admin login)

@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Http\Client;
 
 /** Thrown by $response->throw() for a 4xx/5xx answer; ->response holds it */

@@ -1,4 +1,5 @@
 <?php
+
 namespace Tests\Unit;
 
 use System\Cache\FileStore;
@@ -20,9 +21,13 @@ class CacheTest extends TestCase
 
     public function tearDown(): void
     {
-        if (!is_dir($this->dir)) return;
+        if (!is_dir($this->dir)) {
+            return;
+        }
         $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($this->dir, \FilesystemIterator::SKIP_DOTS), \RecursiveIteratorIterator::CHILD_FIRST);
-        foreach ($it as $f) $f->isDir() ? @rmdir($f) : @unlink($f);
+        foreach ($it as $f) {
+            $f->isDir() ? @rmdir($f) : @unlink($f);
+        }
         @rmdir($this->dir);
     }
 
@@ -55,7 +60,10 @@ class CacheTest extends TestCase
     public function testRememberComputesOnce(): void
     {
         $calls = 0;
-        $compute = function () use (&$calls) { $calls++; return 'expensive'; };
+        $compute = function () use (&$calls) {
+            $calls++;
+            return 'expensive';
+        };
         $this->assertSame('expensive', $this->store->remember('r', 60, $compute));
         $this->assertSame('expensive', $this->store->remember('r', 60, $compute));
         $this->assertSame(1, $calls);
@@ -94,7 +102,9 @@ class CacheTest extends TestCase
     public function testRateLimiter(): void
     {
         $limiter = new RateLimiter($this->store);
-        for ($i = 0; $i < 3; $i++) $limiter->hit('login:1', 60);
+        for ($i = 0; $i < 3; $i++) {
+            $limiter->hit('login:1', 60);
+        }
         $this->assertTrue($limiter->tooManyAttempts('login:1', 3));
         $this->assertFalse($limiter->tooManyAttempts('login:2', 3), 'keys are independent');
         $this->assertSame(2, $limiter->remaining('login:1', 5));

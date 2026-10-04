@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Http;
 
 /**
@@ -28,7 +29,9 @@ class Maintenance
 
     public static function down(string $message = '', int $retry = 60, ?string $secret = null): void
     {
-        if (!is_dir(dirname(self::file()))) mkdir(dirname(self::file()), 0775, true);
+        if (!is_dir(dirname(self::file()))) {
+            mkdir(dirname(self::file()), 0775, true);
+        }
         file_put_contents(self::file(), json_encode([
             'time' => time(), 'message' => $message, 'retry' => max(0, $retry),
             'secret' => $secret === null || $secret === '' ? null : trim($secret, '/'),
@@ -66,7 +69,9 @@ class Maintenance
     protected static function render(array $info): void
     {
         http_response_code(503);
-        if (!empty($info['retry'])) header('Retry-After: ' . (int) $info['retry']);
+        if (!empty($info['retry'])) {
+            header('Retry-After: ' . (int) $info['retry']);
+        }
         $message = (string) ($info['message'] ?? '') ?: 'We are doing some maintenance. Please check back soon.';
 
         if (Request::wantsJson()) {

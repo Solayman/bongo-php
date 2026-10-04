@@ -1,4 +1,5 @@
 <?php
+
 return [
     // sync: run jobs immediately · database: jobs table · redis: Redis lists & delayed sorted sets
     'driver' => env('QUEUE_DRIVER', 'sync'),

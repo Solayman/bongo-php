@@ -1,4 +1,5 @@
 <?php
+
 return [
     // daily: storage/logs/bongo-YYYY-MM-DD.log   single: storage/logs/bongo.log   none: logging off
     'channel' => env('LOG_CHANNEL', 'daily'),

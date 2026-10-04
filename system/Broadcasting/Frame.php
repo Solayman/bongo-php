@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Broadcasting;
 
 /**
@@ -50,11 +51,15 @@ class Frame
         $offset = 2;
 
         if ($length === 126) {
-            if (strlen($buffer) < 4) return null;
+            if (strlen($buffer) < 4) {
+                return null;
+            }
             $length = unpack('n', substr($buffer, 2, 2))[1];
             $offset = 4;
         } elseif ($length === 127) {
-            if (strlen($buffer) < 10) return null;
+            if (strlen($buffer) < 10) {
+                return null;
+            }
             $length = unpack('J', substr($buffer, 2, 8))[1];
             $offset = 10;
         }
@@ -64,7 +69,9 @@ class Frame
 
         $key = '';
         if ($masked) {
-            if (strlen($buffer) < $offset + 4) return null;
+            if (strlen($buffer) < $offset + 4) {
+                return null;
+            }
             $key = substr($buffer, $offset, 4);
             $offset += 4;
         }

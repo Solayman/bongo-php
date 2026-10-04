@@ -1,4 +1,5 @@
 <?php
+
 return [
     // Guard used by Auth::user(), auth() and plain "auth" middleware
     'default' => 'web',

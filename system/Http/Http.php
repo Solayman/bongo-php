@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Http;
 
 use System\Http\Client\Factory;
@@ -48,8 +49,11 @@ class Http
     public static function response(array|string $body = [], int $status = 200, array $headers = []): Response
     {
         $json = is_array($body);
-        return new Response($status, array_change_key_case($headers + ($json ? ['Content-Type' => 'application/json'] : []), CASE_LOWER),
-            $json ? (string) json_encode($body) : $body);
+        return new Response(
+            $status,
+            array_change_key_case($headers + ($json ? ['Content-Type' => 'application/json'] : []), CASE_LOWER),
+            $json ? (string) json_encode($body) : $body
+        );
     }
 
     /** Requests sent while faked */

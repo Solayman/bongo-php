@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Maintainer commands (release:build, release:branch, release:package).
  * They live only in the framework repository; projects built from a release don't get them.

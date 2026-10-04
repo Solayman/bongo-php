@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Cache;
 
 use System\Redis\Redis;

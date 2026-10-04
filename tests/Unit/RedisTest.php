@@ -1,4 +1,5 @@
 <?php
+
 namespace Tests\Unit;
 
 use System\Cache\RedisStore;
@@ -17,7 +18,9 @@ class RedisTest extends TestCase
     public function setUp(): void
     {
         parent::setUp();
-        if (!extension_loaded('redis')) return;
+        if (!extension_loaded('redis')) {
+            return;
+        }
         try {
             $redis = new \Redis();
             $redis->connect((string) config('database.redis.host'), (int) config('database.redis.port'), 0.5);
@@ -41,7 +44,9 @@ class RedisTest extends TestCase
 
     public function testPutGetForgetAndRemember(): void
     {
-        if (!$store = $this->store()) return;
+        if (!$store = $this->store()) {
+            return;
+        }
 
         $this->assertNull($store->get('missing'));
         $this->assertSame('x', $store->get('missing', 'x'));
@@ -56,7 +61,10 @@ class RedisTest extends TestCase
         $this->assertNull($store->ttl('forever'));
 
         $calls = 0;
-        $compute = function () use (&$calls) { $calls++; return 42; };
+        $compute = function () use (&$calls) {
+            $calls++;
+            return 42;
+        };
         $this->assertSame(42, $store->remember('slow', 60, $compute));
         $this->assertSame(42, $store->remember('slow', 60, $compute));
         $this->assertSame(1, $calls);
@@ -68,7 +76,9 @@ class RedisTest extends TestCase
 
     public function testIncrementIsAtomicAndKeepsExpiry(): void
     {
-        if (!$store = $this->store()) return;
+        if (!$store = $this->store()) {
+            return;
+        }
 
         $this->assertSame(1, $store->increment('hits', 1, 120));
         $this->assertSame(6, $store->increment('hits', 5, 9999));
@@ -79,7 +89,9 @@ class RedisTest extends TestCase
 
     public function testFlushOnlyRemovesThisAppsKeys(): void
     {
-        if (!$store = $this->store()) return;
+        if (!$store = $this->store()) {
+            return;
+        }
 
         $this->redis->set($this->prefix . 'other-app', '1');
         $store->put('a', 1);

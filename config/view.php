@@ -1,4 +1,5 @@
 <?php
+
 return [
     // Where templates live (dot notation: products.index → products/index.php)
     'path' => BASE_PATH . '/resources/views',

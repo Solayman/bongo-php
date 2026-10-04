@@ -1,4 +1,5 @@
 <?php
+
 namespace Tests\Feature;
 
 use System\Testing\HttpTestCase;
@@ -13,8 +14,10 @@ class ShopPagesTest extends HttpTestCase
 
     public function testEveryAdminPageLoads(): void
     {
-        foreach (['/', '/dashboard', '/orders', '/orders/1', '/products', '/products/create', '/products/1/edit',
-                  '/categories', '/categories/1/edit', '/customers', '/customers/2', '/profile', '/system'] as $path) {
+        foreach (
+            ['/', '/dashboard', '/orders', '/orders/1', '/products', '/products/create', '/products/1/edit',
+                  '/categories', '/categories/1/edit', '/customers', '/customers/2', '/profile', '/system'] as $path
+        ) {
             $response = $this->get($path);
             $this->assertSame(200, $response->status, "GET $path returned {$response->status}");
             $this->assertNotContains('Warning:', $response->body, "PHP warning on $path");

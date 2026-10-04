@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Database;
 
 /**
@@ -70,8 +71,12 @@ class BelongsToMany extends Relation
         $existing = $this->linkedIds();
         $detach = array_values(array_diff($existing, $ids));
         $attach = array_values(array_diff($ids, $existing));
-        if ($detach) $this->detach($detach);
-        if ($attach) $this->attach($attach);
+        if ($detach) {
+            $this->detach($detach);
+        }
+        if ($attach) {
+            $this->attach($attach);
+        }
         return ['attached' => $attach, 'detached' => $detach];
     }
 

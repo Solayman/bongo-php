@@ -1,4 +1,5 @@
 <?php
+
 // Scheduled tasks: run `php bongo schedule:run` every minute from cron (or Windows Task Scheduler).
 // See them with `php bongo schedule:list`.
 

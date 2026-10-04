@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Testing;
 
 class TestResponse
@@ -8,7 +9,8 @@ class TestResponse
         public array $headers,
         public string $body,
         protected HttpTestCase $test
-    ) {}
+    ) {
+    }
 
     public function header(string $name): ?string
     {
@@ -26,8 +28,10 @@ class TestResponse
 
     public function csrfToken(): string
     {
-        if (!preg_match('/name="_token" value="([^"]+)"/', $this->body, $m)
-            && !preg_match('/name="csrf-token" content="([^"]+)"/', $this->body, $m)) {
+        if (
+            !preg_match('/name="_token" value="([^"]+)"/', $this->body, $m)
+            && !preg_match('/name="csrf-token" content="([^"]+)"/', $this->body, $m)
+        ) {
             throw new AssertionFailed('No CSRF token found in the response');
         }
         return html_entity_decode($m[1]);

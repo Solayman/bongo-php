@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Mail;
 
 use RuntimeException;
@@ -12,7 +13,9 @@ use System\Log\Log;
  */
 class Mailer
 {
-    public function __construct(protected array $config) {}
+    public function __construct(protected array $config)
+    {
+    }
 
     public static function fromConfig(): self
     {
@@ -138,7 +141,9 @@ class Mailer
         $response = '';
         while (($line = fgets($socket, 515)) !== false) {
             $response .= $line;
-            if (strlen($line) < 4 || $line[3] === ' ') break; // last line of a multi-line reply
+            if (strlen($line) < 4 || $line[3] === ' ') {
+                break; // last line of a multi-line reply
+            }
         }
         $code = (int) substr($response, 0, 3);
         if (!in_array($code, $codes, true)) {
@@ -160,8 +165,12 @@ class Mailer
             'From: ' . $address($message->from),
             'To: ' . implode(', ', array_map($address, $message->to)),
         ];
-        if ($message->cc) $headers[] = 'Cc: ' . implode(', ', array_map($address, $message->cc));
-        if ($message->replyTo) $headers[] = 'Reply-To: ' . $address($message->replyTo);
+        if ($message->cc) {
+            $headers[] = 'Cc: ' . implode(', ', array_map($address, $message->cc));
+        }
+        if ($message->replyTo) {
+            $headers[] = 'Reply-To: ' . $address($message->replyTo);
+        }
         $headers[] = 'Subject: =?UTF-8?B?' . base64_encode($message->subject) . '?=';
         $headers[] = 'Message-ID: <' . bin2hex(random_bytes(12)) . '@' . (parse_url((string) config('app.url'), PHP_URL_HOST) ?: 'localhost') . '>';
         $headers[] = 'MIME-Version: 1.0';

@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Storage;
 
 use System\Http\Response;
@@ -11,7 +12,8 @@ class Disk
     public function __construct(
         protected string $name,
         protected array $config
-    ) {}
+    ) {
+    }
 
     public function root(): string
     {
@@ -122,7 +124,9 @@ class Disk
         }
         $files = [];
         foreach (scandir($dir) ?: [] as $item) {
-            if ($item === '.' || $item === '..' || $item === '.htaccess') continue;
+            if ($item === '.' || $item === '..' || $item === '.htaccess') {
+                continue;
+            }
             $full = $dir . '/' . $item;
             if (is_file($full)) {
                 $files[] = trim($directory . '/' . $item, '/');

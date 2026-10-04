@@ -1,4 +1,5 @@
 <?php
+
 namespace System\Testing;
 
 use PDO;
@@ -45,9 +46,13 @@ class Runner
         foreach ($classes as $class) {
             $short = (new \ReflectionClass($class))->getShortName();
             foreach (get_class_methods($class) as $method) {
-                if (!str_starts_with($method, 'test')) continue;
+                if (!str_starts_with($method, 'test')) {
+                    continue;
+                }
                 $name = "$short::$method";
-                if ($filter && stripos($name, $filter) === false) continue;
+                if ($filter && stripos($name, $filter) === false) {
+                    continue;
+                }
 
                 $test = new $class();
                 try {
@@ -194,7 +199,9 @@ class Runner
             $env[$name] = getenv($name);
         }
         foreach (['DB_CONNECTION', 'DB_SQLITE_PATH', 'DB_HOST', 'DB_PORT', 'DB_USERNAME', 'DB_PASSWORD', 'CACHE_DRIVER', 'SESSION_DRIVER', 'QUEUE_DRIVER', 'REDIS_HOST', 'REDIS_PORT', 'REDIS_PREFIX'] as $name) {
-            if (getenv($name) !== false) $env[$name] = getenv($name);
+            if (getenv($name) !== false) {
+                $env[$name] = getenv($name);
+            }
         }
         $env['APP_URL'] = self::$baseUrl;
 

@@ -1,4 +1,5 @@
 <?php
+
 return [
     // log: write emails to the log (development) · smtp: send for real · file: JSON files (tests)
     'driver' => env('MAIL_DRIVER', 'log'),
