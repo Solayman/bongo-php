@@ -276,6 +276,7 @@ try {
         case 'make:seeder':
         case 'make:notification':
         case 'make:mail':
+        case 'make:command':
             $name = $options[0] ?? '';
             if ($name === '' || str_starts_with($name, '--')) {
                 $flags = ['make:controller' => ' [--api]', 'make:model' => ' [--migration]', 'make:test' => ' [--unit]'];
@@ -295,6 +296,7 @@ try {
                 'make:seeder'     => $generator->seeder($name),
                 'make:notification' => $generator->notification($name),
                 'make:mail'       => $generator->mail($name),
+                'make:command'    => $generator->command($name),
             };
             echo "Created: $created" . PHP_EOL;
             if ($command === 'make:model' && $hasOption('migration')) {
@@ -483,6 +485,14 @@ try {
 
         case 'help':
         default:
+            $custom = loadCustomCommands();
+            if ($command !== 'help' && isset($custom[$command])) {
+                $status = $custom[$command]->handle($options, parseCommandOptions($options));
+                exit((int) $status);
+            }
+            if ($command !== 'help') {
+                echo "Unknown command: $command\n\n";
+            }
             $help = [
                 'about' => 'Version, PHP, environment, drivers and framework size',
                 'serve [--port=8000] [--host=127.0.0.1]' => 'Start the development server',
@@ -507,6 +517,7 @@ try {
                 'make:component <name>' => 'Create a view component: resources/views/components (<x-name>)',
                 'make:seeder <Name>' => 'Create a seeder in database/seeders',
                 'make:notification <Name>' => 'Create a notification (mail/sms/slack) in app/Notifications',
+                'make:command <Name>' => 'Create a custom console command in app/Commands',
                 'make:mail <name>' => 'Create an email template in resources/views/emails',
                 'make:test <Name> [--unit]' => 'Create a feature (or unit) test',
                 'security:check' => 'Deployment security checklist (exit 1 on failures)',
@@ -528,6 +539,9 @@ try {
                 'test [filter]' => 'Run the tests in tests/',
                 'help' => 'Show this help',
             ];
+            foreach (loadCustomCommands() as $customName => $customCmd) {
+                $help[$customName] = $customCmd->getDescription() ?: 'Custom application command';
+            }
             if (is_file(BASE_PATH . '/release/tools/commands.php')) {
                 require_once BASE_PATH . '/release/tools/commands.php';
                 $help += RELEASE_COMMANDS_HELP;
@@ -537,6 +551,8 @@ try {
                 printf("  %-44s %s\n", $usage, $description);
             }
             break;
+
+
     }
 } catch (Throwable $e) {
     fwrite(STDERR, get_class($e) . ': ' . $e->getMessage() . "\n");
@@ -548,4 +564,41 @@ function runSeeder(): void
     require_once base_path('database/seeders/DatabaseSeeder.php');
     (new Database\Seeders\DatabaseSeeder())->run();
     echo "Database seeded.\n";
+}
+
+/** @return array<string, System\Console\Command> */
+function loadCustomCommands(): array
+{
+    $commands = [];
+    $dir = BASE_PATH . '/app/Commands';
+    if (!is_dir($dir)) {
+        return [];
+    }
+    foreach (glob($dir . '/*.php') ?: [] as $file) {
+        require_once $file;
+        $class = 'App\\Commands\\' . basename($file, '.php');
+        if (class_exists($class) && is_subclass_of($class, System\Console\Command::class)) {
+            $ref = new ReflectionClass($class);
+            if (!$ref->isAbstract()) {
+                /** @var System\Console\Command $instance */
+                $instance = new $class();
+                if ($instance->getName() !== '') {
+                    $commands[$instance->getName()] = $instance;
+                }
+            }
+        }
+    }
+    return $commands;
+}
+
+function parseCommandOptions(array $rawOptions): array
+{
+    $options = [];
+    foreach ($rawOptions as $opt) {
+        if (str_starts_with($opt, '--')) {
+            $parts = explode('=', substr($opt, 2), 2);
+            $options[$parts[0]] = $parts[1] ?? true;
+        }
+    }
+    return $options;
 }

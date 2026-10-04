@@ -391,9 +391,13 @@ class Router
         $this->send($container->call([$instance, $method], $params));
     }
 
-    /** Actions may echo, or return a string (HTML) or an array (JSON) */
+    /** Actions may echo, or return a string (HTML), an array (JSON), or a DownloadResponse */
     protected function send($result): void
     {
+        if ($result instanceof \System\Storage\DownloadResponse) {
+            $result->send();
+            return;
+        }
         if (is_array($result) || $result instanceof \JsonSerializable) {
             if (!headers_sent()) header('Content-Type: application/json');
             echo json_encode($result);

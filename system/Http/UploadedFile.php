@@ -115,10 +115,10 @@ class UploadedFile
     }
 
     /**
-     * Save under public/storage/$directory with a random name.
-     * Returns the path relative to public/storage (store it in the database; show it with Storage::url()).
+     * Save under storage/$directory on the specified disk with a random name.
+     * Returns the relative path.
      */
-    public function store(string $directory = ''): string
+    public function store(string $directory = '', ?string $disk = null): string
     {
         if (!$this->isValid()) {
             throw new \RuntimeException('Cannot store an invalid upload: ' . $this->errorMessage());
@@ -130,7 +130,7 @@ class UploadedFile
 
         $relative = trim($directory, '/') . '/' . bin2hex(random_bytes(16)) . '.' . $extension;
         $relative = ltrim($relative, '/');
-        Storage::putFile($relative, $this->path, !$this->test);
+        Storage::disk($disk)->putFile($relative, $this->path, !$this->test);
 
         return $relative;
     }

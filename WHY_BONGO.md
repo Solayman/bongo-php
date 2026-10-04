@@ -9,7 +9,7 @@ A complete full-stack web framework contained in ~480 KB of clean, readable code
 
 [![PHP Version](https://img.shields.io/badge/PHP-8.0%2B-777bb4?style=flat-square&logo=php&logoColor=white)](https://www.php.net)
 [![Dependencies](https://img.shields.io/badge/dependencies-0%20required-success?style=flat-square)](DOCUMENTATION.md)
-[![Test Suite](https://img.shields.io/badge/automated%20tests-312%20passing-success?style=flat-square)](TESTING_GUIDE.md)
+[![Test Suite](https://img.shields.io/badge/automated%20tests-328%20passing-success?style=flat-square)](TESTING_GUIDE.md)
 [![Core Footprint](https://img.shields.io/badge/core%20size-~170%20KB-informational?style=flat-square)](#empirical-benchmarks)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 [![Localization](https://img.shields.io/badge/i18n-English%20%7C%20বাংলা-orange?style=flat-square)](DOCUMENTATION.md#localization)
@@ -138,7 +138,7 @@ $this->get('/products')
     ->assertSee('Yoga Mat');
 ```
 ```bash
-php bongo test              # Runs 312 unit & feature tests with isolated SQLite/MySQL runner
+php bongo test              # Runs 328 unit & feature tests with isolated SQLite/MySQL runner
 ```
 
 ---
@@ -172,16 +172,18 @@ Security mechanisms are embedded directly into the framework foundation:
 ### 5. Actionable Diagnostics & Developer Tooling
 * **Targeted Debugging:** Clear exception screens pinpointing the exact file, call stack, database queries executed, and automated remediation hints (e.g., *Table missing → Run: `php bongo migrate`*).
 * **Performant Profiling:** Clean `dd()` / `dump()` display with collapsible nodes, optimized to render collections exceeding 1,000 records without browser freezing.
-* **CLI Workspace:** Interactive REPL (`php bongo tinker`) and automated scaffolding (`php bongo make:*`).
+* **CLI Workspace:** Interactive REPL (`php bongo tinker`), automated scaffolding (`php bongo make:*`), and extensible custom commands engine.
 
 ### 6. Battery-Included Application Suite
 
 | Domain | Integrated Capabilities |
 |---|---|
 | **HTTP Layer** | Attribute routing, route groups, named parameters, middleware pipelines, signed URLs, form requests |
-| **Data & ORM** | MySQL/MariaDB and SQLite support, query builder, transactions, relations (`hasOne`, `hasMany`, `belongsToMany`), soft deletes, schema migrations, and seeders |
+| **Data & ORM** | MySQL/MariaDB, PostgreSQL (`pgsql`), and SQLite support, query builder, transactions, relations (`hasOne`, `hasMany`, `belongsToMany`), soft deletes, schema migrations, and seeders |
+| **Storage & Files** | Multi-disk storage (`public` vs private `local`), streaming file downloads (`Storage::download()`), magic-byte upload validation |
 | **Identity & Access** | Multi-guard authentication (Session & JWT), authorization gates, policies, password reset flows, email verification |
-| **Async & Scheduling** | Database-backed queues, in-process scheduler (run tasks without system crontab in development), queued mail |
+| **Async & Scheduling** | Database and Redis-backed queues, in-process scheduler (run tasks without system crontab in development), queued mail |
+| **Logging & Telemetry**| Text and structured JSON logging (`LOG_FORMAT=json`), secret masking, daily rotation, structured exception stack traces |
 | **Communication** | Built-in SMTP mailer, test mailbox UI, notifications (Mail, SMS, Slack), resilient HTTP client with retries |
 | **Real-Time** | Standalone WebSocket daemon with channel multiplexing written in native PHP |
 | **Performance & Ops** | File & Redis caching, Redis sessions, route/config caching, maintenance mode, atomic framework self-upgrade |

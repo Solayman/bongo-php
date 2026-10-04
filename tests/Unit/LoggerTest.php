@@ -21,9 +21,9 @@ class LoggerTest extends TestCase
         Logger::setInstance(null);
     }
 
-    protected function logger(string $level = 'debug', string $channel = 'daily'): Logger
+    protected function logger(string $level = 'debug', string $channel = 'daily', string $format = 'text'): Logger
     {
-        return new Logger($this->dir, $channel, $level, 14, 'testing');
+        return new Logger($this->dir, $channel, $level, 14, 'testing', $format);
     }
 
     public function testWritesFormattedLineToDailyFile(): void
@@ -131,5 +131,57 @@ class LoggerTest extends TestCase
         $this->assertSame(['third', 'second'], array_column($logger->recent(10, 'warning'), 'message'));
         $this->assertCount(1, $logger->recent(1));
         $this->assertSame([], $this->logger('debug', 'single')->recent(), 'No file yet means no entries');
+    }
+
+    public function testWritesJsonFormattedLineWhenFormatIsJson(): void
+    {
+        $logger = $this->logger('debug', 'daily', 'json');
+        $logger->info('User {id} signed in', [
+            'id' => 99,
+            'password' => 'secret123',
+            'ip' => '127.0.0.1',
+        ]);
+
+        $line = trim(file_get_contents($logger->file()));
+        $data = json_decode($line, true);
+
+        $this->assertTrue(is_array($data));
+        $this->assertSame('testing', $data['env']);
+        $this->assertSame('info', $data['level']);
+        $this->assertSame('User 99 signed in', $data['message']);
+        $this->assertSame(99, $data['context']['id']);
+        $this->assertSame('********', $data['context']['password']);
+        $this->assertSame('127.0.0.1', $data['context']['ip']);
+    }
+
+    public function testJsonFormatIncludesStructuredException(): void
+    {
+        $logger = $this->logger('debug', 'daily', 'json');
+        $logger->error('Database failed', ['exception' => new \RuntimeException('Connection dropped', 500)]);
+
+        $line = trim(file_get_contents($logger->file()));
+        $data = json_decode($line, true);
+
+        $this->assertTrue(is_array($data));
+        $this->assertSame('error', $data['level']);
+        $this->assertSame('Database failed', $data['message']);
+        $this->assertSame('RuntimeException', $data['exception']['class']);
+        $this->assertSame('Connection dropped', $data['exception']['message']);
+        $this->assertSame(500, $data['exception']['code']);
+        $this->assertTrue(is_array($data['exception']['trace']));
+    }
+
+    public function testRecentParsesJsonLines(): void
+    {
+        $logger = $this->logger('debug', 'daily', 'json');
+        $logger->debug('alpha');
+        $logger->warning('beta', ['context' => ['user' => 'solayman']]);
+        $logger->error('gamma', ['exception' => new \RuntimeException('Fail')]);
+
+        $entries = $logger->recent();
+        $this->assertSame(['gamma', 'beta', 'alpha'], array_column($entries, 'message'));
+        $this->assertSame('error', $entries[0]['level']);
+        $this->assertContains('Fail', $entries[0]['details']);
+        $this->assertContains('solayman', $entries[1]['details']);
     }
 }

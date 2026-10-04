@@ -26,6 +26,17 @@
   - `mysql`: Default enterprise MySQL/MariaDB driver.
   - `sqlite`: Zero-configuration file database (`database.sqlite`).
   - `pgsql`: Native PostgreSQL driver with `PostgresGrammar` DDL, `BIGSERIAL`, `JSONB`, `BOOLEAN`, schema search paths, double-quote identifier escaping, atomic `RETURNING "id"`, and `ON CONFLICT` upsert.
+- **Storage Subsystem**:
+  - Multi-disk isolation (`config/storage.php`): `'public'` (`public/storage`) and private `'local'` (`storage/app`).
+  - Safe streaming downloads via `Storage::download()` and `System\Storage\DownloadResponse`.
+- **Extensible CLI**:
+  - Base class `System\Console\Command` with `handle(array $args, array $options): int` and styled output helpers (`info`, `warn`, `error`, `line`).
+  - Auto-discovery of custom commands from `app/Commands/*.php`.
+- **Structured Logging**:
+  - Supports `LOG_FORMAT=text` and `LOG_FORMAT=json` with secret masking and structured exception objects.
+
+## Review & Privacy Policy
+- **Gitignore Review Files**: Files created specifically for AI/internal reviews (e.g. `CLAUDE.md`, `*claude*review*`) MUST remain in `.gitignore` and untracked from Git to protect company privacy and avoid exposing internal review artifacts publicly on GitHub.
 
 ## Documentation & Memory Policy (CRITICAL - HIGH PRIORITY)
 - **Always Synchronize Docs**: Whenever ANY code change, feature, optimization, or bug fix is made, updating all relevant documentation files (`DOCUMENTATION.md`, `README.md`, `WHY_BONGO.md`, `CHANGELOG.md`, `CLAUDE.md`, and `GEMINI.md`) is **MANDATORY AND HIGH PRIORITY**.

@@ -8,3 +8,8 @@ public/files/*
 !/public/storage/.htaccess
 /dist/
 /database/*.sqlite
+
+# AI reviews and local agent notes (internal company use only)
+CLAUDE.md
+*claude*review*
+
