@@ -9,7 +9,7 @@ A full-stack, enterprise-capable web framework crafted in ~480 KB of clean, read
 
 [![PHP Version](https://img.shields.io/badge/PHP-8.0%2B-777bb4?style=flat-square&logo=php&logoColor=white)](https://www.php.net)
 [![Dependencies](https://img.shields.io/badge/dependencies-0%20required-brightgreen?style=flat-square)](WHY_BONGO.md)
-[![Test Suite](https://img.shields.io/badge/automated%20tests-328%20passing-brightgreen?style=flat-square)](TESTING_GUIDE.md)
+[![Test Suite](https://img.shields.io/badge/automated%20tests-333%20passing-brightgreen?style=flat-square)](TESTING_GUIDE.md)
 [![Core Size](https://img.shields.io/badge/fresh%20skeleton-~170%20KB-informational?style=flat-square)](#performance--benchmarks)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 [![Localization](https://img.shields.io/badge/i18n-English%20%7C%20বাংলা-orange?style=flat-square)](DOCUMENTATION.md#localization)
@@ -152,7 +152,7 @@ $this->get('/products')
     ->assertSee('Yoga Mat');
 ```
 ```bash
-php bongo test              # Runs 328 unit and HTTP integration tests on isolated DB
+php bongo test              # Runs 333 unit and HTTP integration tests on isolated DB
 ```
 
 ---
@@ -167,6 +167,7 @@ Bongo includes an exhaustive set of full-stack batteries out of the box:
 | **Database & ORM** | MySQL/MariaDB, PostgreSQL (`pgsql`), and SQLite query builder, transactions, Active Record models, relationships (`hasOne`, `hasMany`, `belongsToMany`), eager loading, soft deletes, tracked schema migrations with rollback, and seeders. |
 | **Authentication & Access** | Multi-guard authentication (Session and stateless JWT), password hashing with Argon2id + pepper, account lockout, "Remember me", password reset flows, signed email verification, and authorization policies (`Gate` / `Policy`). |
 | **Storage & Uploads** | Multi-disk storage (`Storage::disk('public')` vs private `Storage::disk('local')`), streaming file downloads (`Storage::download()`), 35+ validation rules, array wildcards (`items.*.qty`), and upload validation inspected via real magic bytes. |
+| **Spreadsheets & Docs** | Unified import/export for CSV and Excel `.xlsx` (`Spreadsheet::read()`, `Spreadsheet::download()`) with UTF-8 BOM, and printable vector documents/PDFs (`Printable::invoice()`) with flawless Bangla and multilingual typography. |
 | **Async & Background** | High-throughput job queues (Database and Redis drivers), worker daemon (`php bongo queue:work`), task scheduler (execute recurring jobs without server cron in dev via `php bongo schedule:work`), and queued background mail. |
 | **Logging & Observability**| Text and structured JSON logging (`LOG_FORMAT=json`), daily rotated logs in `storage/logs/`, levels, secret masking, and structured exception formatting for Datadog, CloudWatch, and ELK. |
 | **Extensible CLI** | Pure-PHP CLI with custom console commands (`php bongo make:command <Name>`), base `Command` class, and automatic discovery from `app/Commands/`. |

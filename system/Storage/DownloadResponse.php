@@ -3,18 +3,30 @@ namespace System\Storage;
 
 class DownloadResponse
 {
+    public array $headers = [];
+    public ?string $mimeType = null;
+
     public function __construct(
         public string $path,
         public string $filename,
-        public array $headers = []
-    ) {}
+        array|string $headers = [],
+        ?string $mimeType = null
+    ) {
+        if (is_string($headers)) {
+            $this->mimeType = $headers;
+            $this->headers = [];
+        } else {
+            $this->headers = $headers;
+            $this->mimeType = $mimeType;
+        }
+    }
 
     public function send(): void
     {
         if (!is_file($this->path)) {
             throw new \System\Http\HttpException(404, "File not found [{$this->filename}]");
         }
-        $mime = @mime_content_type($this->path) ?: 'application/octet-stream';
+        $mime = $this->mimeType ?: (@mime_content_type($this->path) ?: 'application/octet-stream');
         $size = filesize($this->path);
 
         if (!headers_sent()) {

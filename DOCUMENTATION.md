@@ -13,6 +13,7 @@ Built in:
 | Schema & migrations | PHP migrations with a schema builder; each run is tracked in the database; rollback |
 | Sessions | Flash messages, old input, CSRF tokens |
 | Validation & storage | 35+ rules (dates, regex, files, `unique`, …), `items.*.field` wildcards, custom messages; multi-disk storage (`Storage::disk('public')` vs `Storage::disk('local')`), streaming file downloads (`Storage::download()`), and safe uploads (`$file->store()`, `Storage::url()`) |
+| Spreadsheets & Documents | Unified import/export for CSV and Excel `.xlsx` (`Spreadsheet::read()`, `Spreadsheet::download()`) with UTF-8 BOM, and printable vector documents/PDFs (`Printable::invoice()`) with flawless Bangla and multilingual typography |
 | Hardening | Strict sessions with idle/absolute timeouts, trusted-proxy aware `Request::ip()`/`isSecure()`, optional CSP, `php bongo security:check` deployment checklist |
 | Auth & security | Multiple guards (session, JWT) and providers, `auth:api` middleware, own HS256 JWT with refresh and revocation, peppered Argon2id passwords, AES-256-GCM encryption, login throttling |
 | Testing | `php bongo test`: unit + HTTP tests on a separate test database |
@@ -630,6 +631,111 @@ foreach ($request->files('photos') as $photo) {   // a list of UploadedFile; emp
 | `dimensions:min_width=…,max_width=…,min_height=…,max_height=…,width=…,height=…,ratio=16/9` | Image size in pixels |
 
 **Try it:** **System status → Upload test** validates up to 5 images and reports each file's type, size and dimensions. Nothing is stored.
+
+---
+
+## 6. Spreadsheets & Documents
+
+Bongo provides a unified, zero-dependency data suite for daily business operations: import/export of spreadsheets (CSV and Excel `.xlsx`) and printable invoices/reports with **flawless Bengali and multilingual typography**.
+
+### Unified Spreadsheet Engine (`System\Data\Spreadsheet`)
+
+No more dealing with different classes or installing bloated 40MB packages like PhpSpreadsheet. `Spreadsheet` handles both **CSV and genuine Microsoft Excel (`.xlsx`)** workbooks using PHP's native `ZipArchive` and streams.
+
+#### 1. Unified Download / Export
+Specify `.xlsx` or `.csv` in the filename, and Bongo automatically generates the corresponding format:
+
+```php
+use System\Data\Spreadsheet;
+
+// Export as genuine styled Excel (.xlsx) workbook with bold headers
+return Spreadsheet::download(
+    rows: Product::all(),
+    filename: 'inventory-2026.xlsx',
+    columns: [
+        'sku'   => 'SKU Code',
+        'name'  => 'Product Name',
+        'price' => 'Unit Price ($)',
+        'stock' => 'Units in Stock',
+    ]
+);
+
+// Export as CSV (automatically injects UTF-8 BOM so Excel opens Bangla text without mojibake)
+return Spreadsheet::download($orders, 'sales.csv');
+```
+
+#### 2. Unified Read / Import
+Pass any uploaded file or path—Bongo inspects the file extension and magic bytes to parse rows into normalized associative arrays:
+
+```php
+// Handles BOTH .xlsx and .csv files transparently:
+$rows = Spreadsheet::read($request->file('import_file'));
+
+foreach ($rows as $row) {
+    Product::updateOrCreate(['sku' => $row['SKU Code']], [
+        'name'  => $row['Product Name'],
+        'price' => (float) $row['Unit Price ($)'],
+        'stock' => (int) $row['Units in Stock'],
+    ]);
+}
+```
+
+---
+
+### Printable Invoices & Vector PDFs (`System\Data\Printable`)
+
+Traditional PHP PDF libraries (DomPDF, FPDF) famously break Indic scripts (Bengali, Hindi, etc.) because they lack OpenType complex text shaping (conjuncts like `ক্ষ` split and vowel marks like `কি` appear backwards).
+
+Bongo solves this with `Printable`:
+- **Flawless Typography**: Emits print-ready HTML5 with standard `@media print` rules, rendering Bengali fonts (**Kalpurush, SolaimanLipi, Noto Sans Bengali**) with 100% pixel-perfect ligatures.
+- **One-Click Native PDF**: Displays an action bar with a **Print / Save as PDF** button (`window.print()`).
+- **Optional Headless PDF Bridge**: If Google Chrome, Microsoft Edge, Chromium, or `wkhtmltopdf` is installed on the server, Bongo compiles binary `.pdf` files automatically for email attachments (`$doc->toPdf($path)`).
+
+```php
+use System\Data\Printable;
+
+$invoice = Printable::invoice('INV-2026-001')
+    ->badge('PAID', '#10b981')
+    ->company([
+        'name'    => 'নোভা টেকনোলজিস (Nova Tech Ltd)',
+        'address' => 'গুলশান-২, ঢাকা-১২১২, বাংলাদেশ',
+        'phone'   => '+880 1700-123456',
+        'email'   => 'billing@novatech.xyz',
+    ])
+    ->customer([
+        'name'    => 'মোঃ সোলায়মান আলী',
+        'address' => 'মিরপুর, ঢাকা',
+    ])
+    ->meta([
+        'চালান তারিখ (Date)' => date('Y-m-d'),
+        'পেমেন্ট মেথড'        => 'bKash / কার্ড',
+    ])
+    ->table(
+        headers: ['বিবরণ (Item)', 'পরিমাণ (Qty)', 'দর (Price)', 'মোট (Total)'],
+        rows: [
+            ['ক্লাউড হোস্টিং (Cloud VPS)', '১', '৳ ২,৫০০', '৳ ২,৫০০'],
+            ['ডোমেইন রেজিস্ট্রেশন (Domain)', '১', '৳ ১,২০০', '৳ ১,২০০'],
+        ],
+        widths: [50, 15, 15, 20],
+        aligns: ['left', 'center', 'right', 'right']
+    )
+    ->totals([
+        'সর্বমোট (Subtotal)' => '৳ ৩,৭০০',
+        'ভ্যাট (VAT 5%)'     => '৳ ১৮৫',
+        'প্রদেয় (Grand Total)' => '৳ ৩,৮৮৫',
+    ])
+    ->notes([
+        'পণ্য ক্রয়ের জন্য ধন্যবাদ।',
+        'For inquiries, contact support@novatech.xyz',
+    ])
+    ->autoPrint(false);
+
+// Return in controller:
+return response($invoice->render());
+
+// Or compile directly to binary PDF on server:
+$invoice->toPdf(storage_path('app/invoices/inv-001.pdf'));
+```
 
 ---
 
