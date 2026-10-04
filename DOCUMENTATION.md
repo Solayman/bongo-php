@@ -3213,16 +3213,80 @@ UniSharp-style web file manager and embedded professional code editor with **zer
   </script>
   ```
 
-* **TinyMCE Integration:**
+* **TinyMCE Integration (TinyMCE 5, 6, and 7):**
+
+  **Method A: Using the built-in helper (Recommended — 1 line):**
+  Include the connector helper script in your view:
+  ```html
+  <textarea id="editor" name="content"></textarea>
+
+  <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js"></script>
+  @include('file-manager::script')
+
+  <script>
+      tinymce.init({
+          selector: 'textarea#editor',
+          plugins: 'image link media code lists table',
+          toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright | link image media | code',
+          file_picker_callback: bongoTinyMCEPicker()
+      });
+  </script>
+  ```
+
+  **Method B: Standalone Native JavaScript (Zero view dependencies):**
+  If you prefer not to include `file-manager::script`, use standard native JavaScript:
   ```javascript
   tinymce.init({
       selector: 'textarea#editor',
+      plugins: 'image link media code lists table',
+      toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright | link image media | code',
       file_picker_callback: function (callback, value, meta) {
           const type = meta.filetype === 'image' ? 'image' : 'all';
+          const width = 1100, height = 700;
+          const left = (screen.width - width) / 2;
+          const top = (screen.height - height) / 2;
+
           window.bongoFileManagerCallback = function (item) {
-              callback(item.url, { alt: item.name });
+              callback(item.url, {
+                  text: item.name,
+                  alt: item.name,
+                  title: item.name
+              });
           };
-          window.open('/filemanager?type=' + type + '&callback=1', 'FileManager', 'width=1100,height=700');
+
+          window.open(
+              '/filemanager?type=' + encodeURIComponent(type) + '&callback=1',
+              'BongoFileManager',
+              'width=' + width + ',height=' + height + ',top=' + top + ',left=' + left + ',scrollbars=yes,resizable=yes'
+          );
+      }
+  });
+  ```
+
+  **Method C: Embedded Modal Dialog (`editor.windowManager.openUrl`):**
+  If you want the file manager to open directly inside a TinyMCE iframe dialog modal instead of a browser popup:
+  ```javascript
+  tinymce.init({
+      selector: 'textarea#editor',
+      plugins: 'image link media code',
+      toolbar: 'undo redo | bold italic | link image media | code',
+      file_picker_callback: function (callback, value, meta) {
+          const width = Math.min(window.innerWidth * 0.9, 1200);
+          const height = Math.min(window.innerHeight * 0.85, 750);
+          const type = meta.filetype === 'image' ? 'image' : 'all';
+
+          tinymce.activeEditor.windowManager.openUrl({
+              url: '/filemanager?type=' + encodeURIComponent(type) + '&callback=1',
+              title: 'Bongo File Manager',
+              width: width,
+              height: height,
+              onMessage: function (api, message) {
+                  if (message.mceAction === 'FileSelected' || message.mceAction === 'custom') {
+                      callback(message.content);
+                      api.close();
+                  }
+              }
+          });
       }
   });
   ```
