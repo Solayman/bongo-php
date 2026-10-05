@@ -15,10 +15,14 @@
   3. Create PR/MR targeting `master` with `head: solayman` (via GitHub REST API or `gh pr create`).
   4. Merge the PR/MR into `master` immediately (`merge_method: merge`).
   5. Sync local `master` and `solayman` branches.
+  6. **ALWAYS Update the `release` Branch Immediately**: Run `php bongo release:branch` and `git push origin refs/heads/release:release`.
+  7. **Sync Feature Testbed**: Pull the fresh starter skeleton into `bongo-package-and-feature-test` (`git pull origin release`).
+- **ALWAYS Update the Release Branch (`release`) (CRITICAL - MANDATORY)**:
+  - The `release` branch is the **clean starter skeleton** (~800 KB, 183 files, zero demo store, zero test fixtures) that end-users and developers clone (`git clone -b release`) to start fresh projects with Bongo PHP.
+  - **RULE**: Every time a batch of work or a PR is merged into `master`, the `release` branch MUST be built and pushed immediately. Never let `release` drift behind `master`.
 - **Package MRs (`Solayman/bongo-php-packages`)**:
   - **RULE: If any package needs an MR, go with `bongo-php-packages`.**
   - Commit to working/feature branch or `solayman`, push to origin, create PR targeting `master`, and merge.
-- **Release Branch (`release`)**: Clean starter skeleton for end-users. Update it with `php bongo release:branch` and `git push origin release` after merging to `master`.
 
 ## Environment & Credential Policy
 - **Check `.env` for `GITHUB_TOKEN`**: Every repository maintains a `.env` file containing a dedicated `GITHUB_TOKEN` (Fine-grained PAT) for API operations, package catalog lookups, PR creation, and merges:
