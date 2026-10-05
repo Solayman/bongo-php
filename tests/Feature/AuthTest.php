@@ -9,7 +9,7 @@ class AuthTest extends HttpTestCase
     public function testGuestIsRedirectedToLogin(): void
     {
         $this->get('/')->assertRedirect('/login');
-        $this->get('/products')->assertRedirect('/login');
+        $this->get('/profile')->assertRedirect('/login');
     }
 
     public function testLoginPageRenders(): void
@@ -20,7 +20,7 @@ class AuthTest extends HttpTestCase
     public function testAdminCanLogInAndOut(): void
     {
         $this->loginAsAdmin()->assertRedirect('/');
-        $this->get('/')->assertStatus(200)->assertSee('Welcome back, Admin!')->assertSee('Revenue');
+        $this->get('/')->assertStatus(200)->assertSee('Welcome back, Admin!')->assertSee('Dashboard');
 
         // Logged-in users are sent away from the login page
         $this->get('/login')->assertRedirect('/');
@@ -31,8 +31,8 @@ class AuthTest extends HttpTestCase
 
     public function testRedirectsToIntendedPageAfterLogin(): void
     {
-        $this->get('/orders')->assertRedirect('/login');
-        $this->loginAsAdmin()->assertRedirect('/orders');
+        $this->get('/profile')->assertRedirect('/login');
+        $this->loginAsAdmin()->assertRedirect('/profile');
     }
 
     public function testWrongPasswordAndUnknownEmailShowTheSameError(): void
@@ -48,7 +48,7 @@ class AuthTest extends HttpTestCase
 
     public function testCustomersCannotSignIn(): void
     {
-        $this->submit('/login', '/login', ['email' => 'rahim1@example.com', 'password' => 'password'])->assertRedirect('/login');
+        $this->submit('/login', '/login', ['email' => 'user@example.com', 'password' => 'password'])->assertRedirect('/login');
         $this->get('/login')->assertSee('Only administrators can sign in');
         $this->get('/')->assertRedirect('/login');
     }

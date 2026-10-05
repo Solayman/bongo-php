@@ -274,13 +274,14 @@ Claude reviewed **every feature from PRs #78–#94** line by line and ran the fu
 | Package Security Hardening (PRs #39, #40 & #41) | ✅ Verified, 182 package tests | Realpath boundary containment, CRLF header sanitization, JSON hex script escaping, auth guards in two-factor, JSON-LD hex escaping in SEO, ActivityLogger trusted proxy IP resolution, FTP path normalization traversal defense, and BackupManager filename sanitization. |
 | Package N+1 Elimination & Polymorphic Eager Loading (PR #42) | ✅ Verified, 182 package tests | Batched permission & role revocation via `whereIn('name', ...)` in `permission`; polymorphic subject/causer relationship resolution and `Activity::loadMorphs()` batched eager loading in `activity-log`. |
 | Core Framework CRLF & HTTP Response Splitting Hardening | ✅ Verified, 2 tests | Sanitized `redirect()` helper and CORS `Access-Control-Allow-Origin` echoing by stripping `\r`, `\n`, and `\0`. |
+| Internal DebugBar & Decoupled Architecture | ✅ **Verified, 353 framework tests (1,600 assertions)** | Professional floating dark-theme DevTools toolbar with Request, Messages, Timeline, Views, Queries (N+1 detection), Models, Cache, OpCache, Memory, and Time widgets; decoupled starter framework with demo store moved to `bongo-package-and-feature-test`. |
 
-**Test results at review end:** 382 tests pass on MySQL, PostgreSQL 18 and SQLite (1,938 assertions). 182 package tests pass in bongo-php-packages (757 assertions).
+**Test results at review end:** 353 tests pass on MySQL, PostgreSQL 18 and SQLite (1,600 assertions). 182 package tests pass in bongo-php-packages (757 assertions).
 
 ### Rules learned from this review (apply to all future work)
 1. **Test on every database a change touches:** `DB_CONNECTION=pgsql DB_PORT=5432 DB_USERNAME=postgres DB_PASSWORD=... php -d extension=pdo_pgsql bongo test`, plus SQLite (`DB_CONNECTION=sqlite php -d extension=pdo_sqlite bongo test`) and MySQL. Grammar-only unit tests are not enough.
 2. **PSR-12 with 0 errors** (`php phpcs.phar`) before every PR.
-3. **Only measured numbers in docs.** No "100%", "<15ms" or "pixel-perfect" without a reproducible measurement. Recount files, lines and tests after changes. Current: 127 files, ~17,400 lines, ~626 KB in `system/`; 382 tests.
+3. **Only measured numbers in docs.** No "100%", "<15ms" or "pixel-perfect" without a reproducible measurement. Recount files, lines and tests after changes. Current: 128 files, ~17,900 lines, ~640 KB in `system/`; 353 tests.
 4. **Never describe Bongo with Laravel or Blade terms** ("Blade-compatible" etc.). Comparison tables that *name* other frameworks are fine.
 5. **Security defaults for new code:**
    - escape or whitelist everything that reaches HTML/CSS/shell/headers;

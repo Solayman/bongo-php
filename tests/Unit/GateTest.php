@@ -131,12 +131,12 @@ namespace Tests\Unit {
         public function testAppPoliciesAreFoundByName(): void
         {
             Gate::actingAs($this->alice);
-            $product = new \App\Models\Product();
-            $product->id = 999999;   // never ordered
-            $this->assertTrue(Gate::allows('update', $product), 'App\Policies\ProductPolicy found for App\Models\Product');
-            $this->assertTrue(Gate::allows('delete', $product));
+            $user = new \App\Models\User();
+            $user->id = 999999;
+            $this->assertTrue(Gate::allows('update', $user), 'App\Policies\UserPolicy found for App\Models\User');
+            $this->assertTrue(Gate::allows('delete', $user));
             Gate::actingAs($this->bob);
-            $this->assertFalse(Gate::allows('update', $product));
+            $this->assertFalse(Gate::allows('update', $user));
         }
 
         public function testCanDirectives(): void

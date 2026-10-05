@@ -202,7 +202,7 @@ namespace Tests\Unit {
         public function testAppScheduleLoads(): void
         {
             $names = array_map(fn($t) => $t->getName(), Schedule::load()->tasks());
-            $this->assertTrue(in_array('Email the low stock report', $names, true));
+            $this->assertTrue(in_array('Clear compiled views', $names, true));
             $this->assertTrue(in_array('Prune expired tokens and login attempts', $names, true));
         }
     }

@@ -14,6 +14,12 @@ class DebugProbe
     public $self;
 }
 
+class DebugModelProbe extends \System\Database\Model
+{
+    protected static $table = 'debug_probes';
+    protected array $fillable = ['name', 'slug'];
+}
+
 class DebugTest extends TestCase
 {
     /** Called like a controller action: dump() inside reports this method and its values */
@@ -43,7 +49,7 @@ class DebugTest extends TestCase
     {
         $rows = [];
         for ($i = 1; $i <= 5000; $i++) {
-            $rows[] = \App\Models\Category::hydrate(['id' => $i, 'name' => "Category $i", 'slug' => "category-$i"]);
+            $rows[] = DebugModelProbe::hydrate(['id' => $i, 'name' => "Category $i", 'slug' => "category-$i"]);
         }
         $html = (new Dumper())->html($rows);
 
@@ -61,7 +67,7 @@ class DebugTest extends TestCase
 
     public function testModelsDumpTheirColumnsNotTheirSettings(): void
     {
-        $category = \App\Models\Category::hydrate(['id' => 1, 'name' => 'Books', 'slug' => 'books']);
+        $category = DebugModelProbe::hydrate(['id' => 1, 'name' => 'Books', 'slug' => 'books']);
         $text = (new Dumper())->text([$category]);
 
         $this->assertContains('name: "Books"', $text);
@@ -72,7 +78,7 @@ class DebugTest extends TestCase
 
         // Hidden columns are masked, loaded relations shown, unsaved edits listed
         $user = \App\Models\User::hydrate(['id' => 2, 'name' => 'Rahim', 'password' => '$argon2id$secret']);
-        $user->setRelation('orders', [\App\Models\Category::hydrate(['id' => 9, 'name' => 'Order-like'])]);
+        $user->setRelation('orders', [DebugModelProbe::hydrate(['id' => 9, 'name' => 'Order-like'])]);
         $user->name = 'Rahim Uddin';
         $text = (new Dumper())->text($user);
         $this->assertContains('password: "***"', $text);
@@ -80,7 +86,7 @@ class DebugTest extends TestCase
         $this->assertContains('orders:', $text);
         $this->assertContains("'Rahim' → 'Rahim Uddin'", $text);
 
-        $this->assertContains('(not saved yet): true', (new Dumper())->text(new \App\Models\Category(['name' => 'New'])));
+        $this->assertContains('(not saved yet): true', (new Dumper())->text(new DebugModelProbe(['name' => 'New'])));
     }
 
     public function testTextDumpShowsTypesVisibilityAndRecursion(): void

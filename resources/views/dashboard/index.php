@@ -5,38 +5,40 @@
 @section('content')
 <div class="row g-3 mb-4">
     <div class="col-sm-6 col-xl-3">
-        <div class="card stat-tile h-100"><div class="card-body">
-            <div class="label">{{ __('Revenue (all time)') }}</div>
-            <div class="value">{{ money($stats['revenue']) }}</div>
-            <div class="sub">{{ __(':amount in the last 30 days', ['amount' => money($stats['revenue30'])]) }}</div>
-        </div></div>
-    </div>
-    <div class="col-sm-6 col-xl-3">
-        <div class="card stat-tile h-100"><div class="card-body">
-            <div class="label">{{ __('Orders') }}</div>
-            <div class="value">{{ number_format($stats['orders']) }}</div>
-            <div class="sub"><a href="<?= url('/orders?status=pending') ?>">{{ __(':count pending', ['count' => $stats['pending']]) }}</a></div>
-        </div></div>
-    </div>
-    <div class="col-sm-6 col-xl-3">
-        <div class="card stat-tile h-100"><div class="card-body">
-            <div class="label">{{ __('Customers') }}</div>
-            <div class="value">{{ number_format($stats['customers']) }}</div>
-            <div class="sub"><a href="<?= url('/customers') ?>">{{ __('View customers') }}</a></div>
-        </div></div>
-    </div>
-    <div class="col-sm-6 col-xl-3">
-        <div class="card stat-tile h-100"><div class="card-body">
-            <div class="label">{{ __('Products') }}</div>
-            <div class="value">{{ number_format($stats['products']) }}</div>
-            <div class="sub">
-                @if($stats['lowStock'])
-                    <i class="bi bi-exclamation-triangle-fill text-warning"></i> {{ trans_choice('{0} All products in stock|{1} :count product low on stock|[2,*] :count products low on stock', $stats['lowStock']) }}
-                @else
-                    {{ trans_choice('{0} All products in stock|{1} :count product low on stock|[2,*] :count products low on stock', 0) }}
-                @endif
+        <div class="card stat-tile h-100">
+            <div class="card-body">
+                <div class="label">{{ __('Registered Users') }}</div>
+                <div class="value">{{ number_format($stats['users']) }}</div>
+                <div class="sub">{{ __('System accounts') }}</div>
             </div>
-        </div></div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-tile h-100">
+            <div class="card-body">
+                <div class="label">{{ __('PHP Runtime') }}</div>
+                <div class="value">PHP {{ explode('-', $stats['php_version'])[0] }}</div>
+                <div class="sub">{{ php_sapi_name() }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-tile h-100">
+            <div class="card-body">
+                <div class="label">{{ __('Database') }}</div>
+                <div class="value text-capitalize">{{ $stats['db_driver'] }}</div>
+                <div class="sub">{{ __('Active primary connection') }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-tile h-100">
+            <div class="card-body">
+                <div class="label">{{ __('Queue Driver') }}</div>
+                <div class="value text-capitalize">{{ $stats['queue_driver'] }}</div>
+                <div class="sub">{{ __('Environment:') }} {{ $stats['env'] }}</div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -44,76 +46,73 @@
     <div class="col-xl-8">
         <div class="card h-100">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <span class="fw-semibold">{{ __('Recent orders') }}</span>
-                <a href="<?= url('/orders') ?>" class="small">{{ __('View all') }}</a>
+                <span class="fw-semibold">{{ __('Welcome to Bongo PHP') }}</span>
+                <span class="badge bg-success-subtle text-success">v{{ System\Framework::version() }}</span>
             </div>
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light"><tr><th>{{ __('Order') }}</th><th>{{ __('Customer') }}</th><th>{{ __('Status') }}</th><th>{{ __('Date') }}</th><th class="num">{{ __('Total') }}</th></tr></thead>
-                    <tbody>
-                    @foreach($recentOrders as $order)
-                        <tr>
-                            <td><a href="<?= url('/orders/' . $order->id) ?>">{{ $order->order_number }}</a></td>
-                            <td>{{ $order->customer_name ?? __('Guest') }}</td>
-                            <td><span class="badge <?= App\Models\Order::badge($order->status) ?>">{{ __(ucfirst($order->status)) }}</span></td>
-                            <td class="text-secondary small">{{ date('M j, Y', strtotime($order->created_at)) }}</td>
-                            <td class="num">{{ money($order->total) }}</td>
-                        </tr>
-                    @endforeach
-                    @if(!$recentOrders)
-                        <tr><td colspan="5" class="text-center text-secondary py-4">{{ __('No orders yet.') }}</td></tr>
-                    @endif
-                    </tbody>
-                </table>
+            <div class="card-body">
+                <h5 class="card-title fw-bold">{{ __('Admin Dashboard') }}</h5>
+                <p class="text-secondary mb-4">
+                    {{ __('Bongo PHP is a modern, lightweight, zero-dependency PHP framework built for speed, simplicity, and rock-solid reliability.') }}
+                </p>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="p-3 border rounded-3 bg-light">
+                            <h6 class="fw-semibold mb-2"><i class="bi bi-terminal me-2"></i>{{ __('Developer Commands') }}</h6>
+                            <ul class="list-unstyled small text-secondary mb-0">
+                                <li><code>php bongo serve</code> - {{ __('Start local server') }}</li>
+                                <li><code>php bongo migrate</code> - {{ __('Run migrations') }}</li>
+                                <li><code>php bongo test</code> - {{ __('Execute test suite') }}</li>
+                                <li><code>php bongo benchmark</code> - {{ __('Measure performance') }}</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 border rounded-3 bg-light">
+                            <h6 class="fw-semibold mb-2"><i class="bi bi-box-seam me-2"></i>{{ __('Production Caching') }}</h6>
+                            <ul class="list-unstyled small text-secondary mb-0">
+                                <li><code>php bongo config:cache</code> - {{ __('Compile config') }}</li>
+                                <li><code>php bongo route:cache</code> - {{ __('Compile routes') }}</li>
+                                <li><code>php bongo view:cache</code> - {{ __('Precompile views') }}</li>
+                                <li><code>php bongo optimize:clear</code> - {{ __('Clear all caches') }}</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="col-xl-4 d-flex flex-column gap-3">
-        <div class="card">
-            <div class="card-header bg-white fw-semibold">{{ __('Orders by status') }}</div>
-            <ul class="list-group list-group-flush">
-                @foreach($statusCounts as $status => $count)
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <a href="<?= url('/orders?status=' . $status) ?>" class="text-body text-decoration-none">
-                            <span class="badge <?= App\Models\Order::badge($status) ?> me-2">&nbsp;</span>{{ __(ucfirst($status)) }}
-                        </a>
-                        <span class="num">{{ $count }}</span>
-                    </li>
-                @endforeach
-            </ul>
-        </div>
-
-        <div class="card">
-            <div class="card-header bg-white fw-semibold">{{ __('Top products') }}</div>
-            <ul class="list-group list-group-flush">
-                @foreach($topProducts as $product)
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>{{ $product['product_name'] }}</span>
-                        <span class="text-secondary small num">{{ __(':units sold', ['units' => $product['units']]) }} · {{ money($product['revenue']) }}</span>
-                    </li>
-                @endforeach
-                @if(!$topProducts)
-                    <li class="list-group-item text-secondary">{{ __('No sales yet.') }}</li>
-                @endif
-            </ul>
-        </div>
-
-        <div class="card">
-            <div class="card-header bg-white fw-semibold">{{ __('Low stock') }}</div>
-            <ul class="list-group list-group-flush">
-                @foreach($lowStock as $product)
-                    <li class="list-group-item d-flex justify-content-between">
-                        <a href="<?= url('/products/' . $product->id . '/edit') ?>">{{ $product->name }}</a>
-                        <span class="num <?= $product->stock == 0 ? 'text-danger fw-semibold' : '' ?>">
-                            {{ $product->stock == 0 ? __('Out of stock') : __(':count left', ['count' => $product->stock]) }}
-                        </span>
-                    </li>
-                @endforeach
-                @if(!$lowStock)
-                    <li class="list-group-item text-secondary">{{ __('Nothing is running low.') }}</li>
-                @endif
-            </ul>
+    <div class="col-xl-4">
+        <div class="card h-100">
+            <div class="card-header bg-white fw-semibold">
+                {{ __('Quick Links') }}
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="<?= url('/profile') ?>" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-medium">{{ __('Profile Settings') }}</div>
+                        <div class="small text-secondary">{{ __('Update your name, email and password') }}</div>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </a>
+                @can('manage-system')
+                <a href="<?= url('/system') ?>" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-medium">{{ __('System Status') }}</div>
+                        <div class="small text-secondary">{{ __('Environment check & security audit') }}</div>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </a>
+                @endcan
+                <a href="https://github.com/Solayman/bongo-php" target="_blank" rel="noopener" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-medium">{{ __('GitHub Repository') }}</div>
+                        <div class="small text-secondary">{{ __('Source code, docs and updates') }}</div>
+                    </div>
+                    <i class="bi bi-box-arrow-up-right text-muted"></i>
+                </a>
+            </div>
         </div>
     </div>
 </div>

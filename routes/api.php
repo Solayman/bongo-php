@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\HealthController;
-use App\Http\Controllers\Api\ProductController;
 use System\Routing\Route;
 
 /*
@@ -20,7 +19,4 @@ Route::post('/auth/refresh', [AuthController::class, 'refresh'])->name('auth.ref
 Route::middleware('auth:api')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me'])->name('auth.me');
     Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
-
-    Route::get('/products', [ProductController::class, 'index'])->name('products.index');
-    Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show')->where('product', '\d+');
 });
