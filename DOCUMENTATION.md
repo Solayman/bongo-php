@@ -50,11 +50,14 @@ cp .env.example .env              # Windows: copy .env.example .env
 # edit .env: APP_NAME, APP_URL, DB_* values
 php bongo key:generate          # writes APP_KEY to .env
 php bongo migrate               # create tables (tracked in the `migrations` table)
-php bongo db:seed               # demo data for the e-commerce test app
-php bongo serve                 # http://127.0.0.1:8000
+php bongo db:seed               # seed initial admin user account
+php bongo serve                 # http://127.0.0.1:8000 (options: --port 8000, 8002, -p 8002)
 ```
 
-Demo login (seeded): **admin@example.com / password**. Change it on the Profile page.
+* **Welcome Page:** `http://127.0.0.1:8000/`
+* **Sign In:** `http://127.0.0.1:8000/login`
+* **Dashboard:** `http://127.0.0.1:8000/dashboard`
+* **Demo login (seeded):** `admin@example.com` / `password`
 
 ### `.env` keys
 
