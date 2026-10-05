@@ -35,5 +35,5 @@ return [
     // 'seo',             // Search Engine Optimization (SEO), OpenGraph, Twitter Cards, Schema JSON-LD, XML Sitemap
     // 'activity-log',    // Enterprise audit trail & model activity logger with old/new attribute diffs
     // 'health',          // Application health checks & uptime monitoring for database, storage, cache, and redis
-    // 'file-manager',    // Web file manager with tree navigation, image previews, and embedded code editor
+    'file-manager',    // Web file manager with tree navigation, image previews, and embedded code editor
 ];

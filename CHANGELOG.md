@@ -35,6 +35,8 @@ Every notable change to the Bongo PHP Framework. Versions follow [semantic versi
   - `activity-log` (1.0.0): Enterprise-ready audit trail and model activity logger with `LogsActivity` trait, automated event recording and old vs new attribute diff tracking, client telemetry (IP and User-Agent), and `php bongo activity:clean`.
   - `health` (1.0.0): Production uptime monitoring and health check suite with built-in checks for Database latency, Storage write/read/delete, Disk Space %, Cache responsiveness, and Redis, HTTP `/health` JSON endpoint with secret token masking, and CLI `php bongo health:check`.
   - `file-manager` (1.0.0): Zero-dependency web file manager and embedded professional code editor compatible with UniSharp File Manager API. Features dark slate header, directory tree sidebar, dual Thumbnails/List views, speed dial floating action buttons (FAB), drag-and-drop multi-file uploads, embedded CodeMirror 5 code editor with syntax highlighting for 10+ languages (PHP, JS, CSS, HTML, SQL, etc.), Dracula/Eclipse themes, `Ctrl+S` auto-saving, high-resolution image preview lightbox with zoom and metadata, standalone WYSIWYG connector (`bongoFileManager()`), and path traversal sanitization.
+- **Demo Store Blog & TinyMCE 6 / File Manager Integration**: Added full Blog section to the demo application with post CRUD (`App\Http\Controllers\PostController`), slug generation, status workflow (`published` / `draft`), TinyMCE 6 rich text editor integration, Bongo File Manager popup/modal picker integration (`bongoTinyMCEPicker()`), public frontend blog feed and post view (`App\Http\Controllers\BlogController`), and automated integration test suite (`tests/Feature/BlogTest.php`). Total core tests increased to **371 tests passing** (1,888 assertions).
+- **Multi-Directory Migration Generation Support**: Updated `System\Database\Migrator::make()` to handle array migration paths safely, creating new migrations in the primary application directory when package migration directories are registered.
 - **Storage Driver Extensibility & Presigned URLs**:
   - `Storage::extend($driver, $callback)`: register custom filesystem disk drivers at runtime.
   - `Storage::set($name, $disk)`: inject or mock disk instances in unit testing.
@@ -73,7 +75,12 @@ Every notable change to the Bongo PHP Framework. Versions follow [semantic versi
 - Starter skeleton metrics and documentation synchronized: updated fresh starter skeleton documentation to reflect accurate footprint (~800 KB, 183 files) and documented direct end-user distribution via the `release` branch (`git clone -b release`).
 - Query values are bound with their real types (int, null, bool with native `\PDO::PARAM_BOOL` for pgsql).
 - Framework autoloader optimized with direct prefix checks (`strncmp`) and `is_file()` lookups.
-- **PSR-12 coding standard** for the whole codebase (formatting only, #97). Rules in `phpcs.xml`; check with `php phpcs.phar` (0 errors required, see CONTRIBUTING).
+- **PSR-12 coding standard** for the whole codebase (formatting only, #97). Rules in `phpcs.xml`; check with `php phpcs.phar` (0 errors required, see CONTRIBUTING). Enforced across all 20 packages with `declare(strict_types=1);` in 100% of source files.
+- **Package code optimizations & N+1 elimination**:
+  - `permission`: Eliminated N+1 queries in `HasRoles::hasPermissionViaRole()` and `getAllPermissions()` using a single batched O(1) query (`WHERE rhp.role_id IN (...)`) and model resolution (`whereIn`). Extracted shared `HasPermissions` trait, removing 100+ lines of duplicate code between `Role` and `HasRoles`.
+  - `settings`: Eliminated N+1 queries in `SettingsManager::set(array)` by batch-fetching existing records via `Setting::whereIn()`. Added `SettingsManager::load(array $keys)` for single-query cache pre-loading.
+  - `activity-log`: Extracted polymorphic helper `ActivityLogger::resolveMorph()`, eliminating duplicate morph extraction across models and loggers.
+  - Package test suite updated to 174 passing tests (741 assertions, 0 failures).
 - `php bongo test` now runs on **PostgreSQL** too: it creates the test database and loads `pdo_pgsql` in the test server (#95).
 - Docs corrected (#99): measured numbers only (122 files, ~16,000 lines, ~570 KB, 349 tests), no "Blade" wording, correct controller path, unique section numbers in DOCUMENTATION.md, `php bongo help` instead of a non-existent `list`. CLAUDE.md and GEMINI.md record the verified review status.
 
