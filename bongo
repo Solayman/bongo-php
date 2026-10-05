@@ -19,11 +19,21 @@ $hasOption = fn(string $name) => in_array("--$name", $options, true);
 $optionValue = function (string $name, $default = null) use ($options) {
     for ($i = 0; $i < count($options); $i++) {
         $opt = $options[$i];
-        if (str_starts_with($opt, "--$name=")) {
-            return substr($opt, strlen($name) + 3);
+        if (str_starts_with($opt, "--$name=") || str_starts_with($opt, "-$name=")) {
+            return substr($opt, strpos($opt, '=') + 1);
         }
-        if ($opt === "--$name" && isset($options[$i + 1]) && !str_starts_with($options[$i + 1], '--')) {
-            return $options[$i + 1];
+        if (($opt === "--$name" || $opt === "-$name" || $opt === $name) && isset($options[$i + 1])) {
+            $next = ltrim($options[$i + 1], '-');
+            if ($next !== '' && (is_numeric($next) || !str_starts_with($options[$i + 1], '--'))) {
+                return $next;
+            }
+        }
+        // Support shorthand like: php bongo serve 8002 or -p 8002
+        if ($name === 'port' && $opt === '-p' && isset($options[$i + 1])) {
+            return ltrim($options[$i + 1], '-');
+        }
+        if ($name === 'port' && is_numeric(ltrim($opt, '-')) && (int) ltrim($opt, '-') > 1000) {
+            return ltrim($opt, '-');
         }
     }
     return $default;

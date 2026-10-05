@@ -8,8 +8,13 @@ class AuthTest extends HttpTestCase
 {
     public function testGuestIsRedirectedToLogin(): void
     {
-        $this->get('/')->assertRedirect('/login');
+        $this->get('/dashboard')->assertRedirect('/login');
         $this->get('/profile')->assertRedirect('/login');
+    }
+
+    public function testWelcomePageRendersForGuest(): void
+    {
+        $this->get('/')->assertStatus(200)->assertSee('Bongo')->assertSee('Modern Lightweight PHP Framework');
     }
 
     public function testLoginPageRenders(): void
@@ -19,14 +24,14 @@ class AuthTest extends HttpTestCase
 
     public function testAdminCanLogInAndOut(): void
     {
-        $this->loginAsAdmin()->assertRedirect('/');
-        $this->get('/')->assertStatus(200)->assertSee('Welcome back, Admin!')->assertSee('Dashboard');
+        $this->loginAsAdmin()->assertRedirect('/dashboard');
+        $this->get('/dashboard')->assertStatus(200)->assertSee('Welcome back, Admin!')->assertSee('Dashboard');
 
         // Logged-in users are sent away from the login page
-        $this->get('/login')->assertRedirect('/');
+        $this->get('/login')->assertRedirect('/dashboard');
 
-        $this->submit('/', '/logout')->assertRedirect('/login');
-        $this->get('/')->assertRedirect('/login');
+        $this->submit('/dashboard', '/logout')->assertRedirect('/login');
+        $this->get('/dashboard')->assertRedirect('/login');
     }
 
     public function testRedirectsToIntendedPageAfterLogin(): void
@@ -43,14 +48,14 @@ class AuthTest extends HttpTestCase
         $this->submit('/login', '/login', ['email' => 'nobody@example.com', 'password' => 'wrong'])->assertRedirect('/login');
         $this->get('/login')->assertSee('These credentials do not match our records.')->assertSee('nobody@example.com');
 
-        $this->get('/')->assertRedirect('/login');
+        $this->get('/dashboard')->assertRedirect('/login');
     }
 
     public function testCustomersCannotSignIn(): void
     {
         $this->submit('/login', '/login', ['email' => 'user@example.com', 'password' => 'password'])->assertRedirect('/login');
         $this->get('/login')->assertSee('Only administrators can sign in');
-        $this->get('/')->assertRedirect('/login');
+        $this->get('/dashboard')->assertRedirect('/login');
     }
 
     public function testValidationErrorsOnEmptyForm(): void
@@ -81,7 +86,7 @@ class AuthTest extends HttpTestCase
         // Even the right password is refused while locked
         $this->submit('/login', '/login', ['email' => 'locktest@example.com', 'password' => 'password'])->assertRedirect('/login');
         $this->get('/login')->assertSee('Too many login attempts');
-        $this->get('/')->assertRedirect('/login');
+        $this->get('/dashboard')->assertRedirect('/login');
     }
 
     public function testSessionIdChangesOnLogin(): void

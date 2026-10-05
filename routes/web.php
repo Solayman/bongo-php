@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SystemController;
+use App\Http\Controllers\HomeController;
 use System\Routing\Route;
 
 /*
@@ -12,6 +13,9 @@ use System\Routing\Route;
  * Register with Route::get/post/put/patch/delete/options/any/match, then chain
  * ->name(), ->middleware(), ->withoutMiddleware(), ->where().
  */
+
+// Public Welcome Page
+Route::get('/', [HomeController::class, 'index'])->name('welcome');
 
 // Authentication
 Route::middleware('guest')->group(function () {
@@ -29,8 +33,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
     // Dashboard
-    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/dashboard', [DashboardController::class, 'index']);
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

@@ -6,7 +6,7 @@ return [
 
     'guards' => [
         // Browser sessions (cookie)
-        'web' => ['driver' => 'session', 'provider' => 'users', 'login_url' => '/login', 'home' => '/'],
+        'web' => ['driver' => 'session', 'provider' => 'users', 'login_url' => '/login', 'home' => '/dashboard'],
 
         // API clients: "Authorization: Bearer <JWT>"
         'api' => ['driver' => 'jwt', 'provider' => 'users'],

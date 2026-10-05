@@ -44,7 +44,7 @@ class AuthController extends Controller
             $this->failLogin(__('Only administrators can sign in to the dashboard.'), $email);
         }
 
-        $intended = Session::get('url.intended', '/');
+        $intended = Session::get('url.intended', '/dashboard');
         Session::forget('url.intended');
 
         flash('success', __('Welcome back, :name!', ['name' => Auth::user()->name]));

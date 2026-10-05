@@ -14,7 +14,7 @@ class RememberMeTest extends HttpTestCase
 
     public function testWithoutRememberTheUserIsSignedOutWhenTheBrowserCloses(): void
     {
-        $this->submit('/login', '/login', ['email' => 'admin@example.com', 'password' => 'password'])->assertRedirect('/');
+        $this->submit('/login', '/login', ['email' => 'admin@example.com', 'password' => 'password'])->assertRedirect('/dashboard');
         $this->assertSame(false, isset($this->cookies['remember_web']), 'no cookie without the checkbox');
         $this->closeBrowser();
         $this->get('/dashboard')->assertRedirect('/login');
@@ -23,7 +23,7 @@ class RememberMeTest extends HttpTestCase
     public function testRememberMeKeepsTheUserSignedIn(): void
     {
         $this->get('/login')->assertSee('name="remember"');
-        $this->submit('/login', '/login', ['email' => 'admin@example.com', 'password' => 'password', 'remember' => '1'])->assertRedirect('/');
+        $this->submit('/login', '/login', ['email' => 'admin@example.com', 'password' => 'password', 'remember' => '1'])->assertRedirect('/dashboard');
 
         $cookie = $this->cookies['remember_web'] ?? '';
         $this->assertTrue((bool) preg_match('/^\d+(\||%7C)[a-f0-9]{64}$/', $cookie), "cookie: $cookie");

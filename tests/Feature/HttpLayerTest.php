@@ -125,9 +125,9 @@ class HttpLayerTest extends HttpTestCase
         $this->get('/login')->assertSee('এই ইমেইল বা পাসওয়ার্ড আমাদের রেকর্ডের সাথে মেলে না।');
 
         $this->submit('/login', '/login', ['email' => 'admin@example.com', 'password' => 'password']);
-        $this->get('/')->assertSee('আবার স্বাগতম, Admin!')->assertSee('ড্যাশবোর্ড');
+        $this->get('/dashboard')->assertSee('আবার স্বাগতম, Admin!')->assertSee('ড্যাশবোর্ড');
 
-        $this->get('/?lang=en')->assertSee('Dashboard');
+        $this->get('/dashboard?lang=en')->assertSee('Dashboard');
     }
 
     public function testBrowserLanguageIsUsedWhenNothingWasChosen(): void

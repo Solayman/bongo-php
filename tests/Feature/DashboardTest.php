@@ -34,7 +34,7 @@ class DashboardTest extends HttpTestCase
 
     public function testDashboardShowsSystemInfo(): void
     {
-        $this->get('/')
+        $this->get('/dashboard')
             ->assertSee('Admin Dashboard')
             ->assertSee('Admin')
             ->assertSee('PHP');
@@ -47,7 +47,7 @@ class DashboardTest extends HttpTestCase
 
     public function testDebugFooterShowsQueries(): void
     {
-        $response = $this->get('/');
+        $response = $this->get('/dashboard');
         $response->assertSee('bongo-debugbar');
         $response->assertSee('Queries');
         $response->assertSee('SELECT COUNT(*) AS aggregate FROM users');
