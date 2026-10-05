@@ -4,7 +4,7 @@
     </a>
 
     <div class="nav-section">{{ __('Navigation') }}</div>
-    <a class="nav-link <?= is_active('/') ?: is_active('/dashboard') ?>" href="<?= url('/') ?>"><i class="bi bi-speedometer2"></i><span>{{ __('Dashboard') }}</span></a>
+    <a class="nav-link <?= is_active('/dashboard') ?>" href="<?= url('/dashboard') ?>"><i class="bi bi-speedometer2"></i><span>{{ __('Dashboard') }}</span></a>
 
     <div class="nav-section mt-3">{{ __('Account') }}</div>
     <a class="nav-link <?= is_active('/profile') ?>" href="<?= url('/profile') ?>"><i class="bi bi-person-gear"></i><span>{{ __('Profile') }}</span></a>

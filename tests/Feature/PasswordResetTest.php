@@ -64,7 +64,7 @@ class PasswordResetTest extends HttpTestCase
 
         // New password works, old one does not
         $this->submit('/login', '/login', ['email' => $this->email, 'password' => 'old-password'])->assertRedirect('/login');
-        $this->submit('/login', '/login', ['email' => $this->email, 'password' => 'brand-new-pass'])->assertRedirect('/');
+        $this->submit('/login', '/login', ['email' => $this->email, 'password' => 'brand-new-pass'])->assertRedirect('/dashboard');
 
         // Single use: the link is dead now
         $this->cookies = [];
