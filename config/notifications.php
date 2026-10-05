@@ -6,7 +6,7 @@ return [
         'url'    => env('SMS_URL', ''),                       // e.g. https://api.your-sms-gateway.com/send
         'token'  => env('SMS_TOKEN', ''),                     // sent as "Authorization: Bearer ..."
         'fields' => ['to' => 'to', 'text' => 'text'],         // the gateway's names for the number and the message
-        'extra'  => [],                                       // fixed fields, e.g. ['sender_id' => 'BongoShop']
+        'extra'  => [],                                       // fixed fields, e.g. ['sender_id' => 'Bongo']
     ],
 
     // Slack: an incoming-webhook URL. Without one, Slack messages are written to the log.
