@@ -3096,7 +3096,7 @@ Complete API development suite for professional APIs on Bongo PHP Framework. Inc
   ```
 
 #### 16. `settings` — Dynamic Application & Store Settings
-Zero-dependency, type-safe application configuration and store settings manager for Bongo MVC. Persists dynamic settings in the database with in-memory & persistent caching, type casting (boolean, integer, float, json, string), CLI commands, and a Blade `@setting` directive.
+Zero-dependency, type-safe application configuration and store settings manager for Bongo. Persists dynamic settings in the database with in-memory & persistent caching, type casting (boolean, integer, float, json, string), CLI commands, and a Blade `@setting` directive.
 * **Install:** `php bongo add settings && php bongo migrate`
 * **API Usage:**
   ```php
