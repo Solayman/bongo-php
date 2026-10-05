@@ -242,7 +242,8 @@ if (!function_exists('abort')) {
 if (!function_exists('redirect')) {
     function redirect($url)
     {
-        header('Location: ' . $url, true, 302);
+        $cleanUrl = str_replace(["\r", "\n", "\0"], '', (string) $url);
+        header('Location: ' . $cleanUrl, true, 302);
         exit;
     }
 }

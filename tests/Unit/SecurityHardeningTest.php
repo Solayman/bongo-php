@@ -108,4 +108,22 @@ class SecurityHardeningTest extends TestCase
         $this->assertSame('ok', $results['HTTPS']['status']);
         $this->assertSame('ok', $results['APP_KEY']['status']);
     }
+
+    public function testRedirectSanitizesCrlfHeaderInjection(): void
+    {
+        $dirty = "https://example.com/page\r\nSet-Cookie: session=hacked\r\n";
+        $clean = str_replace(["\r", "\n", "\0"], '', $dirty);
+        $this->assertSame('https://example.com/pageSet-Cookie: session=hacked', $clean);
+        $this->assertFalse(str_contains($clean, "\r"));
+        $this->assertFalse(str_contains($clean, "\n"));
+    }
+
+    public function testCorsOriginSanitizesCrlf(): void
+    {
+        $dirty = "https://example.com\r\nInjected-Header: evil";
+        $clean = str_replace(["\r", "\n", "\0"], '', $dirty);
+        $this->assertSame('https://example.comInjected-Header: evil', $clean);
+        $this->assertFalse(str_contains($clean, "\r"));
+        $this->assertFalse(str_contains($clean, "\n"));
+    }
 }

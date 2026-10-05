@@ -44,7 +44,8 @@ class Cors
             header('Access-Control-Allow-Origin: *');
         } elseif (in_array($origin, $allowed, true) || in_array('*', $allowed, true)) {
             // A specific origin is echoed back; with credentials "*" is not allowed by browsers
-            header('Access-Control-Allow-Origin: ' . $origin);
+            $cleanOrigin = str_replace(["\r", "\n", "\0"], '', (string) $origin);
+            header('Access-Control-Allow-Origin: ' . $cleanOrigin);
             header('Vary: Origin', false);
         } else {
             return false;
