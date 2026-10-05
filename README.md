@@ -53,31 +53,37 @@ php bongo key:generate
 php bongo migrate
 
 # 4. Start local development server
-php bongo serve             # Listening on http://127.0.0.1:8000
+php bongo serve             # Listening on http://127.0.0.1:8000 (supports --port 8000, 8002, -p 8002)
 ```
 
-### Full Repository with Storefront Demo & Test Suites
-If you are evaluating Bongo's complete feature set or contributing:
+Visit your application in the browser:
+* **Welcome Page:** `http://127.0.0.1:8000/`
+* **Admin Sign In:** `http://127.0.0.1:8000/login` *(Login: `admin@example.com` / `password`)*
+* **Admin Dashboard:** `http://127.0.0.1:8000/dashboard`
+
+### Official Feature Testbed & Package Sandbox
+If you are evaluating Bongo's complete ecosystem (E-Commerce Storefront, Blog CMS, File Manager, TinyMCE 6, and all 24 official packages):
 
 ```bash
-# 1. Clone the full repository
-git clone https://github.com/Solayman/bongo-php.git my-app && cd my-app
+# 1. Clone the official testbed repository
+git clone https://github.com/Solayman/bongo-package-and-feature-test.git testbed && cd testbed
 
 # 2. Configure environment (Windows: copy .env.example .env)
 cp .env.example .env
 
-# 3. Generate security key, migrate database, and seed demo store
+# 3. Generate security key, migrate database, and seed full demo
 php bongo key:generate
 php bongo migrate
 php bongo db:seed
 
 # 4. Start local development server
-php bongo serve
+php bongo serve --port 8002
 ```
 
-Visit your application in the browser:
-* **Admin Dashboard:** `http://127.0.0.1:8000` *(Login: `admin@example.com` / `password`)*
-* **Storefront Demo:** `http://127.0.0.1:8000/shop` *(Login: `rahim1@example.com` / `password`)*
+Visit the testbed application in the browser:
+* **Testbed Admin / CMS:** `http://127.0.0.1:8002/login` *(Pre-filled: `admin@example.com` / `password`)*
+* **Storefront Demo:** `http://127.0.0.1:8002/shop` *(Pre-filled: `rahim1@example.com` / `password`)*
+* **Public Blog:** `http://127.0.0.1:8002/blog`
 
 > [!TIP]
 > Composer packages are **100% optional**. If you choose to install packages, Bongo automatically detects and loads `vendor/autoload.php`.
