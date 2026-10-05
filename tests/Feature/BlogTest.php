@@ -111,4 +111,33 @@ class BlogTest extends HttpTestCase
         $this->assertContains('bongoFileManager', $scriptRes->body);
         $this->assertContains('bongoTinyMCEPicker', $scriptRes->body);
     }
+
+    public function testBlogPostHtmlXssSanitization(): void
+    {
+        $maliciousPayload = '<p>Safe intro</p><script>alert("xss")</script><img src="x" onerror="alert(1)"><a href="javascript:alert(1)">bad link</a>';
+
+        $this->submit('/posts/create', '/posts', [
+            'title' => 'Security Audit Test Post',
+            'content' => $maliciousPayload,
+            'status' => 'published',
+        ])->assertRedirect('/posts');
+
+        $post = $this->db('posts')->where('title', 'Security Audit Test Post')->first();
+        $this->assertNotNull($post);
+
+        // Verify stored content does not contain dangerous vectors
+        $this->assertNotContains('<script', $post->content);
+        $this->assertNotContains('onerror', $post->content);
+        $this->assertNotContains('javascript:', $post->content);
+        $this->assertContains('<p>Safe intro</p>', $post->content);
+
+        // Verify frontend display
+        $res = $this->get('/blog/' . $post->slug);
+        $res->assertStatus(200);
+        $this->assertNotContains('alert("xss")', $res->body);
+        $this->assertNotContains('onerror="alert(1)"', $res->body);
+        $this->assertNotContains('href="javascript:alert(1)"', $res->body);
+        $this->assertContains('<p>Safe intro</p>', $res->body);
+    }
 }
+

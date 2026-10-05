@@ -9,7 +9,7 @@ A complete full-stack web framework contained in ~616 KB of clean, readable code
 
 [![PHP Version](https://img.shields.io/badge/PHP-8.0%2B-777bb4?style=flat-square&logo=php&logoColor=white)](https://www.php.net)
 [![Dependencies](https://img.shields.io/badge/dependencies-0%20required-success?style=flat-square)](DOCUMENTATION.md)
-[![Test Suite](https://img.shields.io/badge/automated%20tests-371%20passing-success?style=flat-square)](TESTING_GUIDE.md)
+[![Test Suite](https://img.shields.io/badge/automated%20tests-380%20passing-success?style=flat-square)](TESTING_GUIDE.md)
 [![Starter Skeleton](https://img.shields.io/badge/starter%20skeleton-~800%20KB-informational?style=flat-square)](#framework-comparison)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 [![Localization](https://img.shields.io/badge/i18n-English%20%7C%20বাংলা-orange?style=flat-square)](DOCUMENTATION.md#localization)
@@ -56,7 +56,7 @@ php bongo serve             # Listening on http://127.0.0.1:8000
 ```
 
 ### Option B: Full Framework with Demo Store & Test Suite
-The `master` branch includes the full framework alongside a complete sample e-commerce application (admin dashboard + customer storefront) and the 340-test automated test suite:
+The `master` branch includes the full framework alongside a complete sample e-commerce application (admin dashboard + customer storefront) and the 380-test automated test suite:
 
 ```bash
 # Clone the complete development repository
@@ -154,7 +154,7 @@ $this->get('/products')
     ->assertSee('Yoga Mat');
 ```
 ```bash
-php bongo test              # Runs 371 unit & feature tests with isolated SQLite/MySQL/PostgreSQL runner
+php bongo test              # Runs 380 unit & feature tests (1,932 assertions) with isolated SQLite/MySQL/PostgreSQL runner
 ```
 
 ---
@@ -257,7 +257,7 @@ Architectural trade-offs compared objectively across common PHP ecosystems:
 Yes. Bongo does not require Composer, but it remains fully compatible with it. If `vendor/autoload.php` exists, the framework automatically registers the autoloader.
 
 **Is Bongo suitable for production workloads?**  
-Bongo includes 371 automated test cases, strict type hinting, regression suites, and production security verification (`php bongo security:check`). As a v0.9.x release, core interfaces are stable while feature expansion continues.
+Bongo includes 380 automated test cases (1,932 assertions), strict type hinting, regression suites, and production security verification (`php bongo security:check`). As a v0.9.x release, core interfaces are stable while feature expansion continues.
 
 **How does framework maintenance and upgrading work?**  
 The framework provides an isolated upgrade utility (`php bongo upgrade`) that verifies cryptographic SHA-256 checksums, creates an automated pre-upgrade backup, and patches core `system/` components without touching application files. Upgrades can be reversed using `php bongo upgrade --rollback`.

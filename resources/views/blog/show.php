@@ -37,7 +37,7 @@
             @endif
 
             <div class="post-content lh-lg fs-5">
-                {!! $post->content !!}
+                {!! clean_html((string) $post->content) !!}
             </div>
 
             <footer class="mt-5 pt-4 border-top d-flex justify-content-between align-items-center">

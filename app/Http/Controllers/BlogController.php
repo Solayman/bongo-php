@@ -17,6 +17,7 @@ class BlogController extends Controller
         $search = $request->q;
 
         $query = Post::query()
+            ->with('user')
             ->where('status', 'published')
             ->orderBy('id', 'DESC');
 
