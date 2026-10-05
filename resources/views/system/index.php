@@ -275,7 +275,7 @@
             </table>
         </div>
     @else
-        <div class="card-body text-secondary small">No emails yet. Use "Forgot your password?" on the login page, or register in the shop, and the email appears here.</div>
+        <div class="card-body text-secondary small">No emails yet. Use "Forgot your password?" on the login page to see emails appear here.</div>
     @endif
 </div>
 
