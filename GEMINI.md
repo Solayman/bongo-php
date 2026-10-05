@@ -239,9 +239,10 @@ Claude verified **all features from PRs #78–#94** on real MySQL, **PostgreSQL 
 | Package Subsystem & Official Suite (Phases A, B, C, D) | ✅ **Complete, 20 packages, 180 package tests** | Pure-PHP manager (`System\Package`), SHA-256 verification, update diff safety, app overrides, `bootstrap.php` runner, storage extensibility (`Storage::extend()`, `Storage::temporaryUrl()`), and 20 official packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`, `nagad`, `stripe`, `two-factor`, `image`, `backup`, `permission`, `zip`, `ftp`, `paypal`, `api-tools`, `settings`, `seo`, `activity-log`, `health`, `file-manager`). |
 | Demo Store Blog & TinyMCE 6 / File Manager (#114+) | ✅ Verified, 3 tests | Post CRUD, TinyMCE 6 editor, Bongo File Manager modal/popup pickers, draft visibility, and array migration path support in Migrator. |
 | HTML Sanitization & Stored XSS Fix (#117) | ✅ Verified, 9 tests | `HtmlSanitizer` & `clean_html()` helper, DOMDocument with UTF-8 envelope (Unicode/Bengali safe), post content sanitized in PostController & show.php, N+1 query resolved on blog listings via eager loading `with('user')`, `--origins` flag added to `websocket:serve`. |
-| Package Security Hardening (PRs #39 & #40) | ✅ Verified, 21 tests in file-manager | Realpath boundary containment, CRLF header sanitization, JSON hex script escaping, auth guards in two-factor, JSON-LD hex escaping in SEO. |
+| Package Security Hardening (PRs #39, #40 & #41) | ✅ Verified, 182 package tests | Realpath boundary containment, CRLF header sanitization, JSON hex script escaping, auth guards in two-factor, JSON-LD hex escaping in SEO, ActivityLogger trusted proxy IP resolution, FTP path normalization traversal defense, and BackupManager filename sanitization. |
+| Core Framework CRLF & HTTP Response Splitting Hardening | ✅ Verified, 2 tests | Sanitized `redirect()` helper and CORS `Access-Control-Allow-Origin` echoing by stripping `\r`, `\n`, and `\0`. |
 
 **Current framework verification totals:**
-- Core framework tests: **380 tests passing (1,932 assertions)** across MySQL, PostgreSQL 18, and SQLite.
-- System metrics: **127 modular files, 17,468 lines (~17,400 lines), ~626 KB** in `system/`.
-- Official package suite: **20 packages, 180 passing package tests (745 assertions)**.
+- Core framework tests: **382 tests passing (1,938 assertions)** across MySQL, PostgreSQL 18, and SQLite.
+- System metrics: **127 modular files, 17,470 lines (~17,400 lines), ~626 KB** in `system/`.
+- Official package suite: **20 packages, 182 passing package tests (749 assertions)**.
