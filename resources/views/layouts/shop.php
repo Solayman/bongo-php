@@ -28,6 +28,9 @@
                     @endforeach
                 </ul>
             </div>
+            <a href="{{ route('blog.index') }}" class="btn btn-sm btn-outline-dark">
+                <i class="bi bi-journal-text me-1"></i>{{ __('Blog') }}
+            </a>
             <a href="{{ route('shop.cart') }}" class="btn btn-sm btn-dark position-relative">
                 <i class="bi bi-cart3 me-1"></i>{{ __('Cart') }}
                 @if($cartCount)

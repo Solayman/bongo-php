@@ -219,7 +219,8 @@ class Migrator
         if ($last !== '' && strcmp($prefix, $last) <= 0) {
             $prefix = substr($last, 0, 11) . str_pad((string) ((int) substr($last, 11, 6) + 1), 6, '0', STR_PAD_LEFT);
         }
-        $file = rtrim($this->path, '/\\') . DIRECTORY_SEPARATOR . $prefix . "_$name.php";
+        $targetDir = is_array($this->path) ? ($this->path[0] ?? base_path('database/migrations')) : $this->path;
+        $file = rtrim($targetDir, '/\\') . DIRECTORY_SEPARATOR . $prefix . "_$name.php";
 
         $up = $table
             ? "        Schema::create('$table', function (Blueprint \$table) {\n            \$table->id();\n            \$table->timestamps();\n        });"

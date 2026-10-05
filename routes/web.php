@@ -1,11 +1,13 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PasswordResetController;
+use App\Http\Controllers\PostController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Shop\AccountController;
@@ -60,6 +62,16 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{id}', [CategoryController::class, 'destroy'])->name('destroy')->where('id', '\d+');
     });
 
+    // Blog Posts (Admin)
+    Route::prefix('/posts')->name('posts.')->group(function () {
+        Route::get('/', [PostController::class, 'index'])->name('index');
+        Route::get('/create', [PostController::class, 'create'])->name('create');
+        Route::post('/', [PostController::class, 'store'])->name('store');
+        Route::get('/{id}/edit', [PostController::class, 'edit'])->name('edit')->where('id', '\d+');
+        Route::put('/{id}', [PostController::class, 'update'])->name('update')->where('id', '\d+');
+        Route::delete('/{id}', [PostController::class, 'destroy'])->name('destroy')->where('id', '\d+');
+    });
+
     // Orders
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show')->where('id', '\d+');
@@ -81,6 +93,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/system/mail/{id}', [SystemController::class, 'mail'])->name('system.mail')->middleware('can:manage-system');
     Route::get('/system/error-test', [SystemController::class, 'errorTest'])->name('system.error-test');
     Route::get('/system/dump-test', [SystemController::class, 'dumpTest'])->name('system.dump-test');
+});
+
+// Public Frontend Blog
+Route::prefix('/blog')->name('blog.')->group(function () {
+    Route::get('/', [BlogController::class, 'index'])->name('index');
+    Route::get('/{slug}', [BlogController::class, 'show'])->name('show');
 });
 
 // Storefront for customers (the "customer" guard; separate from the admin login)
