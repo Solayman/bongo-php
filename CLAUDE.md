@@ -134,7 +134,15 @@ The following high-priority features and optimizations were recently implemented
   * **Public Blog Controller (`App\Http\Controllers\BlogController`):** Public frontend blog feed at `/blog` and post reader at `/blog/{slug}` with draft protection.
   * **TinyMCE Connector (`bongoTinyMCEPicker()`):** Seamless file manager popup callback integration returning selected asset URLs into TinyMCE image and media dialogs.
   * **Migrator Fix (`System\Database\Migrator::make()`):** Added support for array migration paths to safely generate new migrations into the primary application directory when package migration directories are loaded.
-  * **Testing:** Verified via `tests/Feature/BlogTest.php` (3 tests covering CRUD, draft filtering, and file manager script endpoints).
+### N. HTML Sanitization, Rich-Text Stored XSS Prevention, N+1 Query Resolution & WebSocket Origin Restrictions (PR #117)
+* **Problem Solved:** User-submitted rich text in blog posts and CMS features risked Stored Cross-Site Scripting (XSS) if raw HTML was rendered, while third-party HTML purifiers add heavyweight dependencies. In addition, blog post feeds suffered from N+1 user queries, and the WebSocket server lacked command-line origin restrictions.
+* **Implementation:**
+  * **HTML Sanitizer (`System\Security\HtmlSanitizer`):** Zero-dependency pure-PHP sanitizer using native `DOMDocument` wrapped in a UTF-8 envelope so non-Latin/Bengali Indic scripts preserve ligatures and characters without entity corruption. Recursively strips dangerous elements (`<script>`, `<iframe>`, `<style>`, `<svg>`, `<math>`, `<object>`, `<embed>`, `<applet>`), all inline event handlers (`onload`, `onerror`, `onclick`, etc.), invalid protocols (`javascript:`, `vbscript:`, dangerous `data:`), and unsafe CSS constructs. Auto-enforces `rel="noopener noreferrer"` on `target="_blank"` links.
+  * **Global Helper (`clean_html()`):** Added in `app/Helpers/commonHelper.php` for seamless template and controller sanitization.
+  * **Blog Stored XSS Elimination:** Integrated in `App\Http\Controllers\PostController` (`store()` and `update()`) and template view `resources/views/blog/show.php` via `{!! clean_html($post->content) !!}`.
+  * **N+1 Query Elimination:** Eager loaded user relation via `Post::query()->with('user')` in `PostController::index()` and `BlogController::index()`.
+  * **WebSocket Allowed Origins CLI Flag:** Added `--origins=` / `--allowed-origins=` option to `php bongo websocket:serve`.
+  * **Testing:** 8 unit tests in `tests/Unit/HtmlSanitizerTest.php` (31 assertions) and integration tests in `tests/Feature/BlogTest.php`. Total test suite: **380 tests passing (1,932 assertions)** across MySQL, PostgreSQL 18, and SQLite.
 
 ---
 
@@ -214,7 +222,7 @@ php bongo serve            # Runs local dev server on http://127.0.0.1:8000
 php bongo migrate          # Runs database migrations
 php bongo db:seed          # Populates database seeds
 php bongo queue:work       # Runs queue worker (QUEUE_DRIVER=database or redis)
-php bongo websocket:serve  # Runs standalone WebSocket server on port 6001
+php bongo websocket:serve [--origins=...] # Standalone WebSocket server on port 6001 with origin filter
 php bongo security:check   # Runs pre-launch security & permission checks
 php bongo test             # Runs test runner on isolated test database
 php bongo make:command <X> # Generates custom CLI command in app/Commands/
