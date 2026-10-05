@@ -15,6 +15,7 @@ class BroadcastTest extends TestCase
     /** @var resource|null */
     protected $server = null;
     protected int $port = 0;
+    protected array $pipes = [];
 
     public function setUp(): void
     {
@@ -40,13 +41,18 @@ class BroadcastTest extends TestCase
         fclose($probe);
 
         $null = DIRECTORY_SEPARATOR === '\\' ? 'NUL' : '/dev/null';
+        $bongoScript = DIRECTORY_SEPARATOR === '\\' ? str_replace('/', '\\', BASE_PATH . '/bongo') : (BASE_PATH . '/bongo');
+        $cmd = DIRECTORY_SEPARATOR === '\\'
+            ? escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($bongoScript) . " websocket:serve --port={$this->port} --origins=http://good.test"
+            : [PHP_BINARY, $bongoScript, 'websocket:serve', "--port={$this->port}", '--origins=http://good.test'];
         $this->server = proc_open(
-            [PHP_BINARY, BASE_PATH . '/bongo', 'websocket:serve', "--port={$this->port}"],
+            $cmd,
             [0 => ['pipe', 'r'], 1 => ['file', $null, 'w'], 2 => ['file', $null, 'w']],
             $pipes,
             BASE_PATH,
             getenv() + ['BROADCAST_ALLOWED_ORIGINS' => 'http://good.test']
         );
+        $this->pipes = $pipes;
         $GLOBALS['config']['broadcasting']['host'] = '127.0.0.1';
         $GLOBALS['config']['broadcasting']['port'] = $this->port;
 

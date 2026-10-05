@@ -419,10 +419,14 @@ try {
 
         case 'websocket:serve':
             // Live updates for open pages: Broadcast::to('orders')->send(...) arrives in the browser
+            $originsOption = $optionValue('origins', $optionValue('allowed-origins'));
+            $allowedOrigins = $originsOption !== null
+                ? array_values(array_filter(array_map(fn($o) => rtrim(trim($o), '/'), explode(',', (string) $originsOption))))
+                : (array) config('broadcasting.allowed_origins', []);
             $server = new System\Broadcasting\Server(
                 (string) $optionValue('host', config('broadcasting.host', '127.0.0.1')),
                 (int) $optionValue('port', config('broadcasting.port', 6001)),
-                (array) config('broadcasting.allowed_origins', [])
+                $allowedOrigins
             );
             $server->listen();
             echo 'Browsers connect to ' . System\Broadcasting\Broadcast::publicUrl() . '. Press Ctrl+C to stop.' . PHP_EOL;

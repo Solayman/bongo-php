@@ -262,13 +262,14 @@ Claude reviewed **every feature from PRs #78–#94** line by line and ran the fu
 | Docs (#78–#94) | ✅ Corrected (#99) | Real numbers only, no "Blade" wording, correct paths, unique section numbers. |
 | Package Subsystem & Official Suite (Phases A, B, C, D) | ✅ **Complete, 20 packages, 174 package tests** | Pure-PHP manager (`System\Package`), SHA-256 verification, update diff safety, app overrides, `bootstrap.php` runner, storage extensibility (`Storage::extend()`, `Storage::temporaryUrl()`), and 20 official packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`, `nagad`, `stripe`, `two-factor`, `image`, `backup`, `permission`, `zip`, `ftp`, `paypal`, `api-tools`, `settings`, `seo`, `activity-log`, `health`, `file-manager`). |
 | Demo Store Blog & TinyMCE 6 / File Manager (#114+) | ✅ Verified, 3 tests | Post CRUD, TinyMCE 6 editor, Bongo File Manager modal/popup pickers, draft visibility, and array migration path support in Migrator. |
+| HTML Sanitization & Stored XSS Fix (#117) | ✅ Verified, 9 tests | `HtmlSanitizer` & `clean_html()` helper, DOMDocument with UTF-8 envelope (Unicode/Bengali safe), post content sanitized in PostController & show.php, N+1 query resolved on blog listings via eager loading `with('user')`, `--origins` flag added to `websocket:serve`. |
 
-**Test results at review end:** 371 tests pass on MySQL, PostgreSQL 18 and SQLite.
+**Test results at review end:** 380 tests pass on MySQL, PostgreSQL 18 and SQLite (1,932 assertions).
 
 ### Rules learned from this review (apply to all future work)
 1. **Test on every database a change touches:** `DB_CONNECTION=pgsql DB_PORT=5432 DB_USERNAME=postgres DB_PASSWORD=... php -d extension=pdo_pgsql bongo test`, plus SQLite (`DB_CONNECTION=sqlite php -d extension=pdo_sqlite bongo test`) and MySQL. Grammar-only unit tests are not enough.
 2. **PSR-12 with 0 errors** (`php phpcs.phar`) before every PR.
-3. **Only measured numbers in docs.** No "100%", "<15ms" or "pixel-perfect" without a reproducible measurement. Recount files, lines and tests after changes. Current: 127 files, ~15,000 lines, ~616 KB in `system/`; 371 tests.
+3. **Only measured numbers in docs.** No "100%", "<15ms" or "pixel-perfect" without a reproducible measurement. Recount files, lines and tests after changes. Current: 127 files, ~17,400 lines, ~626 KB in `system/`; 380 tests.
 4. **Never describe Bongo with Laravel or Blade terms** ("Blade-compatible" etc.). Comparison tables that *name* other frameworks are fine.
 5. **Security defaults for new code:**
    - escape or whitelist everything that reaches HTML/CSS/shell/headers;

@@ -17,7 +17,7 @@ class PostController extends Controller
         $search = $request->q;
         $status = $request->status;
 
-        $query = Post::query()->orderBy('id', 'DESC');
+        $query = Post::query()->with('user')->orderBy('id', 'DESC');
 
         if ($search) {
             $query->whereRaw('title LIKE ? OR content LIKE ?', ["%$search%", "%$search%"]);
@@ -55,6 +55,10 @@ class PostController extends Controller
             'status' => 'required|in:published,draft',
         ]);
 
+        if (isset($data['content'])) {
+            $data['content'] = clean_html((string) $data['content']);
+        }
+
         $data['slug'] = Post::uniqueSlug($data['title']);
         $data['user_id'] = auth()->id ?? null;
 
@@ -89,6 +93,10 @@ class PostController extends Controller
             'featured_image' => 'nullable|string|max:255',
             'status' => 'required|in:published,draft',
         ]);
+
+        if (isset($data['content'])) {
+            $data['content'] = clean_html((string) $data['content']);
+        }
 
         if ($data['title'] !== $post->title) {
             $data['slug'] = Post::uniqueSlug($data['title'], (int) $post->id);

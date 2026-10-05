@@ -5,6 +5,13 @@ Every notable change to the Bongo PHP Framework. Versions follow [semantic versi
 ## Unreleased
 
 ### Added
+- **HTML Sanitization Subsystem (`System\Security\HtmlSanitizer`) & `clean_html()` Global Helper**: Pure-PHP, zero-dependency HTML sanitizer powered by native `DOMDocument` with UTF-8 envelope preservation for multilingual/Bengali scripts. Eliminates Stored Cross-Site Scripting (XSS) by stripping dangerous tags (`<script>`, `<iframe>`, `<style>`, `<svg>`, `<math>`, `<object>`, `<embed>`, `<applet>`), inline event attributes (`onload`, `onerror`, `onclick`), dangerous protocols (`javascript:`, `vbscript:`, unsafe `data:`), and CSS injection hacks (`expression`, `url()`), while preserving safe formatting, media (`img`), tables, and auto-enforcing `rel="noopener noreferrer"` on `target="_blank"` links.
+- **WebSocket Allowed Origins CLI Parameter**: Added `--origins=` / `--allowed-origins=` option to `php bongo websocket:serve` for deterministic command-line origin filtering across all operating systems.
+- **Automated Test Suite Expansion**: Added unit tests in `tests/Unit/HtmlSanitizerTest.php` (8 tests, 31 assertions) and integration test in `tests/Feature/BlogTest.php`. Total framework test suite increased to **380 tests passing** (1,932 assertions).
+
+### Fixed & Optimized
+- **Blog Rich-Text XSS Vulnerability Fix**: Sanitized blog post contents in `App\Http\Controllers\PostController` (`store()` and `update()`) and rendered securely via `{!! clean_html($post->content) !!}` in `resources/views/blog/show.php`.
+- **N+1 Query Resolution**: Optimized blog post queries in `PostController::index()` and `BlogController::index()` with eager loading (`Post::query()->with('user')`), preventing redundant user lookup queries during post listing.
 - **Official Package Subsystem** (`System\Package`): pure-PHP, zero-dependency package manager and runtime loader (`Installer` and `PackageManager`) supporting official catalog installation, lockfile tracking (`packages/.lock.json`), SHA-256 integrity checks, update safety net (`--backup` to `storage/package-backups/`, `--force`), namespaced views and translations with priority application overrides (`resources/views/vendor/<name>/`, `lang/vendor/<name>/`), package routes integration with route caching support, multi-directory package migration discovery in `php bongo migrate` / `migrate:status` / `migrate:rollback`, package CLI command auto-discovery, package test runner integration, and CLI commands:
   - `php bongo add <name>[@version]`
   - `php bongo package:install [<name>[@version]]`
