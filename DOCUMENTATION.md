@@ -17,17 +17,17 @@ Built in:
 | Hardening | Strict sessions with idle/absolute timeouts, trusted-proxy aware `Request::ip()`/`isSecure()`, optional CSP, `php bongo security:check` deployment checklist |
 | Auth & security | Multiple guards (session, JWT) and providers, `auth:api` middleware, own HS256 JWT with refresh and revocation, peppered Argon2id passwords, AES-256-GCM encryption, login throttling |
 | Testing | `php bongo test`: unit + HTTP tests on a separate test database |
-| Debugging | `dump()`/`dd()` for browser, CLI and JSON; developer error page with source and stack trace; `php bongo tinker` |
+| Debugging | Internal DevTools DebugBar (`@debugbar`), floating dark toolbar with 7 tabs (Request, Messages, Timeline, Views, Queries with N+1 repetition counters, Models, Cache, OpCache, Memory, and Page Time); `dump()`/`dd()` for browser, CLI and JSON; developer error page with source and stack trace; `php bongo tinker` |
 | Mail & events | Built-in SMTP client (TLS/SSL, AUTH), log and file drivers, HTML + text emails; `Event::listen/dispatch`; forgot-password flow with hashed single-use tokens |
 | Localization | `__()`, `trans_choice()`, JSON + group translation files, `?lang=` / session / `Accept-Language`, translated validation messages; English and বাংলা included |
 | Cache & rate limits | File cache (`Cache::remember`), `throttle:60,1` middleware with rate-limit headers, `RateLimiter` |
 | Container & DI | Service container (`app()`, `bind/singleton/instance`, autowiring), controller method injection, route model binding (`edit(Product $product)` → 404 if missing) |
 | Generators | `make:command`, `make:controller [--api]`, `make:model [--migration]`, `make:middleware`, `make:request`, `make:policy`, `make:job`, `make:component`, `make:seeder`, `make:notification`, `make:mail`, `make:test [--unit]`, `make:migration` |
 | Logging | Built-in daily log files in `storage/logs`, text and structured JSON format (`LOG_FORMAT=json`), levels, secret masking; framework events logged automatically |
-| Packages | Zero-dependency package manager: `php bongo add / package:install / package:update / package:remove / package:list / package:publish / package:diff / package:test`, SHA-256 integrity verification, update safety net, app override priority; official packages suite (`sslcommerz`, `bkash`, `nagad`, `stripe`, `sms`, `s3`, `social-login`, `two-factor`, `image`, `backup`) |
+| Packages | Zero-dependency package manager: `php bongo add / package:install / package:update / package:remove / package:list / package:publish / package:diff / package:test`, SHA-256 integrity verification, update safety net, app override priority; 24 official packages (`sslcommerz`, `bkash`, `nagad`, `aamarpay`, `stripe`, `paypal`, `two-factor`, `captcha`, `social-login`, `permission`, `sms`, `telegram`, `bangla-tools`, `s3`, `ftp`, `file-manager`, `image`, `zip`, `backup`, `api-tools`, `settings`, `seo`, `activity-log`, `health`) |
 | CLI | `php bongo serve / tinker / route:list / make:* / config:cache / config:clear / view:cache / view:clear / cache:clear / migrate / migrate:status / migrate:rollback / make:migration / db:seed / key:generate / log:clear / test`, plus custom console commands auto-discovery |
 
-The repository currently includes an **e-commerce admin panel** (products, categories, orders, customers). It is the test application used to exercise the framework end to end, and it will be removed later so the framework ships fresh.
+The core framework ships clean and lightweight (~800 KB starter skeleton on `release`), containing pure authentication, dashboard, and system health status. The complete e-commerce store demo and full application sandbox are maintained in the dedicated official repository [`Solayman/bongo-package-and-feature-test`](https://github.com/Solayman/bongo-package-and-feature-test).
 
 ---
 
@@ -2119,6 +2119,37 @@ If a query fails because a table or column is missing and migrations are pending
 
 ## 11. Debugging
 
+### Professional Internal DebugBar (`system/Debug/DebugBar.php`)
+
+Bongo includes an internal, zero-dependency, dark-themed developer toolbar built directly into the framework core. When `APP_DEBUG=true`, the DebugBar provides deep real-time runtime telemetry without slowing down page rendering.
+
+#### Features & Toolbar Layout:
+- **Minimize & Restore Pill:** Click the **Bongo 🥁** badge to collapse the bar into a non-intrusive floating pill showing query and log counts, or restore it with a single click.
+- **7 Inspection Tabs:**
+  1. **Request:** HTTP method badge (`GET`, `POST`, `PUT`, `DELETE`), matched route, controller action, HTTP headers, session data, cookies, and input parameters.
+  2. **Messages:** Real-time application log stream (`Logger::getRecorded()`) with styled severity badges (`info`, `warning`, `error`).
+  3. **Timeline:** Request boot duration, database query time, view render time, and peak memory usage.
+  4. **Views:** Tree of rendered templates with render time in milliseconds and passed data keys.
+  5. **Queries:** Formatted SQL statements with connection names, execution time, one-click copy SQL button, and automated **N+1 repetition warning badges** flagging queries executed 3+ times.
+  6. **Models:** Active Record model counts hydrated during the request lifecycle.
+  7. **Cache:** Telemetry on cache hits, misses, writes, and eviction events.
+- **Right Status Widgets:**
+  - `⚡ OpCache` status indicator (active / disabled).
+  - `🗄️ {RAM} MB` real-time request memory consumption.
+  - `⏱️ {Time} ms` total end-to-end page render duration.
+  - Route pill linking directly to `/system`.
+
+#### Usage:
+Include the directive in master layouts right before the closing `</body>` tag:
+```html
+@debugbar
+```
+Or via PHP:
+```php
+{!! \System\Debug\DebugBar::render() !!}
+```
+The DebugBar renders only when `APP_DEBUG=true`. In production (`APP_DEBUG=false`), it renders nothing and incurs zero runtime overhead.
+
 ### `dump()` and `dd()`
 
 ```php
@@ -3343,3 +3374,139 @@ UniSharp-style web file manager and embedded professional code editor with **zer
 
 
 
+
+
+#### 21. `captcha` — Anti-Bot Human Verification Suite
+Universal anti-bot & human verification suite with **zero required external dependencies**. Supports Cloudflare Turnstile, Google reCAPTCHA (v2 checkbox & v3 invisible), hCaptcha, and pure-PHP offline math and GD image captchas.
+* **Install:** `php bongo add captcha`
+* **Configuration (`config/captcha.php` & `.env`):**
+  ```ini
+  CAPTCHA_DRIVER=turnstile # turnstile, recaptcha, hcaptcha, math, image
+  TURNSTILE_SITE_KEY=your_site_key
+  TURNSTILE_SECRET_KEY=your_secret_key
+  RECAPTCHA_SITE_KEY=your_recaptcha_key
+  RECAPTCHA_SECRET_KEY=your_recaptcha_secret
+  RECAPTCHA_VERSION=v2 # v2 or v3
+  RECAPTCHA_SCORE_THRESHOLD=0.5
+  ```
+* **Views & Templates:**
+  ```html
+  <form method="POST" action="/register">
+      {!! csrf_field() !!}
+      <!-- Render captcha widget -->
+      @captcha
+
+      <button type="submit">Submit</button>
+      @captchascript
+  </form>
+  ```
+* **Controller Verification:**
+  ```php
+  use Bongo\Packages\Captcha\Captcha;
+
+  if (!Captcha::verify()) {
+      return back()->with('error', 'Captcha validation failed.');
+  }
+  ```
+* **Middleware:**
+  ```php
+  Route::post('/contact', [ContactController::class, 'send'])->middleware(VerifyCaptcha::class);
+  ```
+
+#### 22. `aamarpay` — AamarPay Payment Gateway
+Official AamarPay payment gateway integration for Bangladesh. Zero dependencies, pure PHP 8.0+.
+* **Install:** `php bongo add aamarpay`
+* **Configuration (`config/aamarpay.php` & `.env`):**
+  ```ini
+  AAMARPAY_STORE_ID=aamarpaytest
+  AAMARPAY_SIGNATURE_KEY=28c78bb1f45112f5a40b956f9d102abb
+  AAMARPAY_SANDBOX=true
+  AAMARPAY_CURRENCY=BDT
+  ```
+* **Initiating a Payment:**
+  ```php
+  use Bongo\Packages\Aamarpay\AamarPay;
+
+  $gateway = new AamarPay();
+  $response = $gateway->initiate([
+      'amount'           => 1200.00,
+      'tran_id'          => 'TXN_' . uniqid(),
+      'customer_name'    => 'Rahim Ahmed',
+      'customer_email'   => 'rahim@example.com',
+      'customer_phone'   => '01700000000',
+      'customer_address' => 'Dhaka',
+  ]);
+
+  header('Location: ' . $response['payment_url']);
+  exit;
+  ```
+* **Verifying Callback:**
+  ```php
+  $result = (new AamarPay())->verify($tranId);
+  if ($result['success']) {
+      // Payment confirmed
+  }
+  ```
+* **CLI Health Check:** `php bongo aamarpay:check`
+
+#### 23. `telegram` — Telegram Bot Notifications & Alerts
+Real-time notification and system alerting package using the Telegram Bot API with zero external dependencies.
+* **Install:** `php bongo add telegram`
+* **Configuration (`config/telegram.php` & `.env`):**
+  ```ini
+  TELEGRAM_BOT_TOKEN=123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ
+  TELEGRAM_CHAT_ID=-1001234567890
+  TELEGRAM_PARSE_MODE=HTML
+  ```
+* **API Usage:**
+  ```php
+  use Bongo\Packages\Telegram\Telegram;
+
+  $telegram = new Telegram();
+
+  // Send simple text notification
+  $telegram->notify('New customer registered: customer@example.com');
+
+  // Send rich system alert with emoji and JSON details
+  $telegram->alert(
+      title: 'Database Failover',
+      message: 'Connection switched to replica cluster.',
+      level: 'warning',
+      extra: ['latency_ms' => 42, 'node' => 'db-02']
+  );
+  ```
+* **Global Helpers:** `telegram_notify($msg)` and `telegram_alert($title, $msg, $level)`.
+* **Testing:** `Telegram::fake()` allows complete unit testing without hitting the live Telegram API.
+* **CLI Utilities:** `php bongo telegram:send "Hello"` and `php bongo telegram:test`.
+
+#### 24. `bangla-tools` — Bengali Localization & Linguistic Toolkit
+Comprehensive Bengali linguistic and localization engine with zero dependencies.
+* **Install:** `php bongo add bangla-tools`
+* **Features & Usage:**
+  ```php
+  use Bongo\Packages\BanglaTools\Bangla;
+
+  // Numerals
+  Bangla::number(12345); // ১২৩৪৫
+  Bangla::enNumber('১২৩৪৫'); // 12345
+
+  // Numbers to Words
+  Bangla::words(150, asCurrency: true); // একশত পঞ্চাশ টাকা মাত্র
+  Bangla::words(2500000); // পঁচিশ লাখ
+
+  // Bangladeshi Taka Currency Notation (South Asian grouping)
+  Bangla::taka(150000.50); // ৳ ১,৫০,০০০.৫০
+
+  // Bengali Calendar & Bongabdo Date Converter (Bangla Academy standard)
+  Bangla::date('2024-04-14'); // ১ বৈশাখ ১৪৩১, রবিবার
+  $info = Bangla::calendar('now'); // ['day' => 1, 'month_name' => 'বৈশাখ', 'season' => 'গ্রীষ্ম', 'year' => 1431]
+
+  // Unicode Cleaner & SEO Slug
+  Bangla::slug('আমার সোনার বাংলা - ১ম পর্ব'); // আমার-সোনার-বাংলা-১ম-পর্ব
+  ```
+* **Template Directives:**
+  ```html
+  <p>Price: @taka(2500)</p>
+  <p>Date: @bangla_date('now')</p>
+  <p>Count: @bangla_number(42)</p>
+  ```
