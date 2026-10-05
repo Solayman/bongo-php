@@ -275,8 +275,9 @@ Claude reviewed **every feature from PRs #78–#94** line by line and ran the fu
 | Package N+1 Elimination & Polymorphic Eager Loading (PR #42) | ✅ Verified, 182 package tests | Batched permission & role revocation via `whereIn('name', ...)` in `permission`; polymorphic subject/causer relationship resolution and `Activity::loadMorphs()` batched eager loading in `activity-log`. |
 | Core Framework CRLF & HTTP Response Splitting Hardening | ✅ Verified, 2 tests | Sanitized `redirect()` helper and CORS `Access-Control-Allow-Origin` echoing by stripping `\r`, `\n`, and `\0`. |
 | Internal DebugBar & Decoupled Architecture | ✅ **Verified, 353 framework tests (1,600 assertions)** | Professional floating dark-theme DevTools toolbar with Request, Messages, Timeline, Views, Queries (N+1 detection), Models, Cache, OpCache, Memory, and Time widgets; decoupled starter framework with demo store moved to `bongo-package-and-feature-test`. |
+| Package Suite Expansion: Captcha, AamarPay, Telegram, BanglaTools (PR #43) | ✅ **Verified, 208 package tests (853 assertions)** | 4 new production packages added: `captcha` (Turnstile, reCAPTCHA v2/v3, hCaptcha, pure-PHP math & GD image), `aamarpay` (payment gateway with TrxCheck & CLI verify), `telegram` (Bot API alerts & notifications), and `bangla-tools` (Bangla numerals, words, Taka currency, Bongabdo calendar, and Unicode normalizer). |
 
-**Test results at review end:** 353 tests pass on MySQL, PostgreSQL 18 and SQLite (1,600 assertions). 182 package tests pass in bongo-php-packages (757 assertions).
+**Test results at review end:** 353 tests pass on MySQL, PostgreSQL 18 and SQLite (1,600 assertions). 208 package tests pass across all 24 packages in bongo-php-packages (853 assertions).
 
 ### Rules learned from this review (apply to all future work)
 1. **Test on every database a change touches:** `DB_CONNECTION=pgsql DB_PORT=5432 DB_USERNAME=postgres DB_PASSWORD=... php -d extension=pdo_pgsql bongo test`, plus SQLite (`DB_CONNECTION=sqlite php -d extension=pdo_sqlite bongo test`) and MySQL. Grammar-only unit tests are not enough.

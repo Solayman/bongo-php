@@ -35,5 +35,9 @@ return [
     // 'seo',             // Search Engine Optimization (SEO), OpenGraph, Twitter Cards, Schema JSON-LD, XML Sitemap
     // 'activity-log',    // Enterprise audit trail & model activity logger with old/new attribute diffs
     // 'health',          // Application health checks & uptime monitoring for database, storage, cache, and redis
+    // 'captcha',         // Anti-bot protection (Turnstile, reCAPTCHA v2/v3, hCaptcha, pure-PHP math & image)
+    // 'aamarpay',        // AamarPay payment gateway for Bangladesh (bKash, Nagad, cards, TrxCheck)
+    // 'telegram',        // Telegram Bot notifications, alerts, and channel messaging
+    // 'bangla-tools',    // Bengali localization toolkit (numerals, words, Taka currency, Bongabdo calendar, slugs)
     'file-manager',    // Web file manager with tree navigation, image previews, and embedded code editor
 ];
