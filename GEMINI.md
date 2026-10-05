@@ -142,6 +142,19 @@
 - **WebSocket Allowed Origins CLI Flag:** Added `--origins=` / `--allowed-origins=` option to `php bongo websocket:serve`.
 - **Testing:** 8 unit tests in `tests/Unit/HtmlSanitizerTest.php` (31 assertions) and integration tests in `tests/Feature/BlogTest.php`. Total test suite: **380 tests passing (1,932 assertions)** across MySQL, PostgreSQL 18, and SQLite.
 
+### O. Official Packages Suite Security Hardening & Zero-Vulnerability Assurance (PRs #39 & #40 in bongo-php-packages)
+- **`file-manager` Hardening:**
+  - Blocked all executable extensions (`php`, `php3`-`php8`, `pht`, `phps`, `phtml`, `phar`, `pgif`, `inc`, `cgi`, `pl`, `py`, `asp`, `aspx`, `jsp`, `sh`, `bash`, `cmd`, `bat`, `exe`, etc.) and server configurations (`.htaccess`, `.env`, `ini`, `conf`).
+  - Added null-byte injection (`\0`) protection and multi-extension execution bypass protection (`avatar.php.png`, `file.phtml.jpg`).
+  - Enforced `realpath()` boundary containment checks across all filesystem operations (`createFolder`, `deleteItem`, `renameItem`, `moveItem`, `copyItem`, `saveFile`, `readFile`, `download`, `thumbnail`) ensuring no operation or symlink can escape the storage root directory.
+  - Added `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'` and `X-Content-Type-Options: nosniff` headers for streaming SVG files, neutralizing SVG Stored XSS.
+  - Added CRLF (`\r`, `\n`) and quote sanitization on `Content-Disposition` in download endpoint to eliminate HTTP response splitting.
+  - Replaced single-quoted `htmlspecialchars()` in client JavaScript initialization with `json_encode(..., JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT)` to eliminate JavaScript script injection.
+- **`two-factor` Hardening:** Added `resolveUserId()` authentication guard to prevent unauthenticated guest requests from operating on default user ID 1 in production across setup, verification, and disabling.
+- **`seo` Hardening:** Added `JSON_HEX_TAG | JSON_HEX_AMP` to Schema.org JSON-LD structured script generation, preventing HTML script tag breakout.
+- **`api-tools` Hardening:** Encoded OpenAPI specification URL in Swagger UI template via JSON hex encoding.
+- **Package Testing:** **180 tests passing (745 assertions)** across all 20 packages in `bongo-php-packages`.
+
 ---
 
 ## 6. Important CLI Commands
@@ -223,11 +236,12 @@ Claude verified **all features from PRs #78–#94** on real MySQL, **PostgreSQL 
 | Printable HTML/PDF (#88) | ✅ Verified, **fixed in #96** | All attributes are validated or escaped; temp files deleted; Chrome output captured. |
 | Code style | ✅ **PSR-12, 0 errors** (#97) | Rules in `phpcs.xml`. Check with `php phpcs.phar`. |
 | Docs (#78–#94) | ✅ Corrected (#99) | Real numbers only, no "Blade" wording, correct paths, unique section numbers. |
-| Package Subsystem & Official Suite (Phases A, B, C, D) | ✅ **Complete, 20 packages, 174 package tests** | Pure-PHP manager (`System\Package`), SHA-256 verification, update diff safety, app overrides, `bootstrap.php` runner, storage extensibility (`Storage::extend()`, `Storage::temporaryUrl()`), and 20 official packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`, `nagad`, `stripe`, `two-factor`, `image`, `backup`, `permission`, `zip`, `ftp`, `paypal`, `api-tools`, `settings`, `seo`, `activity-log`, `health`, `file-manager`). |
+| Package Subsystem & Official Suite (Phases A, B, C, D) | ✅ **Complete, 20 packages, 180 package tests** | Pure-PHP manager (`System\Package`), SHA-256 verification, update diff safety, app overrides, `bootstrap.php` runner, storage extensibility (`Storage::extend()`, `Storage::temporaryUrl()`), and 20 official packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`, `nagad`, `stripe`, `two-factor`, `image`, `backup`, `permission`, `zip`, `ftp`, `paypal`, `api-tools`, `settings`, `seo`, `activity-log`, `health`, `file-manager`). |
 | Demo Store Blog & TinyMCE 6 / File Manager (#114+) | ✅ Verified, 3 tests | Post CRUD, TinyMCE 6 editor, Bongo File Manager modal/popup pickers, draft visibility, and array migration path support in Migrator. |
 | HTML Sanitization & Stored XSS Fix (#117) | ✅ Verified, 9 tests | `HtmlSanitizer` & `clean_html()` helper, DOMDocument with UTF-8 envelope (Unicode/Bengali safe), post content sanitized in PostController & show.php, N+1 query resolved on blog listings via eager loading `with('user')`, `--origins` flag added to `websocket:serve`. |
+| Package Security Hardening (PRs #39 & #40) | ✅ Verified, 21 tests in file-manager | Realpath boundary containment, CRLF header sanitization, JSON hex script escaping, auth guards in two-factor, JSON-LD hex escaping in SEO. |
 
 **Current framework verification totals:**
 - Core framework tests: **380 tests passing (1,932 assertions)** across MySQL, PostgreSQL 18, and SQLite.
 - System metrics: **127 modular files, 17,468 lines (~17,400 lines), ~626 KB** in `system/`.
-- Official package suite: **20 packages, 174 passing package tests (706 assertions)**.
+- Official package suite: **20 packages, 180 passing package tests (745 assertions)**.
