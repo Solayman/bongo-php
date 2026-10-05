@@ -58,6 +58,19 @@ class Model implements \JsonSerializable
         self::$connectionOverrides[static::class] = $name;
     }
 
+    /** Hydrated model counts per class for DebugBar */
+    protected static array $hydratedCounts = [];
+
+    public static function getHydratedCounts(): array
+    {
+        return self::$hydratedCounts;
+    }
+
+    public static function resetHydratedCounts(): void
+    {
+        self::$hydratedCounts = [];
+    }
+
     /** Model::withTrashed()->get(), Model::onlyTrashed()->get() */
     public static function withTrashed(): QueryBuilder
     {
@@ -193,6 +206,7 @@ class Model implements \JsonSerializable
     /** Build a model from a database row (used by the query builder) */
     public static function hydrate(array $row): static
     {
+        self::$hydratedCounts[static::class] = (self::$hydratedCounts[static::class] ?? 0) + 1;
         $model = new static();
         $model->attributes = $row;
         $model->original = $row;

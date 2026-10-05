@@ -170,6 +170,11 @@ class Request
         return $key === null ? self::$routeParameters : (self::$routeParameters[$key] ?? $default);
     }
 
+    public static function routeParameters(): array
+    {
+        return self::$routeParameters;
+    }
+
     /**
      * HTTP method. HTML forms can only send GET/POST, so a POST may carry
      * _method=PUT|PATCH|DELETE (or the X-HTTP-Method-Override header).

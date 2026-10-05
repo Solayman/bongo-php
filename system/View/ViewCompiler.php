@@ -32,6 +32,7 @@ class ViewCompiler
     /** Directives without arguments that always compile to the same PHP */
     protected const FIXED = [
         'else' => '<?php else: ?>', 'csrf' => '<?php echo csrf_field(); ?>',
+        'debugbar' => '<?php if (config("app.debug")) { echo \System\Debug\DebugBar::render(); } ?>',
         'endfor' => '<?php endfor; ?>', 'endwhile' => '<?php endwhile; ?>',
         'endsection' => '<?php $this->sections->end(); ?>', 'stop' => '<?php $this->sections->end(); ?>',
         'endpush' => '<?php $this->sections->endPush(); ?>',
