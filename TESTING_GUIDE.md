@@ -205,59 +205,41 @@ Delete the generated test files afterwards.
 | 8.4 | Add `LOG_LEVEL=warning` to `.env`, then write a test entry | It does **not** appear (below the minimum level). Remove the line afterwards. |
 | 8.5 | `php bongo log:clear` | "Removed N log file(s)", and the log panel is empty |
 
-## 8b. Debugging
+## 8b. Debugging & Internal DebugBar
 
 | # | Do this | You should see |
 | --- | --- | --- |
-| 8b.1 | **System status → Debug tools → Trigger test error** | Developer page: "RuntimeException", the source around `SystemController.php:77` with the line highlighted, a stack trace, request details, and **Cookie: \*\*\*\*\*\*\*\*** |
-| 8b.2 | **Try dd()** | Dark page "dd() called at app/Http/Controllers/SystemController.php:…" with collapsible values |
-| 8b.3 | Add `dump($product);` at the top of `ProductController::edit()`, then open a product's edit page | The dump appears above the page, and the page still loads. Remove the line afterwards. |
-| 8b.4 | `curl -H "Accept: application/json" http://127.0.0.1:8000/system/dump-test` (with a session cookie) | JSON `{"dd": [...], "at": "..."}` |
-| 8b.5 | `php bongo tinker`, then `DB::table('users')->count()` | `=> 11` |
-| 8b.6 | Set `APP_DEBUG=false` in `.env`, then Trigger test error | A plain "500 · Server Error" page with no code shown; the Debug tools card is hidden. Put it back afterwards. |
-| 8b.7 | Check the log after 8b.1 | `ERROR Uncaught RuntimeException: Test exception …` with the trace under **Details** |
+| 8b.1 | Open any page with `APP_DEBUG=true` | Floating dark **DevTools DebugBar** appears at the bottom with 7 tabs: Request, Messages, Timeline, Views, Queries, Models, Cache, plus OpCache, Memory, and Page Time status badges. |
+| 8b.2 | Click the **Bongo 🥁** icon on the left | The DebugBar collapses into a tiny floating badge pill showing query and log counts. Clicking it again restores the toolbar. |
+| 8b.3 | Click the **Queries** tab | All executed SQL queries with connection name, duration, and one-click "Copy SQL". Queries executed 3+ times show an **N+1 repetition warning badge**. |
+| 8b.4 | **System status → Debug tools → Trigger test error** | Developer page: "RuntimeException", the source around `SystemController.php:77` with the line highlighted, a stack trace, request details, and **Cookie: \*\*\*\*\*\*\*\*** |
+| 8b.5 | **Try dd()** | Dark page "dd() called at app/Http/Controllers/SystemController.php:…" with collapsible values |
+| 8b.6 | `php bongo tinker`, then `DB::table('users')->count()` | `=> 2` |
+| 8b.7 | Set `APP_DEBUG=false` in `.env`, then refresh | The DebugBar completely disappears (0 overhead), plain error pages shown. Put it back afterwards. |
+| 8b.8 | Check the log after 8b.4 | `ERROR Uncaught RuntimeException: Test exception …` with the trace under **Details** |
 
 ## 9. System status page
 
 - [ ] Log times match your clock. If they don't, set `APP_TIMEZONE` in `.env` (e.g. `APP_TIMEZONE=Asia/Dhaka`).
-
 - [ ] **Framework self-check:** Routing, Environment, Config, View engine, Session and Database are all **OK**. "Composer (optional)" shows **Not installed**, which is expected because Bongo needs no Composer.
 - [ ] **Tables:** lists your database tables, with approximate row counts.
-- [ ] **Upload test:** choose 2–3 images and click **Check files**. A green message lists each file with its type, size in KB and pixel size.
-- [ ] Rename a text file to `fake.png` and include it. The page says **File N: The photos must be an image**, naming the position of the bad file.
-- [ ] Click **Check files** with nothing chosen. The page says **Choose at least one image.**
-
-## 9b. Storefront (`/shop`)
-
-| # | Do this | You should see |
-| --- | --- | --- |
-| 9b.1 | Open `/shop` (signed out) | The product grid with coloured demo images; filter by category and search |
-| 9b.2 | Open a product → **Add to cart** (quantity 2) | "… was added to your cart." The cart badge shows 2. |
-| 9b.3 | **Cart** → change a quantity → **Update**; remove an item | Totals update; removed items are gone |
-| 9b.4 | **Checkout** while signed out | Sent to `/shop/login` |
-| 9b.5 | **Create an account** | Signed in as the new customer, still with the same cart |
-| 9b.6 | Checkout with an empty address | "The shipping address field is required." |
-| 9b.7 | Fill in the address → **Place order** | The order page, "Thank you! Your order ORD-… has been placed." The cart is empty and the stock has gone down. |
-| 9b.8 | System status → Recent log entries | `Mail "Order ORD-… confirmed" sent to …` |
-| 9b.9 | Admin panel → Orders | The new order is listed (pending) |
-| 9b.10 | As the customer, change the URL to another order's id (`/shop/orders/1`) | **404**: customers only see their own orders |
-| 9b.11 | Sign in to `/login` as admin in the same browser | Both sessions work side by side (two guards) |
-| 9b.12 | Try `/shop/login` with the admin account | "These credentials do not match our records." Admins are not customers. |
-
-## 9c. Queue and scheduler
-
-- [ ] Run `php bongo migrate`. It creates the `jobs` and `failed_jobs` tables.
-- [ ] Set `QUEUE_DRIVER=database` in `.env`. Place a shop order, then open **System status → Queue**: one job is **pending**.
-- [ ] Run `php bongo queue:work --stop-when-empty`. The order confirmation mail is sent (see `storage/mail/` with `MAIL_DRIVER=file`), and the pending count returns to 0.
-- [ ] Run `php bongo schedule:list`. It shows "Email the low stock report" (daily 08:00), "Clear compiled views", and the framework maintenance tasks, each with a next run time.
-- [ ] Run `php bongo schedule:run`. It runs whatever is due this minute, or prints "No scheduled tasks are due".
-- [ ] Edit a product and save **without** choosing an image. You are redirected to the list, and the existing image is kept (this was a 500 before PR #17).
+- [ ] **Deployment checklist:** Pre-launch security, permissions, and database connectivity all verified.
 
 ## 10. Automated tests
 
 ```bash
+# Core Framework Suite (bongo-php)
 php bongo test
+# Expected: 353 passed (1,600 assertions) across MySQL, PostgreSQL 18, and SQLite
+
+# Official Packages Suite (bongo-php-packages)
+php run_tests.php
+# Expected: 208 passed (853 assertions) across all 24 packages
+
+# Sandbox Application Testbed (bongo-package-and-feature-test)
+php bongo test
+# Expected: 36 passed (367 assertions)
 ```
 
-- [ ] The last line reads `Tests: N passed`, with no failures.
-- [ ] The test run did **not** change your data: the dashboard totals are the same as before, because tests use the separate `<DB_DATABASE>_test` database.
+- [ ] Every automated test passes cleanly with zero failures.
+- [ ] The test run did **not** change your application data, as tests run on isolated `<DB_DATABASE>_test` databases.
