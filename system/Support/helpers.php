@@ -67,7 +67,20 @@ if (!function_exists('url')) {
     /** Absolute URL for a path inside the app: url('/products') */
     function url($path = '/')
     {
-        return rtrim(config('app.url', ''), '/') . '/' . ltrim($path, '/');
+        $configured = (string) config('app.url', '');
+        $pathString = '/' . ltrim((string) $path, '/');
+
+        // When served over HTTP/HTTPS, dynamically match current host and port if configured URL uses localhost/127.0.0.1
+        if (isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] !== '') {
+            $scheme = \System\Http\Request::isSecure() ? 'https' : 'http';
+            $configHost = parse_url($configured, PHP_URL_HOST);
+            if ($configHost === '127.0.0.1' || $configHost === 'localhost' || $configured === '') {
+                $basePath = rtrim(parse_url($configured, PHP_URL_PATH) ?? '', '/');
+                return $scheme . '://' . $_SERVER['HTTP_HOST'] . $basePath . $pathString;
+            }
+        }
+
+        return rtrim($configured, '/') . $pathString;
     }
 }
 
