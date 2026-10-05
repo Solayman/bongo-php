@@ -19,6 +19,8 @@ class ViewEngine
     protected ?string $extends = null;
     /** view name => compiled file, for the current top-level render (an @include in a loop is resolved once) */
     protected array $resolved = [];
+    /** Views rendered during the current request for DebugBar */
+    protected array $renderedViews = [];
     protected static ?ViewEngine $shared = null;
     /** Variables every view gets (see share()) */
     protected static array $sharedData = [];
@@ -61,6 +63,16 @@ class ViewEngine
         }
     }
 
+    public function getRenderedViews(): array
+    {
+        return $this->renderedViews;
+    }
+
+    public function clearRenderedViews(): void
+    {
+        $this->renderedViews = [];
+    }
+
     public function render(string $view, array $data = []): string
     {
         if ($this->depth === 0) {
@@ -77,10 +89,18 @@ class ViewEngine
         $parentLayout = $this->extends;
         $this->extends = null;
 
+        $start = microtime(true);
         try {
             // Child sections are captured while it runs; its own output is
             // discarded when it extends a layout
             $output = $this->evaluate($view, $data);
+
+            $this->renderedViews[] = [
+                'name'      => $view,
+                'path'      => $this->pathFor($view),
+                'data_keys' => array_keys($data),
+                'ms'        => round((microtime(true) - $start) * 1000, 2),
+            ];
 
             $layout = $this->extends;
             $this->extends = $parentLayout;
