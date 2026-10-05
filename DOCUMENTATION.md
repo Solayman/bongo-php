@@ -788,7 +788,7 @@ return $this->view(data: ['products' => $products]);           // ProductControl
 | Syntax | Meaning |
 | --- | --- |
 | `{{ $value }}` | Escaped output (HTML-safe). `null` prints nothing. |
-| `{!! $html !!}` | Raw output: trusted HTML only |
+| `{!! $html !!}` | Raw output: trusted HTML only. For untrusted rich text, sanitize with `{!! clean_html($post->content) !!}`. |
 | `{{-- note --}}` | Comment, removed from the output |
 | `@{{ value }}` | Prints `{{ value }}` literally (for Vue/Alpine) |
 | `@@if` | Prints `@if` literally |
@@ -1674,6 +1674,29 @@ Unknown abilities are denied, and so are guests, unless the callback's user para
 
 **In the shop app:** the System status page and its link need `manage-system`. A product that has been ordered shows a disabled **Delete** button, and a hand-made delete request for it gets a 403.
 
+### Rich-text HTML sanitization and XSS prevention (`HtmlSanitizer`)
+
+When allowing rich-text HTML (e.g. from TinyMCE blog posts, product descriptions, or user submissions), outputting raw HTML via `{!! $html !!}` can introduce Stored Cross-Site Scripting (XSS).
+
+Bongo provides a built-in, zero-dependency HTML sanitizer (`System\Security\HtmlSanitizer`) and global helper `clean_html()`:
+
+```php
+// In a controller before saving:
+$post->content = clean_html($request->input('content'));
+
+// Or inside a template when rendering:
+{!! clean_html($post->content) !!}
+```
+
+**Key capabilities:**
+- **Zero Composer dependencies**: Uses native PHP `DOMDocument` wrapped in a UTF-8 envelope so non-Latin scripts (such as Bengali and Indic scripts) are preserved exactly without numeric character reference entity corruption.
+- **Dangerous element removal**: Completely purges `<script>`, `<iframe>`, `<style>`, `<svg>`, `<math>`, `<object>`, `<embed>`, `<applet>`, `<meta>`, `<link>`, `<form>`, `<input>`, `<button>` and their inner content.
+- **Protocol sanitization**: Removes dangerous URL schemes such as `javascript:`, `vbscript:`, and unsafe `data:` protocols from `href`, `src`, and `action` attributes.
+- **Event handler stripping**: Automatically removes all inline JavaScript event attributes (`onload`, `onerror`, `onclick`, `onmouseover`, etc.).
+- **CSS style validation**: Scrubs expressions, `url(...)`, `-moz-binding`, `@import`, and behavioral hacks from `style` attributes while allowing safe inline visual styling (`color`, `font-size`, `text-align`, etc.).
+- **Automatic tab-nabbing protection**: Appends `rel="noopener noreferrer"` to any hyperlink with `target="_blank"`.
+- **Customizable whitelist**: Pass allowed tags as a second argument: `clean_html($markup, ['p', 'b', 'i', 'a'])`.
+
 ---
 
 ## 9a. Mail and events
@@ -1826,6 +1849,7 @@ Push changes to pages that are already open (a new order on the dashboard, a cha
 
 ```bash
 php bongo websocket:serve            # ws://127.0.0.1:6001
+php bongo websocket:serve --origins=http://example.com,https://app.com
 ```
 
 **2. Send from PHP**, anywhere (controller, job, model event):
@@ -2252,6 +2276,7 @@ You can build and register your own CLI commands in seconds:
 | `response($data, 'json', 200)` | JSON or HTML response and stop |
 | `__('text', [...])`, `trans_choice()`, `locale()` | Translation |
 | `e($value)` | HTML-escape |
+| `clean_html($html, $tags)` | Sanitize untrusted rich-text HTML against XSS (Unicode-safe native DOM parser) |
 | `money($n)`, `is_active('/prefix')` | Formatting and nav helpers |
 | `base_path('x')` | Absolute project path |
 | `debug_stats()` | Query count/time, page time and memory (used by the debug footer) |

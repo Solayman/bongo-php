@@ -439,3 +439,14 @@ if (!function_exists('is_active')) {
         return ($prefix === '/' ? $path === '/' : str_starts_with($path, $prefix)) ? 'active' : '';
     }
 }
+
+if (!function_exists('clean_html')) {
+    /**
+     * Clean untrusted HTML of XSS attack vectors while preserving safe rich-text markup.
+     */
+    function clean_html(string $html, ?array $allowedTags = null): string
+    {
+        return \System\Security\HtmlSanitizer::clean($html, $allowedTags);
+    }
+}
+
