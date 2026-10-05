@@ -82,6 +82,16 @@ class Blueprint
         return $this->addColumn($name, 'BIGINT');
     }
 
+    public function unsignedBigInteger(string $name): ColumnDefinition
+    {
+        return $this->addColumn($name, 'BIGINT')->unsigned();
+    }
+
+    public function unsignedInteger(string $name): ColumnDefinition
+    {
+        return $this->addColumn($name, 'INT')->unsigned();
+    }
+
     public function decimal(string $name, int $precision = 10, int $scale = 2): ColumnDefinition
     {
         return $this->addColumn($name, "DECIMAL($precision, $scale)");
