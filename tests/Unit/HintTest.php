@@ -31,8 +31,8 @@ class HintTest extends TestCase
 
     public function testMissingUseStatement(): void
     {
-        $e = $this->errorFrom('namespace App\Http\Controllers; return Category::all();');
-        $this->assertSame('Add "use App\Models\Category;" at the top of the file.', Hint::for($e));
+        $e = $this->errorFrom('namespace App\Http\Controllers; return User::all();');
+        $this->assertSame('Add "use App\Models\User;" at the top of the file.', Hint::for($e));
     }
 
     public function testMethodTypo(): void

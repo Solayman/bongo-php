@@ -56,20 +56,20 @@ class HttpLayerTest extends HttpTestCase
     public function testMethodSpoofingAndRealVerbs(): void
     {
         $this->loginAsAdmin();
-        $id = $this->db('categories')->insertGetId(['name' => 'Spoof', 'slug' => 'spoof-test']);
+        $token = $this->get('/profile')->csrfToken();
 
-        // A real DELETE without a token is refused by CSRF
-        $this->request('DELETE', "/categories/$id")->assertStatus(419);
-        $this->assertSame('Spoof', $this->db('categories')->where('id', $id)->first()->name);
+        // A real PUT without a token is refused by CSRF
+        $this->request('PUT', '/profile')->assertStatus(419);
 
-        // An HTML form: POST + _method=DELETE + token
-        $this->submit('/categories', "/categories/$id", ['_method' => 'DELETE'])->assertRedirect('/categories');
-        $this->assertNull($this->db('categories')->where('id', $id)->first());
+        // An HTML form: POST + _method=PUT + token
+        $this->submit('/profile', '/profile', ['_method' => 'PUT', 'name' => 'Admin Spoof', 'email' => 'admin@example.com'])->assertRedirect('/profile');
+        $this->assertSame('Admin Spoof', $this->db('users')->where('id', 1)->first()->name);
+        $this->db('users')->where('id', 1)->update(['name' => 'Admin']);
 
-        // A plain POST to a DELETE-only path is 405, with an Allow header
-        $response = $this->submit('/categories', '/categories/1');
+        // A plain POST to a PUT-only path is 405, with an Allow header
+        $response = $this->post('/profile', ['name' => 'Bad Post']);
         $response->assertStatus(405);
-        $this->assertContains('DELETE', (string) $response->header('Allow'));
+        $this->assertContains('PUT', (string) $response->header('Allow'));
     }
 
     public function testCsrfTokenAcceptedFromHeader(): void
@@ -84,15 +84,9 @@ class HttpLayerTest extends HttpTestCase
     public function testNamedRoutesInRenderedPages(): void
     {
         $this->loginAsAdmin();
-        // A new product is first in the list and never ordered, so it has a Delete form
-        $free = $this->db('products')->insertGetId(['name' => 'Route Probe', 'sku' => 'ROUTE-PROBE', 'price' => 1, 'stock' => 1, 'status' => 'draft']);
-        try {
-            $this->get('/products')
-                ->assertSee('action="' . \System\Testing\Runner::$baseUrl . "/products/$free\"")
-                ->assertSee('name="_method" value="DELETE"');
-        } finally {
-            $this->db('products')->where('id', $free)->delete();
-        }
+        $this->get('/profile')
+            ->assertSee('action="' . \System\Testing\Runner::$baseUrl . '/profile"')
+            ->assertSee('name="_method" value="PUT"');
     }
 
     public function testApiIsRateLimited(): void
@@ -131,9 +125,9 @@ class HttpLayerTest extends HttpTestCase
         $this->get('/login')->assertSee('এই ইমেইল বা পাসওয়ার্ড আমাদের রেকর্ডের সাথে মেলে না।');
 
         $this->submit('/login', '/login', ['email' => 'admin@example.com', 'password' => 'password']);
-        $this->get('/')->assertSee('আবার স্বাগতম, Admin!')->assertSee('সাম্প্রতিক অর্ডার')->assertSee('ড্যাশবোর্ড');
+        $this->get('/')->assertSee('আবার স্বাগতম, Admin!')->assertSee('ড্যাশবোর্ড');
 
-        $this->get('/?lang=en')->assertSee('Recent orders');
+        $this->get('/?lang=en')->assertSee('Dashboard');
     }
 
     public function testBrowserLanguageIsUsedWhenNothingWasChosen(): void

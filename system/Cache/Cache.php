@@ -35,13 +35,29 @@ class Cache
         self::$store = $store;
     }
 
+    protected static array $events = [];
+
+    public static function getEvents(): array
+    {
+        return self::$events;
+    }
+
+    public static function clearEvents(): void
+    {
+        self::$events = [];
+    }
+
     public static function forever(string $key, $value): bool
     {
+        self::$events[] = ['action' => 'put', 'key' => $key, 'time' => date('H:i:s')];
         return self::store()->put($key, $value, null);
     }
 
     public static function __callStatic(string $method, array $arguments)
     {
+        if (in_array($method, ['get', 'has', 'put', 'forget', 'remember', 'increment'], true) && isset($arguments[0]) && is_string($arguments[0])) {
+            self::$events[] = ['action' => $method, 'key' => $arguments[0], 'time' => date('H:i:s')];
+        }
         return self::store()->$method(...$arguments);
     }
 }

@@ -51,15 +51,4 @@ class RememberMeTest extends HttpTestCase
             $this->get('/dashboard')->assertRedirect('/login');
         }
     }
-
-    public function testTheShopHasItsOwnRememberCookie(): void
-    {
-        $this->get('/shop/login')->assertSee('name="remember"');
-        $this->submit('/shop/login', '/shop/login', ['email' => 'rahim1@example.com', 'password' => 'password', 'remember' => '1']);
-        $this->assertTrue(isset($this->cookies['remember_customer']));
-        $this->assertSame(false, isset($this->cookies['remember_web']), 'admin is not remembered');
-        $this->closeBrowser();
-        $this->get('/shop/orders')->assertStatus(200);
-        $this->get('/dashboard')->assertRedirect('/login');
-    }
 }

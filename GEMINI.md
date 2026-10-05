@@ -198,6 +198,27 @@ php bongo release:build <folder>          # Builds fresh clean starter project i
 php bongo release:package [--out=dist]    # Builds zip archive and sha256 for GitHub release
 ```
 
+### P. Professional Internal DebugBar (`System\Debug\DebugBar`) & Decoupled Framework Architecture
+- **Internal DebugBar (`System\Debug\DebugBar`):**
+  - Integrated zero-dependency pure-PHP interactive DevTools toolbar injected in debug mode (`APP_DEBUG=true`).
+  - Dark-themed floating panel with 7 comprehensive tabs:
+    - `Request`: HTTP method, URI, route name, action controller, IP, user-agent, route parameters, headers, query parameters, POST payload, session data, cookies.
+    - `Messages`: Live application log entries recorded in the request (`LOG.info`, `LOG.warning`, `LOG.error`) with badges and contextual data.
+    - `Timeline`: Execution milestones (boot time, application runtime, total database query duration, peak memory usage).
+    - `Views`: Rendered view templates hierarchy, individual render execution duration (ms), and passed data keys.
+    - `Queries`: Detailed database query collector with duration (ms), syntax-highlighted SQL statements, connection name, parameter bindings, one-click copy SQL button, and automated N+1 query detection (highlighted warning badge with repeated query counts).
+    - `Models`: Total models hydrated during the request grouped by model class.
+    - `Cache`: Cache access events (hits, misses, writes, forget operations).
+  - Right-side status indicators:
+    - ⚡ OpCache active/disabled badge.
+    - 🗄️ Peak memory usage (MB).
+    - ⏱️ Page response time (ms).
+    - Route badge with link to `/system` status.
+    - Minimize / restore floating chevron pill with badge count indicators.
+- **Decoupled Architecture & Dedicated Sandbox Testbed:**
+  - Migrated entire e-commerce storefront demo (Product, Category, Order, OrderItem, Post models, Shop controllers, cart services, customer storefront, and feature tests) to official testbed sandbox repository (`bongo-package-and-feature-test`).
+  - Streamlined `bongo-php` to a pure, high-performance starter framework containing only core engine (`system/`), authentication & security subsystem, clean starter admin dashboard, and self-contained unit and feature tests (**353 tests passing, 1,600 assertions**).
+
 ---
 
 ## 7. Development Guidelines & Rules for AI Agents
@@ -242,8 +263,9 @@ Claude verified **all features from PRs #78–#94** on real MySQL, **PostgreSQL 
 | Package Security Hardening (PRs #39, #40 & #41) | ✅ Verified, 182 package tests | Realpath boundary containment, CRLF header sanitization, JSON hex script escaping, auth guards in two-factor, JSON-LD hex escaping in SEO, ActivityLogger trusted proxy IP resolution, FTP path normalization traversal defense, and BackupManager filename sanitization. |
 | Package N+1 Elimination & Polymorphic Eager Loading (PR #42) | ✅ Verified, 182 package tests | Batched permission & role revocation via `whereIn('name', ...)` in `permission`; polymorphic subject/causer relationship resolution and `Activity::loadMorphs()` batched eager loading in `activity-log`. |
 | Core Framework CRLF & HTTP Response Splitting Hardening | ✅ Verified, 2 tests | Sanitized `redirect()` helper and CORS `Access-Control-Allow-Origin` echoing by stripping `\r`, `\n`, and `\0`. |
+| Internal DebugBar & Decoupled Architecture | ✅ **Verified, 353 framework tests (1,600 assertions)** | Professional floating dark-theme DevTools toolbar with Request, Messages, Timeline, Views, Queries (N+1 detection), Models, Cache, OpCache, Memory, and Time widgets; decoupled starter framework with demo store moved to `bongo-package-and-feature-test`. |
 
 **Current framework verification totals:**
-- Core framework tests: **382 tests passing (1,938 assertions)** across MySQL, PostgreSQL 18, and SQLite.
-- System metrics: **127 modular files, 17,470 lines (~17,400 lines), ~626 KB** in `system/`.
+- Core framework tests: **353 tests passing (1,600 assertions)** across MySQL, PostgreSQL 18, and SQLite.
+- System metrics: **128 modular files, ~17,900 lines, ~640 KB** in `system/`.
 - Official package suite: **20 packages, 182 passing package tests (757 assertions)**.

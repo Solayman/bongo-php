@@ -46,14 +46,9 @@ class ApiAuthTest extends HttpTestCase
     {
         $token = $this->login();
 
-        $this->assertSame('admin@example.com', $this->json($this->api('GET', '/api/auth/me', [], $token)->assertStatus(200))['user']['email']);
-
-        $products = $this->json($this->api('GET', '/api/products?per_page=5&q=BG-10', [], $token)->assertStatus(200));
-        $this->assertCount(5, $products['data']);
-        $this->assertSame(1, $products['meta']['current_page']);
-        $this->assertTrue(is_float($products['data'][0]['price']));
-
-        $this->api('GET', '/api/products/999999', [], $token)->assertStatus(404);
+        $user = $this->json($this->api('GET', '/api/auth/me', [], $token)->assertStatus(200))['user'];
+        $this->assertSame('admin@example.com', $user['email']);
+        $this->assertSame('admin', $user['role']);
     }
 
     public function testMissingOrBadTokensAre401(): void
@@ -64,7 +59,7 @@ class ApiAuthTest extends HttpTestCase
         $this->assertContains('No token provided', $this->json($response)['error']['message']);
 
         $this->assertContains('Invalid token signature', $this->json($this->api('GET', '/api/auth/me', [], $this->login() . 'x')->assertStatus(401))['error']['message']);
-        $this->api('GET', '/api/products', [], 'not-a-jwt')->assertStatus(401);
+        $this->api('GET', '/api/auth/me', [], 'not-a-jwt')->assertStatus(401);
     }
 
     public function testBrowserSessionDoesNotAuthenticateTheApi(): void
@@ -106,8 +101,8 @@ class ApiAuthTest extends HttpTestCase
 
     public function testCustomersCanUseTheApi(): void
     {
-        $token = $this->login('rahim1@example.com', 'password');
-        $this->assertSame('customer', $this->json($this->api('GET', '/api/auth/me', [], $token))['user']['role']);
+        $token = $this->login('user@example.com', 'password');
+        $this->assertSame('user', $this->json($this->api('GET', '/api/auth/me', [], $token))['user']['role']);
     }
 
     public function testApiLoginIsThrottled(): void
@@ -126,6 +121,6 @@ class ApiAuthTest extends HttpTestCase
         // Signing in on the web does not hand out API tokens, and vice versa
         $this->loginAsAdmin();
         $this->get('/')->assertStatus(200);
-        $this->api('GET', '/api/products')->assertStatus(401);
+        $this->api('GET', '/api/auth/me')->assertStatus(401);
     }
 }

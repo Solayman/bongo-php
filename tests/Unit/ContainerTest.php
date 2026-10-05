@@ -42,7 +42,7 @@ namespace Tests\Unit\ContainerProbe {
 
 namespace Tests\Unit {
 
-    use App\Models\Product;
+    use App\Models\User;
     use System\Container\Container;
     use System\Container\ContainerException;
     use System\Http\HttpException;
@@ -106,19 +106,19 @@ namespace Tests\Unit {
 
         public function testRouteModelBinding(): void
         {
-            $fn = fn(Product $product, Request $request) => [$product->name, get_class($request)];
-            $this->assertSame(['Wireless Earbuds', Request::class], $this->c->call($fn, ['product' => '1']));
-            $this->assertSame(['Wireless Earbuds', Request::class], $this->c->call($fn, ['id' => '1']), 'any route parameter name works by position');
+            $fn = fn(User $user, Request $request) => [$user->name, get_class($request)];
+            $this->assertSame(['Admin', Request::class], $this->c->call($fn, ['user' => '1']));
+            $this->assertSame(['Admin', Request::class], $this->c->call($fn, ['id' => '1']), 'any route parameter name works by position');
 
             try {
-                $this->c->call($fn, ['product' => '999999']);
+                $this->c->call($fn, ['user' => '999999']);
                 $this->assertTrue(false, 'expected 404');
             } catch (HttpException $e) {
                 $this->assertSame(404, $e->status());
-                $this->assertSame('Product not found', $e->getMessage());
+                $this->assertSame('User not found', $e->getMessage());
             }
 
-            $this->assertNull($this->c->call(fn(?Product $product = null) => $product, []), 'an optional model may be missing');
+            $this->assertNull($this->c->call(fn(?User $user = null) => $user, []), 'an optional model may be missing');
         }
 
         public function testGlobalHelper(): void

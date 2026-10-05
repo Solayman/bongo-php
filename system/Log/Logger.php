@@ -33,6 +33,8 @@ class Logger
 
     protected static ?Logger $instance = null;
     protected bool $pruned = false;
+    /** In-memory log messages recorded during the current request for DebugBar */
+    protected array $recorded = [];
 
     public function __construct(
         protected string $path,
@@ -106,12 +108,29 @@ class Logger
         $this->log('emergency', $message, $context);
     }
 
+    public function getRecorded(): array
+    {
+        return $this->recorded;
+    }
+
+    public function clearRecorded(): void
+    {
+        $this->recorded = [];
+    }
+
     public function log(string $level, string $message, array $context = []): void
     {
         $level = strtolower($level);
         if (!isset(self::LEVELS[$level])) {
             $level = 'info';
         }
+
+        $this->recorded[] = [
+            'time'    => date('H:i:s'),
+            'level'   => $level,
+            'message' => $message,
+            'context' => $this->mask($context),
+        ];
 
         if ($this->channel === 'none' || self::LEVELS[$level] < (self::LEVELS[strtolower($this->minLevel)] ?? 100)) {
             return;
