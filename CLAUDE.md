@@ -165,8 +165,8 @@ When interacting with this codebase, you **must adhere to these rules**:
   2. Push to `origin/solayman`.
   3. Open a Pull Request targeting `master` from `solayman` (via GitHub API or `gh pr create`).
   4. Merge the Pull Request immediately (`merge_method: merge`).
-  5. Synchronize local `master` and `solayman` branches.
-  6. When updating the fresh starter skeleton for end users, build and update `release` via `php bongo release:branch` and `git push origin release`.
+  6. **ALWAYS Update the `release` branch immediately** after every merge to `master`: run `php bongo release:branch` and `git push origin refs/heads/release:release` (the `release` branch is the fresh starter skeleton that end-users clone for clean projects).
+  7. Synchronize `bongo-package-and-feature-test` with `git pull origin release`.
 
 * **Official Packages Workflow (`Solayman/bongo-php-packages`)**:
   - **RULE: If any package needs an MR, go with `bongo-php-packages`.**
