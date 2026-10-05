@@ -9,7 +9,7 @@ A full-stack, enterprise-capable web framework crafted in ~616 KB of clean, read
 
 [![PHP Version](https://img.shields.io/badge/PHP-8.0%2B-777bb4?style=flat-square&logo=php&logoColor=white)](https://www.php.net)
 [![Dependencies](https://img.shields.io/badge/dependencies-0%20required-brightgreen?style=flat-square)](WHY_BONGO.md)
-[![Test Suite](https://img.shields.io/badge/automated%20tests-368%20passing-brightgreen?style=flat-square)](TESTING_GUIDE.md)
+[![Test Suite](https://img.shields.io/badge/automated%20tests-371%20passing-brightgreen?style=flat-square)](TESTING_GUIDE.md)
 [![Core Size](https://img.shields.io/badge/fresh%20skeleton-~800%20KB-informational?style=flat-square)](#performance--benchmarks)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 [![Localization](https://img.shields.io/badge/i18n-English%20%7C%20বাংলা-orange?style=flat-square)](DOCUMENTATION.md#localization)
@@ -173,7 +173,7 @@ $this->get('/products')
     ->assertSee('Yoga Mat');
 ```
 ```bash
-php bongo test              # Runs 368 unit and HTTP integration tests on isolated DB
+php bongo test              # Runs 371 unit and HTTP integration tests on isolated DB
 ```
 
 ---

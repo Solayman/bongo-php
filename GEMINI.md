@@ -1,23 +1,31 @@
 # Project Instructions & Memory
 
-## Git & Branching Strategy
-- **Main Branch**: `master` (production-ready code).
-- **Working / Push Branch**: `solayman` (all development code must be pushed to the `solayman` branch).
-- **Release Branch (`release`)**: The clean, production-ready starter skeleton branch for direct end-users to clone and start fresh projects (contains core framework, migrations, starter skeleton, no demo store, no test fixtures). Never commit development work directly to `release`. Update it using `php bongo release:branch` and push via `git push origin release` when publishing framework updates.
-- **Merge Requests / Pull Requests (Core & Package Repositories)**:
-  - **Framework Repo (`Solayman/bongo-php`)**:
-    1. Commit code to `solayman`.
-    2. Push to `origin/solayman`.
-    3. Create PR/MR targeting `master` (`gh pr create --base master --head solayman`).
-    4. Merge PR/MR into `master` (`gh pr merge <number> --merge`).
-    5. Sync local `master` and `solayman` branches.
-  - **Official Packages Repo (`Solayman/bongo-php-packages`)**:
-    - **Always follow Pull Requests in the package repository**: Never push directly to `master`.
-    1. Create a dedicated feature or working branch (e.g. `solayman` or `feat/<package-name>`).
-    2. Commit and push to origin (`git push origin <branch>`).
-    3. Create PR targeting `master` (`gh pr create --repo Solayman/bongo-php-packages --base master --head <branch>`).
-    4. Merge PR into `master` (`gh pr merge <number> --merge`).
-    5. Sync local `master` and working branches.
+## Multi-Repository Workspace Structure (`D:\laravel\framework\`)
+- **`bongo-php`**: Core framework repository (`solayman` branch for active development, `master` for production).
+- **`bongo-php-packages`**: Official package suite repository containing all 20 packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`, `nagad`, `stripe`, `two-factor`, `image`, `backup`, `permission`, `zip`, `ftp`, `paypal`, `api-tools`, `settings`, `seo`, `activity-log`, `health`, `file-manager`) with 174 passing package tests.
+- **`bongo-package-and-feature-test`**: Official testbed and application sandbox. **RULE: Always implement and test new features in this repository.** (`bongo-test` junction links here).
+- **`BongoMvc`**: Directory junction linking to `bongo-php` for seamless package test runner (`run_tests.php`) execution.
+
+## Git, Branching & Merge Request (MR) Policy
+- **Full MR & Merge Access**: The AI agent has full authority to make Pull Requests / Merge Requests (MRs) and merge them.
+- **Always Use `solayman` Branch**: All development code, package additions, and framework updates must be committed to the `solayman` branch.
+- **Always Make MR with `solayman` & Merge**:
+  1. Commit code to `solayman`.
+  2. Push to `origin/solayman`.
+  3. Create PR/MR targeting `master` with `head: solayman` (via GitHub REST API or `gh pr create`).
+  4. Merge the PR/MR into `master` immediately (`merge_method: merge`).
+  5. Sync local `master` and `solayman` branches.
+- **Package MRs (`Solayman/bongo-php-packages`)**:
+  - **RULE: If any package needs an MR, go with `bongo-php-packages`.**
+  - Commit to working/feature branch or `solayman`, push to origin, create PR targeting `master`, and merge.
+- **Release Branch (`release`)**: Clean starter skeleton for end-users. Update it with `php bongo release:branch` and `git push origin release` after merging to `master`.
+
+## Environment & Credential Policy
+- **Check `.env` for `GITHUB_TOKEN`**: Every repository maintains a `.env` file containing a dedicated `GITHUB_TOKEN` (Fine-grained PAT) for API operations, package catalog lookups, PR creation, and merges:
+  - `bongo-php/.env`: `GITHUB_TOKEN`
+  - `bongo-package-and-feature-test/.env`: `GITHUB_TOKEN`
+  - `bongo-php-packages/.env`: `GITHUB_TOKEN`
+- Never remove, overwrite, or expose credentials. Use them for authenticated GitHub API operations.
 
 ## Core Architecture & Principles
 - **Zero Required Dependencies**: The framework must remain self-contained (no mandatory Composer packages, no Node.js runtime, no build step).
@@ -58,9 +66,16 @@
 - **Always Maintain `.env.example`**: Whenever any configuration option, environment variable, driver, or system setting is introduced or updated, `.env.example` MUST be updated immediately with clear comments and sensible defaults so users and developers understand how to configure every framework capability.
 - **Cross-Agent Memory Continuity**: Keeping markdown memory files synchronized ensures other AI agents and human developers immediately inherit accurate architecture, rules, and implementation status.
 
-## Verified Review Status (Claude, 2026-10-04): no re-check needed
+## Verified Review Status (Claude & Gemini, 2026-10-05): no re-check needed
 - Claude verified **all features from PRs #78–#94** on real MySQL, **PostgreSQL 18**, SQLite and Redis servers. The bugs found are fixed in #95 (database), #96 (security), #97 (PSR-12) and #98 (Redis queue), and the docs are corrected in #99. **Do not re-verify these; build on them.** The full table is in `CLAUDE.md` § 7.
-- Current state: **368 tests pass on MySQL, PostgreSQL and SQLite; `system/` has 127 files, 14,988 lines (~15,000 lines) and ~616 KB.**
+- Current state: **371 tests pass on MySQL, PostgreSQL and SQLite (1,888 assertions); `system/` has 127 files, 14,988 lines (~15,000 lines) and ~616 KB.**
+- **Demo Store Blog Feature**: Full Blog lifecycle integrated into the demo application (`PostController`, `BlogController`, `Post` model, `2026_10_04_235716_create_posts_table.php`, TinyMCE 6 rich text editor, Bongo File Manager modal/popup connectors `bongoTinyMCEPicker()`, and automated integration tests in `BlogTest.php`).
+- **Multi-Directory Migration Generation**: `Migrator::make()` safely handles array migration paths, directing newly generated migrations to the application directory when package migration directories are active.
+- **Local Multi-Repo Testing Architecture** (`D:\laravel\framework\`):
+  - `bongo-php`: Core framework repository (`solayman` branch for development, `master` for production).
+  - `bongo-php-packages`: Official package suite repository containing all 20 packages with 174 passing package tests (706 assertions).
+  - `BongoMvc`: Junction link to `bongo-php` for seamless package test runner (`run_tests.php`) execution.
+  - `bongo-package-and-feature-test`: Official feature development and package integration testbed repository (also linked via `bongo-test`).
 - Performance tools (Claude, 2026-10-04, verified, see `CLAUDE.md` § 2 K): `php bongo benchmark`, `system/preload.php`, `DB_PERSISTENT`, N+1 warning, `cache_for()`. Measure every performance claim with `php bongo benchmark`.
 - Rules from the review:
   - test every database a change touches (not only grammar unit tests);
@@ -71,4 +86,5 @@
   - delete temp files;
   - never unserialize unsigned data;
   - update the `release` branch after a batch of merged work.
+
 
