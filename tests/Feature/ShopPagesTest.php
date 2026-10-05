@@ -16,7 +16,7 @@ class ShopPagesTest extends HttpTestCase
     {
         foreach (
             ['/', '/dashboard', '/orders', '/orders/1', '/products', '/products/create', '/products/1/edit',
-                  '/categories', '/categories/1/edit', '/customers', '/customers/2', '/profile', '/system'] as $path
+                  '/categories', '/categories/1/edit', '/posts', '/posts/create', '/customers', '/customers/2', '/profile', '/system'] as $path
         ) {
             $response = $this->get($path);
             $this->assertSame(200, $response->status, "GET $path returned {$response->status}");

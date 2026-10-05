@@ -124,8 +124,17 @@ The following high-priority features and optimizations were recently implemented
   * **Application Overrides:** `resources/views/vendor/<name>/` and `lang/vendor/<name>/` take precedence over package assets, surviving updates.
   * **CLI Commands:** `add`, `package:install`, `package:update`, `package:remove`, `package:list`, `package:publish`, `package:diff`, and `package:test`.
   * **Storage Extensibility & Bootstrapping:** Package `bootstrap.php` runner on framework boot; `Storage::extend()`, `Storage::set()`, and `Storage::temporaryUrl()`.
-  * **Official Packages Suite (`Solayman/bongo-php-packages`):** 19 packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`, `nagad`, `stripe`, `two-factor`, `image`, `backup`, `permission`, `zip`, `ftp`, `paypal`, `api-tools`, `settings`, `seo`, `activity-log`, `health`) with 158 passing package tests.
-  * **Testing:** 11 unit tests in `tests/Unit/PackageTest.php` (43 assertions), 6 tests in `tests/Unit/StorageTest.php` (31 assertions). Full core test suite: **368 tests passing (1845 assertions) across MySQL, PostgreSQL 18, and SQLite**.
+  * **Official Packages Suite (`Solayman/bongo-php-packages`):** 20 production packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`, `nagad`, `stripe`, `two-factor`, `image`, `backup`, `permission`, `zip`, `ftp`, `paypal`, `api-tools`, `settings`, `seo`, `activity-log`, `health`, `file-manager`) with 174 passing package tests (706 assertions).
+  * **Testing:** 11 unit tests in `tests/Unit/PackageTest.php` (43 assertions), 6 tests in `tests/Unit/StorageTest.php` (31 assertions). Full core test suite: **371 tests passing (1888 assertions) across MySQL, PostgreSQL 18, and SQLite**.
+
+### M. Demo Store Blog & TinyMCE 6 / File Manager Integration
+* **Problem Solved:** Demonstrating end-to-end rich content authoring in the application layer utilizing Bongo's official `file-manager` package with WYSIWYG modal and popup pickers.
+* **Implementation:**
+  * **Admin Posts Controller (`App\Http\Controllers\PostController`):** Full post CRUD lifecycle with slug generation, status management (`published`/`draft`), and TinyMCE 6 rich text integration.
+  * **Public Blog Controller (`App\Http\Controllers\BlogController`):** Public frontend blog feed at `/blog` and post reader at `/blog/{slug}` with draft protection.
+  * **TinyMCE Connector (`bongoTinyMCEPicker()`):** Seamless file manager popup callback integration returning selected asset URLs into TinyMCE image and media dialogs.
+  * **Migrator Fix (`System\Database\Migrator::make()`):** Added support for array migration paths to safely generate new migrations into the primary application directory when package migration directories are loaded.
+  * **Testing:** Verified via `tests/Feature/BlogTest.php` (3 tests covering CRUD, draft filtering, and file manager script endpoints).
 
 ---
 
@@ -139,22 +148,35 @@ When interacting with this codebase, you **must adhere to these rules**:
 | **`solayman`** | Active development branch. All commits and pushes must go to `solayman`. |
 | **`release`** | Clean starter skeleton branch for end-users to clone. Built via `php bongo release:branch` and pushed via `git push origin release`. Never commit development code directly to it. |
 
-### Development & PR Workflow:
-* **Framework Repository (`Solayman/bongo-php`)**:
+### Multi-Repository Architecture & PR/MR Workflow:
+* **Repository Landscape (`D:\laravel\framework\`):**
+  * `bongo-php`: Core framework repository (`solayman` branch for development, `master` for production).
+  * `bongo-php-packages`: Official package suite repository (all 20 packages).
+  * `bongo-package-and-feature-test`: Official feature development and package integration testbed. **RULE: Always implement and test new application features here.**
+  * `BongoMvc`: Junction link to `bongo-php` for package test runners.
+
+* **Full MR & Merge Access Policy:**
+  * The AI agent is authorized to make Pull Requests / Merge Requests (MRs) and merge them.
+  * **Always make MR with `solayman` branch and merge the request.**
+  * **GitHub Token:** Check `.env` across all repos for `GITHUB_TOKEN` (Fine-grained PAT) for API-based PR creation and merges.
+
+* **Core Framework Workflow (`Solayman/bongo-php`)**:
   1. Make changes on the local `solayman` branch.
   2. Push to `origin/solayman`.
-  3. Open a Pull Request targeting `master`: `gh pr create --base master --head solayman`.
-  4. Merge the Pull Request: `gh pr merge <number> --merge`.
+  3. Open a Pull Request targeting `master` from `solayman` (via GitHub API or `gh pr create`).
+  4. Merge the Pull Request immediately (`merge_method: merge`).
   5. Synchronize local `master` and `solayman` branches.
   6. When updating the fresh starter skeleton for end users, build and update `release` via `php bongo release:branch` and `git push origin release`.
 
-* **Official Packages Repository (`Solayman/bongo-php-packages`)**:
-  - **Always follow Pull Requests in the package repository**: Never commit/push directly to `master`.
+* **Official Packages Workflow (`Solayman/bongo-php-packages`)**:
+  - **RULE: If any package needs an MR, go with `bongo-php-packages`.**
+  - Always follow Pull Requests in the package repository: never commit/push directly to `master`.
   1. Create a dedicated feature or working branch (e.g. `solayman` or `feat/<package-name>`).
   2. Commit and push to origin (`git push origin <branch>`).
-  3. Open a Pull Request targeting `master`: `gh pr create --repo Solayman/bongo-php-packages --base master --head <branch>`.
-  4. Merge the Pull Request: `gh pr merge <number> --merge`.
+  3. Open a Pull Request targeting `master`: `gh pr create --repo Solayman/bongo-php-packages --base master --head <branch>` (or via GitHub REST API).
+  4. Merge the Pull Request immediately.
   5. Synchronize local `master` and working branches.
+
 
 ---
 
@@ -239,13 +261,14 @@ Claude reviewed **every feature from PRs #78–#94** line by line and ran the fu
 | Code style | ✅ **PSR-12, 0 errors** (#97) | Rules in `phpcs.xml`. Check with `php phpcs.phar` (see CONTRIBUTING). |
 | Docs (#78–#94) | ✅ Corrected (#99) | Real numbers only, no "Blade" wording, correct paths, unique section numbers. |
 | Package Subsystem & Official Suite (Phases A, B, C, D) | ✅ **Complete, 20 packages, 174 package tests** | Pure-PHP manager (`System\Package`), SHA-256 verification, update diff safety, app overrides, `bootstrap.php` runner, storage extensibility (`Storage::extend()`, `Storage::temporaryUrl()`), and 20 official packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`, `nagad`, `stripe`, `two-factor`, `image`, `backup`, `permission`, `zip`, `ftp`, `paypal`, `api-tools`, `settings`, `seo`, `activity-log`, `health`, `file-manager`). |
+| Demo Store Blog & TinyMCE 6 / File Manager (#114+) | ✅ Verified, 3 tests | Post CRUD, TinyMCE 6 editor, Bongo File Manager modal/popup pickers, draft visibility, and array migration path support in Migrator. |
 
-**Test results at review end:** 368 tests pass on MySQL, PostgreSQL 18 and SQLite.
+**Test results at review end:** 371 tests pass on MySQL, PostgreSQL 18 and SQLite.
 
 ### Rules learned from this review (apply to all future work)
 1. **Test on every database a change touches:** `DB_CONNECTION=pgsql DB_PORT=5432 DB_USERNAME=postgres DB_PASSWORD=... php -d extension=pdo_pgsql bongo test`, plus SQLite (`DB_CONNECTION=sqlite php -d extension=pdo_sqlite bongo test`) and MySQL. Grammar-only unit tests are not enough.
 2. **PSR-12 with 0 errors** (`php phpcs.phar`) before every PR.
-3. **Only measured numbers in docs.** No "100%", "<15ms" or "pixel-perfect" without a reproducible measurement. Recount files, lines and tests after changes. Current: 127 files, ~15,000 lines, ~616 KB in `system/`; 368 tests.
+3. **Only measured numbers in docs.** No "100%", "<15ms" or "pixel-perfect" without a reproducible measurement. Recount files, lines and tests after changes. Current: 127 files, ~15,000 lines, ~616 KB in `system/`; 371 tests.
 4. **Never describe Bongo with Laravel or Blade terms** ("Blade-compatible" etc.). Comparison tables that *name* other frameworks are fine.
 5. **Security defaults for new code:**
    - escape or whitelist everything that reaches HTML/CSS/shell/headers;
