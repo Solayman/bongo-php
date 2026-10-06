@@ -39,5 +39,10 @@ return [
     // 'aamarpay',        // AamarPay payment gateway for Bangladesh (bKash, Nagad, cards, TrxCheck)
     // 'telegram',        // Telegram Bot notifications, alerts, and channel messaging
     // 'bangla-tools',    // Bengali localization toolkit (numerals, words, Taka currency, Bongabdo calendar, slugs)
+    // 'bd-locations',    // Bangladesh administrative divisions, 64 districts, upazilas, postcodes, shipping zones
+    // 'webhooks',        // Outbound webhook dispatcher with HMAC-SHA256 signing and verification
+    // 'impersonate',     // Admin user impersonation with secure session swapping
+    // 'queue-monitor',   // Web dashboard for queue jobs, pending counts, and failed job retries
+    // 'discord',         // Discord webhook alerts, notifications, and rich embed builder
     'file-manager',    // Web file manager with tree navigation, image previews, and embedded code editor
 ];
