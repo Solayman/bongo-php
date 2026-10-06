@@ -256,6 +256,12 @@ class Request
             || str_starts_with(self::path(), '/api/') || self::path() === '/api';
     }
 
+    /** True when the request is an AJAX request (X-Requested-With: XMLHttpRequest) */
+    public static function ajax(): bool
+    {
+        return self::header('X-Requested-With') === 'XMLHttpRequest';
+    }
+
     /** Decoded JSON body ([] if none or invalid) */
     public static function json(): array
     {

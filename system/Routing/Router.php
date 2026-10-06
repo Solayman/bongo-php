@@ -296,8 +296,10 @@ class Router
             // Remember the last page shown, so back() works without a Referer header
             // (after middleware, because the session middleware starts the session)
             if ($method === 'GET' && PHP_SAPI !== 'cli' && session_status() === PHP_SESSION_ACTIVE) {
-                $query = $_SERVER['QUERY_STRING'] ?? '';
-                Session::put('_previous_url', $path . ($query !== '' ? "?$query" : ''));
+                if ($this->shouldTrackPreviousUrl($path)) {
+                    $query = $_SERVER['QUERY_STRING'] ?? '';
+                    Session::put('_previous_url', $path . ($query !== '' ? "?$query" : ''));
+                }
             }
 
             $this->callAction($route->action, $params);
@@ -432,5 +434,39 @@ class Router
         } elseif (is_string($result)) {
             echo $result;
         }
+    }
+
+    /**
+     * Determine if the GET request should update _previous_url in session.
+     * Excludes AJAX/JSON calls, asset/file streams, downloads, and image thumbnails.
+     */
+    public function shouldTrackPreviousUrl(string $path): bool
+    {
+        if (\System\Http\Request::ajax() || \System\Http\Request::wantsJson()) {
+            return false;
+        }
+
+        // Exclude common file extensions
+        if (preg_match('/\.(png|jpe?g|gif|webp|svg|ico|pdf|zip|tar|gz|css|js|map|woff2?|ttf|eot)$/i', $path)) {
+            return false;
+        }
+
+        // Exclude asset, thumbnail, download, and binary routes
+        if (str_starts_with($path, '/filemanager/thumb') ||
+            str_starts_with($path, '/filemanager/download') ||
+            str_starts_with($path, '/filemanager/read') ||
+            str_starts_with($path, '/captcha') ||
+            str_starts_with($path, '/storage/') ||
+            str_starts_with($path, '/api/')) {
+            return false;
+        }
+
+        // If Accept header exists, ensure it accepts text/html or generic document
+        $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
+        if ($accept !== '' && !str_contains($accept, 'text/html') && !str_contains($accept, '*/*')) {
+            return false;
+        }
+
+        return true;
     }
 }
