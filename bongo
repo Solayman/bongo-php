@@ -152,7 +152,12 @@ try {
             }
             echo "Starting development server: http://$host:$port\n";
             echo "Press Ctrl+C to stop.\n";
-            passthru(escapeshellarg(PHP_BINARY) . " -S $host:$port -t " . escapeshellarg(__DIR__ . '/public'));
+            $serverScript = __DIR__ . '/server.php';
+            if (is_file($serverScript)) {
+                passthru(escapeshellarg(PHP_BINARY) . " -S $host:$port " . escapeshellarg($serverScript));
+            } else {
+                passthru(escapeshellarg(PHP_BINARY) . " -S $host:$port -t " . escapeshellarg(__DIR__ . '/public'));
+            }
             break;
 
         case 'migrate':

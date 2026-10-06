@@ -13,7 +13,7 @@ class ReleaseBuilder
 {
     /** Copied from this repository: the framework and what every project needs */
     public const FRAMEWORK = [
-        'system', 'bongo', 'config', 'lang',
+        'system', 'bongo', 'config', 'lang', 'server.php',
         'public/index.php', 'public/.htaccess', 'public/storage/.htaccess',
         '.gitignore', '.env.example', 'DOCUMENTATION.md', 'WHY_BONGO.md', 'UPGRADE.md', 'LICENSE', 'CHANGELOG.md',
         'public/asset/js/bongo-socket.js',
