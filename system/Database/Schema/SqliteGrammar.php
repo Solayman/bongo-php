@@ -27,6 +27,10 @@ trait SqliteGrammar
                 $primary[] = $this->wrapName($column->name);
             }
         }
+        foreach ($this->primaryKeys as $col) {
+            $primary[] = $this->wrapName($col);
+        }
+        $primary = array_values(array_unique($primary));
         if ($primary && !$inlinePrimary) {
             $lines[] = 'PRIMARY KEY (' . implode(', ', $primary) . ')';
         }

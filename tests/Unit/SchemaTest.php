@@ -34,6 +34,17 @@ class SchemaTest extends TestCase
         $this->assertContains('FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE', $sql);
     }
 
+    public function testCompilesCompositePrimaryKey(): void
+    {
+        $table = new Blueprint('role_has_permissions');
+        $table->unsignedBigInteger('role_id');
+        $table->unsignedBigInteger('permission_id');
+        $table->primary(['role_id', 'permission_id']);
+
+        $sql = $table->toCreateSql();
+        $this->assertContains('PRIMARY KEY (`role_id`, `permission_id`)', $sql);
+    }
+
     public function testCompilesAlterTable(): void
     {
         $table = new Blueprint('posts');
