@@ -85,6 +85,7 @@ Every notable change to the Bongo PHP Framework. Versions follow [semantic versi
 - Open source files: LICENSE (MIT), CONTRIBUTING, SECURITY, CODE_OF_CONDUCT, and issue and pull request templates.
 
 ### Changed
+- **Responses that send themselves:** a controller may return any object with a `send()` method; the router calls it, so its status code and headers are kept. Before, only `DownloadResponse` did this and other objects (e.g. api-tools' `JsonResponse` from `ApiResponse::error(..., 422)`) were only JSON-encoded and went out as HTTP 200.
 - **Translations moved from `lang/` to `resources/lang/`** (next to `resources/views/`). `php bongo package:publish <name> --lang` now copies to `resources/lang/vendor/<name>/`. A project that still has only a root `lang/` folder keeps working unchanged (`Lang::folder()` falls back to it); see UPGRADE.md.
 - PSR-12 formatting fixes in `Router.php` and `helpers.php` (back to 0 errors).
 - `BroadcastTest` no longer leaves `websocket:serve` processes running on Windows: it started them through `cmd.exe`, so stopping the test only stopped `cmd.exe`. The leftover servers also kept piped test output (`php bongo test | grep`) from ever finishing.

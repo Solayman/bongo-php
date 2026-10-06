@@ -419,10 +419,14 @@ class Router
         $this->send($container->call([$instance, $method], $params));
     }
 
-    /** Actions may echo, or return a string (HTML), an array (JSON), or a DownloadResponse */
+    /**
+     * Actions may echo, or return a string (HTML), an array (JSON), or an object that sends
+     * itself with send(): a DownloadResponse, or a package response such as api-tools'
+     * JsonResponse (so its status code and headers are kept, not just its JSON).
+     */
     protected function send($result): void
     {
-        if ($result instanceof \System\Storage\DownloadResponse) {
+        if (is_object($result) && method_exists($result, 'send')) {
             $result->send();
             return;
         }
