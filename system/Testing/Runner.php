@@ -160,7 +160,11 @@ class Runner
 
         echo "Test database: {$db['database']}\n";
 
-        $migrator = new Migrator(base_path('database/migrations'));
+        $paths = array_merge(
+            [base_path('database/migrations')],
+            class_exists(\System\Package\PackageManager::class) ? \System\Package\PackageManager::migrationPaths() : []
+        );
+        $migrator = new Migrator($paths);
         $migrator->dropAllTables();
         $migrator->migrate();
 
