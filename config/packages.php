@@ -51,5 +51,9 @@ return [
     // 'courier',         // Bangladesh courier & logistics engine (Steadfast and Pathao Courier with tracking)
     // 'invoice',         // Professional invoice and POS thermal receipt generator with A4 print CSS
     // 'whatsapp',        // Meta WhatsApp Business Cloud API client for transactional messages, OTP & media
+    // 'currency',        // Multi-currency conversion, exchange rate caching, and localized money formatting
+    // 'coupon',          // E-commerce promotions, voucher codes, percentage/fixed discounts, and cart calculation
+    // 'push-notification', // Zero-dependency Web Push (VAPID RFC 8292) and Firebase Cloud Messaging (FCM v1)
+    // 'geoip',           // IP address geolocation, visitor country resolution, and currency/timezone detection
     'file-manager',    // Web file manager with tree navigation, image previews, and embedded code editor
 ];
