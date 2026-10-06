@@ -55,5 +55,9 @@ return [
     // 'coupon',          // E-commerce promotions, voucher codes, percentage/fixed discounts, and cart calculation
     // 'push-notification', // Zero-dependency Web Push (VAPID RFC 8292) and Firebase Cloud Messaging (FCM v1)
     // 'geoip',           // IP address geolocation, visitor country resolution, and currency/timezone detection
+    // 'shopping-cart',    // Fluent shopping cart management engine with multi-instance support, taxes, and shipping
+    // 'qr-code',          // Pure-PHP QR Code generator with SVG, PNG, Data URI, ASCII, and payment presets
+    // 'device-detector',  // Zero-dependency User-Agent parser for device, browser, OS, and bot detection
+    // 'honeypot',         // Zero-friction invisible anti-spam and anti-bot form protection
     'file-manager',    // Web file manager with tree navigation, image previews, and embedded code editor
 ];
