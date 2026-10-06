@@ -44,5 +44,9 @@ return [
     // 'impersonate',     // Admin user impersonation with secure session swapping
     // 'queue-monitor',   // Web dashboard for queue jobs, pending counts, and failed job retries
     // 'discord',         // Discord webhook alerts, notifications, and rich embed builder
+    // 'toast',           // Zero-dependency flash and dynamic toast notification system with auto-dismiss and progress bars
+    // 'sweet-alert',     // Zero-dependency modal alert and confirmation dialog engine with promise callbacks
+    // 'zoom',            // Zoom Video Communications API client for meetings, registrants, OAuth and webhooks
+    // 'google-meet',     // Google Meet and Calendar API client with Service Account RS256 JWT auth
     'file-manager',    // Web file manager with tree navigation, image previews, and embedded code editor
 ];
