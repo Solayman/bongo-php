@@ -139,4 +139,31 @@ class QueryBuilderTest extends TestCase
         $this->assertSame('Via model', QbItem::create(['name' => 'Via model'])->name);
         $this->assertSame('users', User::tableName());
     }
+
+    public function testInsertsManyRowsInOneStatement(): void
+    {
+        DB::enableQueryLog();
+        DB::table('qb_groups')->insert([['name' => 'Bulk 1'], ['name' => 'Bulk 2'], ['name' => 'Bulk 3']]);
+        $queries = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        $this->assertSame(1, $queries, 'one INSERT for three rows');
+        $this->assertSame(3, DB::table('qb_groups')->where('name', 'LIKE', 'Bulk %')->count());
+        $this->assertThrows(\InvalidArgumentException::class, fn() => DB::table('qb_groups')->insert([['name' => 'A'], ['id' => 9]]));
+    }
+
+    public function testColumnNamesFromUserInputCannotInjectSql(): void
+    {
+        $qb = fn() => DB::table('qb_items');
+        foreach (['id; DROP TABLE qb_items', 'name OR 1=1 --', '(SELECT 1)', 'id DESC, (SELECT', ''] as $bad) {
+            $this->assertThrows(\InvalidArgumentException::class, fn() => $qb()->orderBy($bad)->get(), "orderBy [$bad]");
+            $this->assertThrows(\InvalidArgumentException::class, fn() => $qb()->where($bad, 1)->get(), "where [$bad]");
+            $this->assertThrows(\InvalidArgumentException::class, fn() => $qb()->whereIn($bad, [1])->get(), "whereIn [$bad]");
+        }
+        $this->assertThrows(\InvalidArgumentException::class, fn() => $qb()->insert(['name = (SELECT 1), price' => 'x']));
+        $this->assertThrows(\InvalidArgumentException::class, fn() => $qb()->where('id', 1)->update(['price = 0, name' => 'x']));
+
+        // Plain and table-qualified names keep working
+        $this->assertSame(20, $qb()->orderBy('qb_items.name')->where('qb_items.price', '>=', 0)->count());
+    }
 }

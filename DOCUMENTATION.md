@@ -1175,6 +1175,7 @@ DB::table('users')->where('email', $email)->exists();                    // or d
 DB::table('products')->distinct()->select('category_id')->get();
 
 $id = DB::table('categories')->insertGetId(['name' => 'Books', 'slug' => 'books']);
+DB::table('tags')->insert([['name' => 'a'], ['name' => 'b'], ['name' => 'c']]);   // many rows, one INSERT
 DB::table('categories')->where('id', $id)->update(['name' => 'Novels']);
 DB::table('products')->where('id', 5)->decrement('stock', 2);           // atomic; also increment()
 DB::table('categories')->where('id', $id)->delete();
@@ -1188,7 +1189,8 @@ Safety rules:
 - Values are always bound with `?`.
 - Operators and `ASC`/`DESC` are whitelisted.
 - `update()`, `delete()`, `increment()` and `decrement()` **refuse to run without a `where()`**. Pass `true` to `update`/`delete` to really affect every row.
-- Column and table names are not escaped, so never pass user input as an identifier.
+- Column names in `where*()`, `orderBy()`, `groupBy()`, `insert()`, `update()`, `increment()` and `upsert()` must be plain names (`price` or `products.price`); anything else throws `InvalidArgumentException`. So `orderBy($request->sort)` cannot inject SQL (still whitelist it to give users a clear error). Use `whereRaw()` for SQL expressions.
+- Table names, `select()`, `join()` and `having()` are not checked: never build them from user input.
 
 ### Row locks
 
