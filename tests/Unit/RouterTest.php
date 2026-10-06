@@ -90,5 +90,17 @@ namespace Tests\Unit {
             $router = new Router(['GET /x' => ['RouterProbeController', 'index', ['missing']]]);
             $this->assertThrows(\RuntimeException::class, fn() => $router->dispatch('GET', '/x'));
         }
+
+        public function testShouldTrackPreviousUrlExcludesAssetsAndApiAndAjax(): void
+        {
+            $this->assertTrue($this->router->shouldTrackPreviousUrl('/posts/create'));
+            $this->assertTrue($this->router->shouldTrackPreviousUrl('/products'));
+            $this->assertFalse($this->router->shouldTrackPreviousUrl('/filemanager/thumb'));
+            $this->assertFalse($this->router->shouldTrackPreviousUrl('/filemanager/download'));
+            $this->assertFalse($this->router->shouldTrackPreviousUrl('/api/health'));
+            $this->assertFalse($this->router->shouldTrackPreviousUrl('/storage/photos/avatar.png'));
+            $this->assertFalse($this->router->shouldTrackPreviousUrl('/assets/app.css'));
+            $this->assertFalse($this->router->shouldTrackPreviousUrl('/captcha'));
+        }
     }
 }
