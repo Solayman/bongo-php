@@ -4,12 +4,12 @@
 
 ### A high-performance, zero-dependency PHP MVC framework engineered for speed, simplicity, and full-source auditability.
 
-A full-stack, enterprise-capable web framework crafted in ~616 KB of clean, readable PHP.  
+A full-stack, enterprise-capable web framework crafted in ~665 KB of clean, readable PHP.  
 **No Composer required. No `vendor/` tree. No Node.js runtime. No build steps.**
 
 [![PHP Version](https://img.shields.io/badge/PHP-8.0%2B-777bb4?style=flat-square&logo=php&logoColor=white)](https://www.php.net)
 [![Dependencies](https://img.shields.io/badge/dependencies-0%20required-brightgreen?style=flat-square)](WHY_BONGO.md)
-[![Test Suite](https://img.shields.io/badge/automated%20tests-353%20passing-brightgreen?style=flat-square)](TESTING_GUIDE.md)
+[![Test Suite](https://img.shields.io/badge/automated%20tests-359%20passing-brightgreen?style=flat-square)](TESTING_GUIDE.md)
 [![Core Size](https://img.shields.io/badge/fresh%20skeleton-~800%20KB-informational?style=flat-square)](#performance--benchmarks)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 [![Localization](https://img.shields.io/badge/i18n-English%20%7C%20বাংলা-orange?style=flat-square)](DOCUMENTATION.md#localization)
@@ -28,7 +28,7 @@ Most modern web frameworks demand significant operational and architectural over
 **Bongo takes an intentional, first-principles path:**
 
 * **Zero Mandatory Dependencies:** Clone the repository, configure your database, and run. No Composer dependency resolver to wait for, no package breaking on minor updates, and no third-party supply-chain vulnerabilities.
-* **Fully Auditable Codebase:** Total framework code is ~15,000 lines across 127 structured files (~616 KB). Every routine—from the request pipeline and ORM to packages and WebSockets—can be read and audited in an afternoon.
+* **Fully Auditable Codebase:** Total framework code is ~18,500 lines across 128 structured files (~665 KB). Every routine—from the request pipeline and ORM to packages and WebSockets—can be read and audited in an afternoon.
 * **Predictable, Measured Performance:** About **0.7–0.85 MB of RAM** per request and **7–13 ms** per page with OpCache (Windows dev machine, built-in server). Loads 24–45 files per request with the caches on. Measure your own app with `php bongo benchmark`.
 * **Deploy Anywhere:** Runs seamlessly on basic shared hosting (cPanel), minimalist VPS instances, Docker containers, or high-density serverless environments without requiring root access or Composer.
 
@@ -179,7 +179,7 @@ $this->get('/products')
     ->assertSee('Yoga Mat');
 ```
 ```bash
-php bongo test              # Runs 371 unit and HTTP integration tests on isolated DB
+php bongo test              # Runs 359 unit and HTTP integration tests on isolated DB
 ```
 
 ---

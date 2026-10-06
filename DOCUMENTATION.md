@@ -109,7 +109,7 @@ database/
   migrations/            PHP migrations (tracked in the `migrations` table)
   seeders/DatabaseSeeder.php
 resources/views/         Templates (dot notation: products.index → products/index.php)
-lang/                    Translations: bn.json, bn/messages.php, ...
+resources/lang/          Translations: en/, bn.json, bn/messages.php, ...
 storage/logs/            Log files (git-ignored)
 system/                  Framework core (namespace System\)
   Auth/                  Auth (guards), SessionGuard, JwtGuard, UserProvider, LoginThrottle, PasswordBroker
@@ -1773,7 +1773,7 @@ Event::dispatch(new OrderShipped($order));   // object events: listeners for its
 ```php
 __('Sign in')                                        // "সাইন ইন" when the locale is bn
 __('Welcome back, :name!', ['name' => $user->name])  // :name, :Name (capitalized), :NAME (upper case)
-__('messages.app.tagline')                           // group file: lang/bn/messages.php
+__('messages.app.tagline')                           // group file: resources/lang/bn/messages.php
 trans_choice('{0} No orders|{1} One order|[2,*] :count orders', $count)
 trans_choice('apple|apples', $count)                 // simple singular|plural
 locale();                                            // "en" or "bn"
@@ -1781,12 +1781,12 @@ locale();                                            // "en" or "bn"
 
 In templates, write `{{ __('Orders') }}` and `@set('title', __('Products'))`.
 
-Translations live in `lang/`:
+Translations live in `resources/lang/` (a project that still has only a root `lang/` folder keeps working):
 
 | File | Keys | Example |
 | --- | --- | --- |
-| `lang/bn.json` | The English sentence itself | `{"Sign in": "সাইন ইন"}` |
-| `lang/bn/messages.php` | Dot-separated group keys | `return ['app' => ['tagline' => '…']];` → `__('messages.app.tagline')` |
+| `resources/lang/bn.json` | The English sentence itself | `{"Sign in": "সাইন ইন"}` |
+| `resources/lang/bn/messages.php` | Dot-separated group keys | `return ['app' => ['tagline' => '…']];` → `__('messages.app.tagline')` |
 
 If a translation is missing in the current language, the fallback language (`fallback_locale`, English) is used, and then the key itself. So untranslated text still shows in English.
 
@@ -1808,7 +1808,7 @@ The `locale` middleware (part of the `web` group) picks the language for each re
 
 Unsupported codes are ignored. The admin top bar and the login page have a language switch, and `<html lang="…">` follows the locale.
 
-**Validation messages are translated as well.** Every rule's message is a template such as `"The :attribute must be at least :param characters."`, so `lang/bn.json` translates it once for every field. Field names are translated too (`"email": "ইমেইল"`). To add a language, add its code to `locales` and create `lang/{code}.json`.
+**Validation messages are translated as well.** Every rule's message is a template such as `"The :attribute must be at least :param characters."`, so `resources/lang/bn.json` translates it once for every field. Field names are translated too (`"email": "ইমেইল"`). To add a language, add its code to `locales` and create `lang/{code}.json`.
 
 ---
 
@@ -2437,7 +2437,7 @@ php bongo key:generate && php bongo migrate && php bongo serve
 ```
 
 The new project has:
-- the whole framework (`system/`, `bongo`, `config/`, `lang/`, `public/index.php`);
+- the whole framework (`system/`, `bongo`, `config/`, `resources/lang/`, `public/index.php`);
 - the core app files: the base `Controller`, the auth, guest and CSRF middleware, error pages, `<x-alert>` and the flash partial;
 - the framework's migrations: users, login throttling, JWT revocations, password resets, jobs, remember me and email verification;
 - starter files from `release/skeleton/`: a welcome page with its `HomeController` and route, `/api/health`, a `User` model, an empty seeder, two example tests and a README.

@@ -34,6 +34,6 @@ php phpcs.phar                      # PSR-12: 0 errors
 
 ## Translations
 
-Bongo ships English and Bangla. To add or fix a language, edit `lang/<code>.json` and send a PR.
+Bongo ships English and Bangla. To add or fix a language, edit `resources/lang/<code>.json` and send a PR.
 
 By contributing, you agree that your work is released under the [MIT License](LICENSE).

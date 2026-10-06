@@ -40,7 +40,7 @@
 
 ## 4. Core Architecture & Principles
 - **Zero Required Dependencies**: The framework must remain self-contained (no mandatory Composer packages, no Node.js runtime, no asset build step). Pure PHP 8.0+.
-- **Minimal Size & Overhead**: Keep `system/` file count low (~127 files) and footprint ~626 KB (~17,400 lines). Fresh starter skeleton on `release` branch is ~800 KB (183 files). Never introduce bloated dependencies or excessive abstractions.
+- **Minimal Size & Overhead**: Keep `system/` file count low (~128 files) and footprint ~665 KB (~18,500 lines). Fresh starter skeleton on `release` branch is ~800 KB (183 files). Never introduce bloated dependencies or excessive abstractions.
 - **Performance Characteristics**: About **0.67–0.83 MB per request** and **7–13 ms per page with OpCache** (`php bongo benchmark`, Windows, built-in server; see DOCUMENTATION.md "Performance").
 - **Production Optimizations**:
   - `php bongo config:cache`: Compiles `config/*.php` and `.env` into `storage/cache/config.php`.
@@ -68,7 +68,7 @@
   - `System\Data\Spreadsheet`: Unified CSV and OpenXML Excel (`.xlsx`) import and export engine with UTF-8 BOM, automatic format detection, and streaming downloads.
   - `System\Data\Printable`: Responsive, print-ready document and vector PDF engine with `@media print` CSS, native browser print/PDF trigger, and headless browser PDF compilation bridge (Chrome/Edge/Chromium/wkhtmltopdf) so Bengali and other Indic scripts keep their ligatures and vowel signs (a real browser engine shapes the text).
 - **Official Package Subsystem & Ecosystem**:
-  - `System\Package`: Zero-dependency package manager and runtime loader (`Installer` and `PackageManager`), SHA-256 integrity verification, safe publishing with app override priority (`resources/views/vendor/<name>/`, `lang/vendor/<name>/`), developer safety net (`--backup`, `--force`), package migration management, CLI command auto-discovery, runtime `bootstrap.php` execution, and full CLI suite (`php bongo add / package:*`).
+  - `System\Package`: Zero-dependency package manager and runtime loader (`Installer` and `PackageManager`), SHA-256 integrity verification, safe publishing with app override priority (`resources/views/vendor/<name>/`, `resources/lang/vendor/<name>/`), developer safety net (`--backup`, `--force`), package migration management, CLI command auto-discovery, runtime `bootstrap.php` execution, and full CLI suite (`php bongo add / package:*`).
   - **Official Packages Suite (`Solayman/bongo-php-packages`)**: 50 production packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`, `nagad`, `stripe`, `two-factor`, `image`, `backup`, `permission`, `zip`, `ftp`, `paypal`, `api-tools`, `settings`, `seo`, `activity-log`, `health`, `file-manager`, `captcha`, `aamarpay`, `telegram`, `bangla-tools`, `bd-locations`, `webhooks`, `impersonate`, `queue-monitor`, `discord`, `toast`, `sweet-alert`, `zoom`, `google-meet`, `courier`, `invoice`, `whatsapp`, `currency`, `coupon`, `push-notification`, `geoip`, `shopping-cart`, `qr-code`, `device-detector`, `honeypot`, `sluggable`, `wishlist`, `reviews`, `feature-flags`, `taggable`, `newsletter`) with 377 passing package tests (1,637 assertions).
 - **HTML Sanitization & Stored XSS Prevention Subsystem**:
   - `System\Security\HtmlSanitizer` and global helper `clean_html()`. Uses native `DOMDocument` wrapped in a UTF-8 envelope so non-Latin scripts (Bengali and other Indic scripts) retain native characters without numeric character reference mangling. Strips dangerous tags (`<script>`, `<iframe>`, `<style>`, `<svg>`, `<math>`, `<object>`, `<embed>`), inline event handlers `on*`, dangerous URL schemes (`javascript:`, `vbscript:`), dangerous CSS properties, and enforces `rel="noopener noreferrer"` on `target="_blank"`.
@@ -127,7 +127,7 @@
 - `cache_for($seconds, etag:, public:)` helper: `Cache-Control`, ETag, 304 on match; private by default, adds `Vary: Cookie`.
 
 ### L. Official Package Subsystem (Pure PHP, Zero Dependencies)
-- **Architecture:** Zero-dependency package manager and runtime loader (`System\Package\Installer` and `PackageManager`), SHA-256 integrity verification, safe publishing with app override priority (`resources/views/vendor/<name>/`, `lang/vendor/<name>/`), developer safety net (`--backup`, `--force`), package migration management, CLI command auto-discovery, runtime `bootstrap.php` execution, and full CLI suite (`php bongo add / package:*`).
+- **Architecture:** Zero-dependency package manager and runtime loader (`System\Package\Installer` and `PackageManager`), SHA-256 integrity verification, safe publishing with app override priority (`resources/views/vendor/<name>/`, `resources/lang/vendor/<name>/`), developer safety net (`--backup`, `--force`), package migration management, CLI command auto-discovery, runtime `bootstrap.php` execution, and full CLI suite (`php bongo add / package:*`).
 - **Official Packages Suite (`Solayman/bongo-php-packages`)**: 20 production packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`, `nagad`, `stripe`, `two-factor`, `image`, `backup`, `permission`, `zip`, `ftp`, `paypal`, `api-tools`, `settings`, `seo`, `activity-log`, `health`, `file-manager`) with 174 passing package tests (706 assertions).
 
 ### M. Demo Store Blog & TinyMCE 6 / File Manager Integration
@@ -254,7 +254,7 @@ php bongo release:package [--out=dist]    # Builds zip archive and sha256 for Gi
 ## 7. Development Guidelines & Rules for AI Agents
 
 1. **Maintain Zero-Dependency Architecture**: Never install or introduce mandatory third-party Composer packages or npm dependencies.
-2. **Minimal Size Principle**: Keep `system/` file count low (~127 files) and footprint ~626 KB (~17,400 lines). Do not create excessive abstraction layers.
+2. **Minimal Size Principle**: Keep `system/` file count low (~128 files) and footprint ~665 KB (~18,500 lines). Do not create excessive abstraction layers.
 3. **PHP 8.0+ Compatibility**: Use strict types, constructor property promotion, union types, and match expressions. Avoid PHP 8.1+ features that break PHP 8.0 support (e.g., `never` return type).
 4. **Mandatory Documentation Synchronization**: Whenever ANY code change, feature, optimization, or bug fix is made, updating all relevant documentation files (`DOCUMENTATION.md`, `README.md`, `WHY_BONGO.md`, `CHANGELOG.md`, `CLAUDE.md`, and `GEMINI.md`) and `.env.example` is **MANDATORY AND HIGH PRIORITY**.
 5. **PSR-12 Standard**: Run `php phpcs.phar` (rules in `phpcs.xml`); every PR must have 0 errors.
@@ -308,6 +308,6 @@ Claude verified **all features from PRs #78–#94** on real MySQL, **PostgreSQL 
 
 **Current framework verification totals:**
 - Core framework tests: **357 tests passing (1,606 assertions)** across MySQL, PostgreSQL 18, and SQLite.
-- System metrics: **128 modular files, ~17,900 lines, ~640 KB** in `system/`.
+- System metrics: **128 modular files, ~18,500 lines, ~665 KB** in `system/`.
 - Official package suite: **40 packages, 299 passing package tests (1,239 assertions)**.
 - Testbed sandbox: **42 feature tests passing (449 assertions)**.

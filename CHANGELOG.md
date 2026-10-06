@@ -19,7 +19,7 @@ Every notable change to the Bongo PHP Framework. Versions follow [semantic versi
 ### Fixed & Optimized
 - **Blog Rich-Text XSS Vulnerability Fix**: Sanitized blog post contents in `App\Http\Controllers\PostController` (`store()` and `update()`) and rendered securely via `{!! clean_html($post->content) !!}` in `resources/views/blog/show.php`.
 - **N+1 Query Resolution**: Optimized blog post queries in `PostController::index()` and `BlogController::index()` with eager loading (`Post::query()->with('user')`), preventing redundant user lookup queries during post listing.
-- **Official Package Subsystem** (`System\Package`): pure-PHP, zero-dependency package manager and runtime loader (`Installer` and `PackageManager`) supporting official catalog installation, lockfile tracking (`packages/.lock.json`), SHA-256 integrity checks, update safety net (`--backup` to `storage/package-backups/`, `--force`), namespaced views and translations with priority application overrides (`resources/views/vendor/<name>/`, `lang/vendor/<name>/`), package routes integration with route caching support, multi-directory package migration discovery in `php bongo migrate` / `migrate:status` / `migrate:rollback`, package CLI command auto-discovery, package test runner integration, and CLI commands:
+- **Official Package Subsystem** (`System\Package`): pure-PHP, zero-dependency package manager and runtime loader (`Installer` and `PackageManager`) supporting official catalog installation, lockfile tracking (`packages/.lock.json`), SHA-256 integrity checks, update safety net (`--backup` to `storage/package-backups/`, `--force`), namespaced views and translations with priority application overrides (`resources/views/vendor/<name>/`, `resources/lang/vendor/<name>/`), package routes integration with route caching support, multi-directory package migration discovery in `php bongo migrate` / `migrate:status` / `migrate:rollback`, package CLI command auto-discovery, package test runner integration, and CLI commands:
   - `php bongo add <name>[@version]`
   - `php bongo package:install [<name>[@version]]`
   - `php bongo package:update [name] [--backup] [--force]`
@@ -85,6 +85,9 @@ Every notable change to the Bongo PHP Framework. Versions follow [semantic versi
 - Open source files: LICENSE (MIT), CONTRIBUTING, SECURITY, CODE_OF_CONDUCT, and issue and pull request templates.
 
 ### Changed
+- **Translations moved from `lang/` to `resources/lang/`** (next to `resources/views/`). `php bongo package:publish <name> --lang` now copies to `resources/lang/vendor/<name>/`. A project that still has only a root `lang/` folder keeps working unchanged (`Lang::folder()` falls back to it); see UPGRADE.md.
+- PSR-12 formatting fixes in `Router.php` and `helpers.php` (back to 0 errors).
+- `BroadcastTest` no longer leaves `websocket:serve` processes running on Windows: it started them through `cmd.exe`, so stopping the test only stopped `cmd.exe`. The leftover servers also kept piped test output (`php bongo test | grep`) from ever finishing.
 - The framework is now called **Bongo PHP Framework**, made by Nobotech (formerly BongoMVC). The repository is `Solayman/bongo-php`.
 - Starter skeleton metrics and documentation synchronized: updated fresh starter skeleton documentation to reflect accurate footprint (~800 KB, 183 files) and documented direct end-user distribution via the `release` branch (`git clone -b release`).
 - Query values are bound with their real types (int, null, bool with native `\PDO::PARAM_BOOL` for pgsql).

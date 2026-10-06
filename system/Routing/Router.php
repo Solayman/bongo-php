@@ -452,12 +452,14 @@ class Router
         }
 
         // Exclude asset, thumbnail, download, and binary routes
-        if (str_starts_with($path, '/filemanager/thumb') ||
+        if (
+            str_starts_with($path, '/filemanager/thumb') ||
             str_starts_with($path, '/filemanager/download') ||
             str_starts_with($path, '/filemanager/read') ||
             str_starts_with($path, '/captcha') ||
             str_starts_with($path, '/storage/') ||
-            str_starts_with($path, '/api/')) {
+            str_starts_with($path, '/api/')
+        ) {
             return false;
         }
 
