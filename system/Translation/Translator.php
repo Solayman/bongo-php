@@ -3,13 +3,13 @@
 namespace System\Translation;
 
 /**
- * Looks up translated text in lang/.
+ * Looks up translated text in resources/lang/.
  *
- *   lang/bn.json          {"Sign in": "সাইন ইন", "Welcome back, :name!": "আবার স্বাগতম, :name!"}
- *   lang/bn/messages.php  return ['orders' => ['title' => 'অর্ডার']];
+ *   resources/lang/bn.json          {"Sign in": "সাইন ইন", "Welcome back, :name!": "আবার স্বাগতম, :name!"}
+ *   resources/lang/bn/messages.php  return ['orders' => ['title' => 'অর্ডার']];
  *
- *   __('Sign in')                         // sentence keys: lang/{locale}.json
- *   __('messages.orders.title')           // group keys: lang/{locale}/messages.php
+ *   __('Sign in')                         // sentence keys: resources/lang/{locale}.json
+ *   __('messages.orders.title')           // group keys: resources/lang/{locale}/messages.php
  *   __('Welcome back, :name!', ['name' => 'Rahim'])
  *   trans_choice('{0} No orders|{1} One order|[2,*] :count orders', $n)
  *
@@ -95,7 +95,7 @@ class Translator
     {
         if (str_contains($key, '::')) {
             [$namespace, $realKey] = explode('::', $key, 2);
-            // 1. App override takes precedence: lang/vendor/<namespace>/<locale>.json
+            // 1. App override takes precedence: resources/lang/vendor/<namespace>/<locale>.json
             $overrideFile = "{$this->path}/vendor/{$namespace}/{$locale}.json";
             if (is_file($overrideFile)) {
                 $overrideJson = json_decode((string) file_get_contents($overrideFile), true) ?: [];
@@ -116,7 +116,7 @@ class Translator
             return null;
         }
 
-        // Group key "file.nested.key" (no spaces) → lang/{locale}/file.php
+        // Group key "file.nested.key" (no spaces) → resources/lang/{locale}/file.php
         if (!preg_match('/\s/', $key) && str_contains($key, '.')) {
             [$group, $rest] = explode('.', $key, 2);
             $value = $this->group($locale, $group);

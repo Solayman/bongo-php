@@ -367,13 +367,13 @@ class Installer
             }
         }
 
-        // Publish lang: packages/<name>/lang/ -> lang/vendor/<name>/
+        // Publish lang: packages/<name>/lang/ -> resources/lang/vendor/<name>/
         if ($all || in_array('lang', $tags, true)) {
             $src = $pkgDir . '/lang';
-            $dest = $this->basePath . '/lang/vendor/' . $name;
+            $folder = \System\Translation\Lang::folder($this->basePath);
             if (is_dir($src)) {
-                $this->copyTreeSafe($src, $dest);
-                $published[] = "lang/vendor/$name/";
+                $this->copyTreeSafe($src, $this->basePath . "/$folder/vendor/" . $name);
+                $published[] = "$folder/vendor/$name/";
             }
         }
 

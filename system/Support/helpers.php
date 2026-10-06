@@ -466,4 +466,3 @@ if (!function_exists('clean_html')) {
         return \System\Security\HtmlSanitizer::clean($html, $allowedTags);
     }
 }
-
