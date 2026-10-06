@@ -8,7 +8,7 @@ This document is prepared for **Claude AI** (and other internal reviewers and ag
 
 **Bongo PHP Framework** is a lightweight, high-performance PHP MVC framework built from first principles with **zero required external dependencies**.
 
-* **Size & Footprint:** ~15,000 lines across 127 modular files in `system/` (~616 KB total footprint).
+* **Size & Footprint:** ~18,500 lines across 128 modular files in `system/` (~665 KB total footprint).
 * **Starter Skeleton:** ~800 KB across 183 files on the `release` branch (clean blank slate for direct end-users; zero demo clutter).
 * **Resource Utilization:** About **0.67–0.83 MB per request** and **7–13 ms per page with OpCache** (`php bongo benchmark`, Windows, built-in server; see DOCUMENTATION.md "Performance").
 * **Zero Dependencies:** No mandatory Composer packages, no Node.js runtime, no asset compilation steps. Pure PHP 8.0+.
@@ -121,7 +121,7 @@ The following high-priority features and optimizations were recently implemented
   * **Installer (`System\Package\Installer`):** Pure-PHP catalog resolution, downloading/extraction, SHA-256 integrity calculation and verification, path traversal prevention (`..`, absolute paths, symlinks), and safe publishing with application override priority.
   * **Update & Remove Safety Net:** Detects local file edits inside `packages/<name>/` via SHA-256 hash comparison against `packages/.lock.json`. Stops updates and removal unless `--backup` (saves to `storage/package-backups/<name>-<timestamp>/`) or `--force` is provided.
   * **Runtime Loader (`System\Package\PackageManager`):** Zero-cost boot hook (`PackageManager::boot()`) costing a single `is_file()` check on `packages/.lock.json`. Automatically registers view namespaces (`name::view`), translation namespaces (`name::key`), and discovers package console commands.
-  * **Application Overrides:** `resources/views/vendor/<name>/` and `lang/vendor/<name>/` take precedence over package assets, surviving updates.
+  * **Application Overrides:** `resources/views/vendor/<name>/` and `resources/lang/vendor/<name>/` take precedence over package assets, surviving updates.
   * **CLI Commands:** `add`, `package:install`, `package:update`, `package:remove`, `package:list`, `package:publish`, `package:diff`, and `package:test`.
   * **Storage Extensibility & Bootstrapping:** Package `bootstrap.php` runner on framework boot; `Storage::extend()`, `Storage::set()`, and `Storage::temporaryUrl()`.
   * **Official Packages Suite (`Solayman/bongo-php-packages`):** 20 production packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`, `nagad`, `stripe`, `two-factor`, `image`, `backup`, `permission`, `zip`, `ftp`, `paypal`, `api-tools`, `settings`, `seo`, `activity-log`, `health`, `file-manager`) with 174 passing package tests (706 assertions).
@@ -243,7 +243,7 @@ php bongo package:test <x>     # Runs test suite of installed package
 ## 6. Development Guidelines for AI Agents
 
 1. **Maintain Zero-Dependency Architecture:** Never install or introduce mandatory third-party Composer packages or npm dependencies.
-2. **Minimal Size Principle:** Keep `system/` file count low (~127 files) and footprint ~616 KB (~15,000 lines). Do not create excessive abstraction layers.
+2. **Minimal Size Principle:** Keep `system/` file count low (~128 files) and footprint ~665 KB (~18,500 lines). Do not create excessive abstraction layers.
 3. **PHP 8.0+ Compatibility:** Use strict types, constructor property promotion, union types, and match expressions. Avoid PHP 8.1+ features that break PHP 8.0 support (e.g., `never` return type).
 4. **Update Documentation:** Always update `DOCUMENTATION.md`, `README.md`, `WHY_BONGO.md`, and `GEMINI.md` when introducing new features or commands.
 5. **PSR-12:** run `php phpcs.phar` (rules in `phpcs.xml`); every PR must have 0 errors.
@@ -286,13 +286,14 @@ Claude reviewed **every feature from PRs #78–#94** line by line and ran the fu
 | Package Expansion: toast, sweet-alert, zoom, google-meet (PR #49 in packages) | ✅ **Verified, 254 package tests (1,082 assertions)** | 4 new official packages: `toast` (flash & dynamic toasts with progress bars), `sweet-alert` (modal alerts & confirm dialogs), `zoom` (Server-to-Server OAuth meetings API & webhooks), `google-meet` (Service Account RS256 JWT Google Calendar & Meet). |
 | Package Expansion: courier, invoice, whatsapp (PR #50 in packages) | ✅ **Verified, 274 package tests (1,155 assertions)** | 3 new official packages: `courier` (Bangladesh Steadfast & Pathao logistics, order creation, live tracking, webhooks), `invoice` (print-ready A4 CSS and 80mm/58mm thermal POS receipts), `whatsapp` (Meta Cloud API v20.0 transactional messaging, OTP templates, media & webhooks). |
 | Package Expansion: currency, coupon, push-notification, geoip (PR #51 in packages) | ✅ **Verified, 299 package tests (1,239 assertions)** | 4 new official packages: `currency` (multi-currency conversion, live exchange rates, BDT/USD formatting), `coupon` (promotions, vouchers, discount calculation), `push-notification` (Web Push VAPID RFC 8292 & FCM v1), `geoip` (IP address geolocation & country/currency/timezone detection). |
+| Translations in `resources/lang` + BroadcastTest leak fix (Claude, 2026-10-06) | ✅ **Verified, 359 tests on PostgreSQL 18 and SQLite** | `lang/` moved to `resources/lang/`; `Lang::folder()` falls back to a root `lang/` for older projects; package `--lang` publishes to `resources/lang/vendor/<name>/`. BroadcastTest started `websocket:serve` via cmd.exe on Windows and leaked the server; now array-form `proc_open`. PSR-12 back to 0 errors. |
 
 **Test results at review end:** 357 tests pass on MySQL, PostgreSQL 18 and SQLite (1,606 assertions). 330 package tests pass across all 44 packages in bongo-php-packages (1,357 assertions). 42 feature tests pass in bongo-package-and-feature-test (449 assertions).
 
 ### Rules learned from this review (apply to all future work)
 1. **Test on every database a change touches:** `DB_CONNECTION=pgsql DB_PORT=5432 DB_USERNAME=postgres DB_PASSWORD=... php -d extension=pdo_pgsql bongo test`, plus SQLite (`DB_CONNECTION=sqlite php -d extension=pdo_sqlite bongo test`) and MySQL. Grammar-only unit tests are not enough.
 2. **PSR-12 with 0 errors** (`php phpcs.phar`) before every PR.
-3. **Only measured numbers in docs.** No "100%", "<15ms" or "pixel-perfect" without a reproducible measurement. Recount files, lines and tests after changes. Current: 128 files, ~17,900 lines, ~640 KB in `system/`; 357 tests.
+3. **Only measured numbers in docs.** No "100%", "<15ms" or "pixel-perfect" without a reproducible measurement. Recount files, lines and tests after changes. Current: 128 files, ~18,500 lines, ~665 KB in `system/`; 359 tests.
 4. **Never describe Bongo with Laravel or Blade terms** ("Blade-compatible" etc.). Comparison tables that *name* other frameworks are fine.
 5. **Security defaults for new code:**
    - escape or whitelist everything that reaches HTML/CSS/shell/headers;

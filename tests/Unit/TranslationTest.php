@@ -72,19 +72,37 @@ class TranslationTest extends TestCase
 
     public function testValidationMessagesFollowTheLocale(): void
     {
-        Lang::setTranslator(new Translator(BASE_PATH . '/lang', 'bn', 'en'));
+        Lang::setTranslator(new Translator(BASE_PATH . '/resources/lang', 'bn', 'en'));
         $errors = Validator::make(['email' => '', 'name' => 'ab'], ['email' => 'required', 'name' => 'min:3']);
         $this->assertSame('ইমেইল দেওয়া আবশ্যক।', $errors['email']);
         $this->assertSame('নাম কমপক্ষে 3 অক্ষরের হতে হবে।', $errors['name']);
 
-        Lang::setTranslator(new Translator(BASE_PATH . '/lang', 'en', 'en'));
+        Lang::setTranslator(new Translator(BASE_PATH . '/resources/lang', 'en', 'en'));
         $this->assertSame('The email field is required.', Validator::make(['email' => ''], ['email' => 'required'])['email']);
+    }
+
+    public function testTranslationsLiveInResourcesLangWithFallbackToRootLang(): void
+    {
+        $this->assertTrue(is_file(BASE_PATH . '/resources/lang/bn.json'), 'shipped translations are in resources/lang');
+
+        $base = sys_get_temp_dir() . '/bongo_langdir_' . bin2hex(random_bytes(4));
+        mkdir($base . '/lang', 0777, true);
+        $this->assertSame('lang', Lang::folder($base), 'an older project with only lang/ keeps working');
+
+        mkdir($base . '/resources/lang', 0777, true);
+        $this->assertSame('resources/lang', Lang::folder($base), 'resources/lang wins when it exists');
+
+        rmdir($base . '/resources/lang');
+        rmdir($base . '/resources');
+        rmdir($base . '/lang');
+        $this->assertSame('resources/lang', Lang::folder($base), 'new projects use resources/lang');
+        rmdir($base);
     }
 
     public function testEveryBanglaValidationTemplateMatchesAnEnglishMessage(): void
     {
         // Each sentence key must be a real English message, or the translation is never used
-        $bn = json_decode(file_get_contents(BASE_PATH . '/lang/bn.json'), true);
+        $bn = json_decode(file_get_contents(BASE_PATH . '/resources/lang/bn.json'), true);
         $source = file_get_contents(BASE_PATH . '/system/Validation/Validator.php');
         foreach (array_keys($bn) as $key) {
             if (str_starts_with($key, 'The :attribute') || str_starts_with($key, 'The selected')) {

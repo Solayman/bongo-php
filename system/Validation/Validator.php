@@ -281,7 +281,7 @@ class Validator
         $message = $this->messages["$field.$rule"] ?? $this->messages["$pattern.$rule"] ?? $this->messages[$rule] ?? $default;
 
         // Messages are templates ("The :attribute must be at least :param characters."),
-        // so they can be translated in lang/{locale}.json before the values are filled in
+        // so they can be translated in resources/lang/{locale}.json before the values are filled in
         $translate = function_exists('__') ? '__' : fn($s) => $s;
         $this->errors[$field] = strtr($translate($message), [
             ':attribute' => $this->displayName($field, $pattern),

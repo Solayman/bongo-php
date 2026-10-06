@@ -12,10 +12,16 @@ class Lang
     public static function translator(): Translator
     {
         return self::$translator ??= new Translator(
-            (string) config('app.lang_path', BASE_PATH . '/lang'),
+            (string) config('app.lang_path', BASE_PATH . '/' . self::folder(BASE_PATH)),
             (string) config('app.locale', 'en'),
             (string) config('app.fallback_locale', 'en')
         );
+    }
+
+    /** "resources/lang"; a project that still has only a root lang/ folder keeps using it */
+    public static function folder(string $basePath): string
+    {
+        return !is_dir($basePath . '/resources/lang') && is_dir($basePath . '/lang') ? 'lang' : 'resources/lang';
     }
 
     public static function setTranslator(?Translator $translator): void

@@ -66,7 +66,7 @@ class PackageTest extends TestCase
         mkdir($this->appDir . '/config', 0777, true);
         mkdir($this->appDir . '/packages', 0777, true);
         mkdir($this->appDir . '/resources/views', 0777, true);
-        mkdir($this->appDir . '/lang', 0777, true);
+        mkdir($this->appDir . '/resources/lang', 0777, true);
         mkdir($this->appDir . '/storage', 0777, true);
         file_put_contents($this->appDir . '/config/packages.php', "<?php return [\n    // 'dummy',\n];\n");
 
@@ -173,11 +173,11 @@ class PackageTest extends TestCase
 
         $published = $installer->publish('dummy', ['views', 'lang']);
         $this->assertTrue(in_array('resources/views/vendor/dummy/', $published, true));
-        $this->assertTrue(in_array('lang/vendor/dummy/', $published, true));
+        $this->assertTrue(in_array('resources/lang/vendor/dummy/', $published, true));
 
         $this->assertTrue(is_file($this->appDir . '/resources/views/vendor/dummy/card.php'));
-        $this->assertTrue(is_file($this->appDir . '/lang/vendor/dummy/en.json'));
-        $this->assertTrue(is_file($this->appDir . '/lang/vendor/dummy/bn.json'));
+        $this->assertTrue(is_file($this->appDir . '/resources/lang/vendor/dummy/en.json'));
+        $this->assertTrue(is_file($this->appDir . '/resources/lang/vendor/dummy/bn.json'));
     }
 
     public function testViewNamespaceAndAppOverride(): void
@@ -209,20 +209,20 @@ class PackageTest extends TestCase
         $installer = new Installer($this->appDir);
         $installer->install('dummy', '1.0.0');
 
-        $translator = new Translator($this->appDir . '/lang', 'en', 'en');
+        $translator = new Translator($this->appDir . '/resources/lang', 'en', 'en');
         Translator::addNamespace('dummy', $this->appDir . '/packages/dummy/lang');
 
         // 1. Package translation before override
         $this->assertSame('Hello from Package', $translator->get('dummy::Greeting'));
 
-        // 2. Publish and override in lang/vendor/dummy/en.json
+        // 2. Publish and override in resources/lang/vendor/dummy/en.json
         $installer->publish('dummy', ['lang']);
         file_put_contents(
-            $this->appDir . '/lang/vendor/dummy/en.json',
+            $this->appDir . '/resources/lang/vendor/dummy/en.json',
             json_encode(['Greeting' => 'Custom App Hello'])
         );
 
-        $translatorOverride = new Translator($this->appDir . '/lang', 'en', 'en');
+        $translatorOverride = new Translator($this->appDir . '/resources/lang', 'en', 'en');
         $this->assertSame('Custom App Hello', $translatorOverride->get('dummy::Greeting'));
     }
 

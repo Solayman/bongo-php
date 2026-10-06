@@ -41,10 +41,8 @@ class BroadcastTest extends TestCase
         fclose($probe);
 
         $null = DIRECTORY_SEPARATOR === '\\' ? 'NUL' : '/dev/null';
-        $bongoScript = DIRECTORY_SEPARATOR === '\\' ? str_replace('/', '\\', BASE_PATH . '/bongo') : (BASE_PATH . '/bongo');
-        $cmd = DIRECTORY_SEPARATOR === '\\'
-            ? escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($bongoScript) . " websocket:serve --port={$this->port} --origins=http://good.test"
-            : [PHP_BINARY, $bongoScript, 'websocket:serve', "--port={$this->port}", '--origins=http://good.test'];
+        // Array form: PHP is started directly (no cmd.exe in between), so proc_terminate() stops the server itself
+        $cmd = [PHP_BINARY, BASE_PATH . '/bongo', 'websocket:serve', "--port={$this->port}", '--origins=http://good.test'];
         $this->server = proc_open(
             $cmd,
             [0 => ['pipe', 'r'], 1 => ['file', $null, 'w'], 2 => ['file', $null, 'w']],

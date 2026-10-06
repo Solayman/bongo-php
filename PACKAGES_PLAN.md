@@ -115,11 +115,11 @@ The package system must feel simple to a beginner:
 - Errors at runtime (e.g. missing key) show the package name and the exact `.env` key, on the existing debug error page.
 
 ### 3.5 Multi-language — **Decided**
-Bongo is multi-language, not Bengali-only. Packages follow the core's `lang/` system:
+Bongo is multi-language, not Bengali-only. Packages follow the core's `resources/lang/` system:
 - Every user-facing text goes through `__()`. No hard-coded strings in views, errors or emails.
 - Each package ships `lang/en.json` (required) and any other locales (`bn.json`, `ar.json`, ...) it supports.
 - Keys are namespaced: `__('sslcommerz::Payment failed')`.
-- App translations override package ones: `lang/vendor/<name>/<locale>.json` in the app is checked first (survives updates).
+- App translations override package ones: `resources/lang/vendor/<name>/<locale>.json` in the app is checked first (survives updates).
 - `php bongo package:publish <name> --lang` copies the package's lang files there for editing.
 - Package tests run at least once with a non-English locale.
 
@@ -133,7 +133,7 @@ Bongo is multi-language, not Bengali-only. Packages follow the core's `lang/` sy
 |---|---|
 | Settings | `config/<name>.php` and `.env` |
 | Views | `php bongo package:publish <name> --views` → `resources/views/vendor/<name>/` (loaded first) |
-| Translations | `php bongo package:publish <name> --lang` → `lang/vendor/<name>/` (loaded first) |
+| Translations | `php bongo package:publish <name> --lang` → `resources/lang/vendor/<name>/` (loaded first) |
 | Behaviour | Events fired by the package (`Event::listen('payment.success', ...)`) in `app/` |
 | Replace a class | Extend in `app/`, bind in the container |
 | Extra tables | Own migrations in `database/migrations/` |
