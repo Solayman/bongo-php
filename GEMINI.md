@@ -2,7 +2,7 @@
 
 ## 1. Multi-Repository Workspace Structure (`D:\laravel\framework\`)
 - **`bongo-php`**: Core framework repository (`solayman` branch for active development, `master` for production).
-- **`bongo-php-packages`**: Official package suite repository containing all 50 packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`, `nagad`, `stripe`, `two-factor`, `image`, `backup`, `permission`, `zip`, `ftp`, `paypal`, `api-tools`, `settings`, `seo`, `activity-log`, `health`, `file-manager`, `captcha`, `aamarpay`, `telegram`, `bangla-tools`, `bd-locations`, `webhooks`, `impersonate`, `queue-monitor`, `discord`, `toast`, `sweet-alert`, `zoom`, `google-meet`, `courier`, `invoice`, `whatsapp`, `currency`, `coupon`, `push-notification`, `geoip`, `shopping-cart`, `qr-code`, `device-detector`, `honeypot`, `sluggable`, `wishlist`, `reviews`, `feature-flags`, `taggable`, `newsletter`) with 373 passing package tests (1,617 assertions).
+- **`bongo-php-packages`**: Official package suite repository containing all 50 packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`, `nagad`, `stripe`, `two-factor`, `image`, `backup`, `permission`, `zip`, `ftp`, `paypal`, `api-tools`, `settings`, `seo`, `activity-log`, `health`, `file-manager`, `captcha`, `aamarpay`, `telegram`, `bangla-tools`, `bd-locations`, `webhooks`, `impersonate`, `queue-monitor`, `discord`, `toast`, `sweet-alert`, `zoom`, `google-meet`, `courier`, `invoice`, `whatsapp`, `currency`, `coupon`, `push-notification`, `geoip`, `shopping-cart`, `qr-code`, `device-detector`, `honeypot`, `sluggable`, `wishlist`, `reviews`, `feature-flags`, `taggable`, `newsletter`) with 377 passing package tests (1,637 assertions).
 - **`bongo-package-and-feature-test`**: Official testbed and application sandbox with 45 passing feature tests (560 assertions). **RULE: Always implement and test new features in this repository.** (`bongo-test` junction links here).
 - **`BongoMvc`**: Directory junction linking to `bongo-php` for seamless package test runner (`run_tests.php`) execution.
 - **`bongo-test`**: Directory junction linking to `bongo-package-and-feature-test`.
@@ -69,7 +69,7 @@
   - `System\Data\Printable`: Responsive, print-ready document and vector PDF engine with `@media print` CSS, native browser print/PDF trigger, and headless browser PDF compilation bridge (Chrome/Edge/Chromium/wkhtmltopdf) so Bengali and other Indic scripts keep their ligatures and vowel signs (a real browser engine shapes the text).
 - **Official Package Subsystem & Ecosystem**:
   - `System\Package`: Zero-dependency package manager and runtime loader (`Installer` and `PackageManager`), SHA-256 integrity verification, safe publishing with app override priority (`resources/views/vendor/<name>/`, `lang/vendor/<name>/`), developer safety net (`--backup`, `--force`), package migration management, CLI command auto-discovery, runtime `bootstrap.php` execution, and full CLI suite (`php bongo add / package:*`).
-  - **Official Packages Suite (`Solayman/bongo-php-packages`)**: 50 production packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`, `nagad`, `stripe`, `two-factor`, `image`, `backup`, `permission`, `zip`, `ftp`, `paypal`, `api-tools`, `settings`, `seo`, `activity-log`, `health`, `file-manager`, `captcha`, `aamarpay`, `telegram`, `bangla-tools`, `bd-locations`, `webhooks`, `impersonate`, `queue-monitor`, `discord`, `toast`, `sweet-alert`, `zoom`, `google-meet`, `courier`, `invoice`, `whatsapp`, `currency`, `coupon`, `push-notification`, `geoip`, `shopping-cart`, `qr-code`, `device-detector`, `honeypot`, `sluggable`, `wishlist`, `reviews`, `feature-flags`, `taggable`, `newsletter`) with 373 passing package tests (1,617 assertions).
+  - **Official Packages Suite (`Solayman/bongo-php-packages`)**: 50 production packages (`sslcommerz`, `bkash`, `sms`, `s3`, `social-login`, `nagad`, `stripe`, `two-factor`, `image`, `backup`, `permission`, `zip`, `ftp`, `paypal`, `api-tools`, `settings`, `seo`, `activity-log`, `health`, `file-manager`, `captcha`, `aamarpay`, `telegram`, `bangla-tools`, `bd-locations`, `webhooks`, `impersonate`, `queue-monitor`, `discord`, `toast`, `sweet-alert`, `zoom`, `google-meet`, `courier`, `invoice`, `whatsapp`, `currency`, `coupon`, `push-notification`, `geoip`, `shopping-cart`, `qr-code`, `device-detector`, `honeypot`, `sluggable`, `wishlist`, `reviews`, `feature-flags`, `taggable`, `newsletter`) with 377 passing package tests (1,637 assertions).
 - **HTML Sanitization & Stored XSS Prevention Subsystem**:
   - `System\Security\HtmlSanitizer` and global helper `clean_html()`. Uses native `DOMDocument` wrapped in a UTF-8 envelope so non-Latin scripts (Bengali and other Indic scripts) retain native characters without numeric character reference mangling. Strips dangerous tags (`<script>`, `<iframe>`, `<style>`, `<svg>`, `<math>`, `<object>`, `<embed>`), inline event handlers `on*`, dangerous URL schemes (`javascript:`, `vbscript:`), dangerous CSS properties, and enforces `rel="noopener noreferrer"` on `target="_blank"`.
 - **WebSocket Server**:
@@ -218,6 +218,29 @@ php bongo release:package [--out=dist]    # Builds zip archive and sha256 for Gi
 - **Decoupled Architecture & Dedicated Sandbox Testbed:**
   - Migrated entire e-commerce storefront demo (Product, Category, Order, OrderItem, Post models, Shop controllers, cart services, customer storefront, and feature tests) to official testbed sandbox repository (`bongo-package-and-feature-test`).
   - Streamlined `bongo-php` to a pure, high-performance starter framework containing only core engine (`system/`), authentication & security subsystem, clean starter admin dashboard, and self-contained unit and feature tests (**353 tests passing, 1,600 assertions**).
+
+### Q. Official Package Suite Performance & Query Optimizations (PR #58 in bongo-php-packages)
+- **`wishlist` N+1 Query Elimination & Memoization:**
+  - Resolved classic N+1 loop in `mergeGuestToUser()` by preloading existing user wishlist items in a single query and indexing them into a composite hash map (`$existingMap[$type . ':' . $id]`), reducing guest merge from O(N) database queries to O(1).
+  - Added instance memoization for `$cachedItems` and `$cachedCount`, and fast in-memory verification in `has()`.
+- **`taggable` Batch Query Optimization & Memoization:**
+  - Added `$_bongoTagsCache` memoization across `tags()`, invalidated on `tag()`, `untag()`, and `retag()`.
+  - Converted per-item `Tag::findOrCreate()` and pivot checks into batch queries (`Tag::query()->whereIn('slug', ...)` and `Taggable::query()->whereIn('tag_id', ...)`), cutting query count by ~80% during multi-tag operations.
+  - Added Unicode slug memoization cache in `Tag::slugify()`.
+- **`reviews` Single-Query Rating Breakdown & Summary:**
+  - Added `ratingSummary(bool $approvedOnly = true)` method that calculates average rating, total count, rating distribution, and star percentages in a single database query instead of 10+ separate queries in view templates.
+  - Enhanced `ratingPercentage()` to reuse pre-calculated distributions or the single-query summary.
+- **`feature-flags` Request-Level In-Memory Cache:**
+  - Added static `$runtimeCache` array to eliminate redundant database queries on repeated `Feature::active()` checks during the same request lifecycle.
+  - Automatically flushes cache upon `activate()`, `deactivate()`, `rollout()`, `forget()`, `fake()`, `stopFaking()`, or explicit `Feature::flushCache()`.
+- **`sluggable` O(1) Collision Hash Map & Slug Memoization:**
+  - Replaced O(N) array search inside `makeUnique()` collision loop with a pre-flipped associative lookup hash set (`$reservedLookup = array_flip(array_map('strtolower', $reserved))`), eliminating per-iteration memory allocations and lookups.
+  - Added static `$slugCache` in `Slugger::slugify()` and `Slugger::flushCache()`.
+- **`bd-locations` Static Indexed Lookups:**
+  - Pre-indexed static arrays `districtsByDivision`, `upazilasByDistrict`, and `upazilasById` on initial data load, replacing repetitive `array_filter` iterations over 495 upazilas with instant O(1) array slicing.
+- **`newsletter` Memoized Status Cache:**
+  - Added `$statusCache` in `Newsletter::isSubscribed()` to prevent duplicate database lookups in navigation menus, templates, and middleware, synchronized on `subscribe()`, `confirm()`, and `unsubscribe()`.
+- **Package Testing:** **377 tests passing (1,637 assertions)** across all 50 packages in `bongo-php-packages`, and **45 tests passing (560 assertions)** in `bongo-package-and-feature-test`.
 
 ---
 
