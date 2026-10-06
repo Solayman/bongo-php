@@ -48,5 +48,8 @@ return [
     // 'sweet-alert',     // Zero-dependency modal alert and confirmation dialog engine with promise callbacks
     // 'zoom',            // Zoom Video Communications API client for meetings, registrants, OAuth and webhooks
     // 'google-meet',     // Google Meet and Calendar API client with Service Account RS256 JWT auth
+    // 'courier',         // Bangladesh courier & logistics engine (Steadfast and Pathao Courier with tracking)
+    // 'invoice',         // Professional invoice and POS thermal receipt generator with A4 print CSS
+    // 'whatsapp',        // Meta WhatsApp Business Cloud API client for transactional messages, OTP & media
     'file-manager',    // Web file manager with tree navigation, image previews, and embedded code editor
 ];
