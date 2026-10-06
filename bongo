@@ -154,7 +154,8 @@ try {
             echo "Press Ctrl+C to stop.\n";
             $serverScript = __DIR__ . '/server.php';
             if (is_file($serverScript)) {
-                passthru(escapeshellarg(PHP_BINARY) . " -S $host:$port " . escapeshellarg($serverScript));
+                // -t public: files the router passes on (CSS, JS, images) are served from public/, never from the project root
+                passthru(escapeshellarg(PHP_BINARY) . " -S $host:$port -t " . escapeshellarg(__DIR__ . '/public') . ' ' . escapeshellarg($serverScript));
             } else {
                 passthru(escapeshellarg(PHP_BINARY) . " -S $host:$port -t " . escapeshellarg(__DIR__ . '/public'));
             }
