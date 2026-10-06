@@ -169,4 +169,12 @@ class HttpLayerTest extends HttpTestCase
         $this->loginAsAdmin();
         $this->get('/system')->assertSee('Deployment checklist')->assertSee('APP_KEY')->assertSee('Demo admin login');
     }
+
+    public function testStaticFilesAreServedFromPublic(): void
+    {
+        // The built-in server (php bongo serve, the test server) passes existing public/ files through
+        $response = $this->get('/asset/js/bongo-socket.js');
+        $this->assertSame(200, $response->status, 'assets load in development');
+        $this->assertContains('BongoSocket', $response->body);
+    }
 }
