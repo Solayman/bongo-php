@@ -54,6 +54,18 @@ class PostgresSchemaTest extends TestCase
         $this->assertNotContains('`', $sql);
     }
 
+    public function testCompilesCompositePrimaryKeyForPostgres(): void
+    {
+        $table = new Blueprint('role_has_permissions', 'pgsql');
+        $table->unsignedBigInteger('role_id');
+        $table->unsignedBigInteger('permission_id');
+        $table->primary(['role_id', 'permission_id']);
+
+        $statements = $table->toCreateStatements();
+        $sql = implode(";\n", $statements);
+        $this->assertContains('PRIMARY KEY ("role_id", "permission_id")', $sql);
+    }
+
     public function testAlterStatementsForPostgres(): void
     {
         $table = new Blueprint('posts', 'pgsql');

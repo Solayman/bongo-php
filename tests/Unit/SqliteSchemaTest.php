@@ -42,6 +42,18 @@ class SqliteSchemaTest extends TestCase
         $this->assertNotContains('ENGINE', $sql);
     }
 
+    public function testCompilesCompositePrimaryKeyForSqlite(): void
+    {
+        $table = new Blueprint('role_has_permissions', 'sqlite');
+        $table->unsignedBigInteger('role_id');
+        $table->unsignedBigInteger('permission_id');
+        $table->primary(['role_id', 'permission_id']);
+
+        $statements = $table->toCreateStatements();
+        $sql = implode(";\n", $statements);
+        $this->assertContains('PRIMARY KEY (`role_id`, `permission_id`)', $sql);
+    }
+
     public function testAlterGivesOneStatementPerChange(): void
     {
         $table = new Blueprint('posts', 'sqlite');

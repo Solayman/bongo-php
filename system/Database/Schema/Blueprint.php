@@ -13,6 +13,7 @@ class Blueprint
 
     /** @var ColumnDefinition[] */
     protected array $columns = [];
+    protected array $primaryKeys = [];
     protected array $indexes = [];     // [type, columns[], name]
     protected array $drops = [];       // ['column'|'index'|'foreign', name]
     protected array $renames = [];     // [from, to]
@@ -160,6 +161,13 @@ class Blueprint
         $this->indexes[] = ['UNIQUE', (array) $columns, $name];
     }
 
+    public function primary(string|array $columns): void
+    {
+        foreach ((array) $columns as $col) {
+            $this->primaryKeys[] = $col;
+        }
+    }
+
     public function dropColumn(string ...$columns): void
     {
         foreach ($columns as $column) {
@@ -217,6 +225,10 @@ class Blueprint
                 $primary[] = $this->wrapName($column->name);
             }
         }
+        foreach ($this->primaryKeys as $col) {
+            $primary[] = $this->wrapName($col);
+        }
+        $primary = array_values(array_unique($primary));
         if ($primary) {
             $lines[] = 'PRIMARY KEY (' . implode(', ', $primary) . ')';
         }
@@ -251,6 +263,9 @@ class Blueprint
             if ($column->primary) {
                 $parts[] = 'ADD PRIMARY KEY (' . $this->wrapName($column->name) . ')';
             }
+        }
+        if ($this->primaryKeys) {
+            $parts[] = 'ADD PRIMARY KEY (' . implode(', ', array_map([$this, 'wrapName'], $this->primaryKeys)) . ')';
         }
         foreach ($this->indexDefinitions() as $definition) {
             $parts[] = 'ADD ' . $definition;
