@@ -27,6 +27,10 @@ trait PostgresGrammar
                 $primary[] = self::wrapPgsql($column->name);
             }
         }
+        foreach ($this->primaryKeys as $col) {
+            $primary[] = self::wrapPgsql($col);
+        }
+        $primary = array_values(array_unique($primary));
         if ($primary && !$inlinePrimary) {
             $lines[] = 'PRIMARY KEY (' . implode(', ', $primary) . ')';
         }
@@ -62,6 +66,10 @@ trait PostgresGrammar
                 throw new \LogicException("PostgreSQL cannot add the primary key column [{$column->name}] to an existing table directly. Use a separate migration constraint.");
             }
             $statements[] = "$table ADD COLUMN " . $this->pgsqlColumn($column, false);
+        }
+        if ($this->primaryKeys) {
+            $cols = implode(', ', array_map([self::class, 'wrapPgsql'], $this->primaryKeys));
+            $statements[] = "$table ADD PRIMARY KEY ($cols)";
         }
 
         return [...$statements, ...$this->pgsqlIndexes(), ...$this->pgsqlComments(), ...$this->pgsqlTriggers()];
