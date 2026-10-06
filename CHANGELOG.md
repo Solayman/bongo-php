@@ -106,6 +106,7 @@ Every notable change to the Bongo PHP Framework. Versions follow [semantic versi
 - Performance numbers in README.md, WHY_BONGO.md and CLAUDE.md re-measured with `php bongo benchmark`: the old "0.45–0.65 MB, 8–19 ms" could not be reproduced; measured now 0.67–0.83 MB and 7–13 ms per page with OpCache (Windows, built-in server). System size: 124 files, ~16,200 lines, ~583 KB; 353 tests.
 
 ### Fixed
+- `php bongo serve` and the test server started PHP's built-in server without `-t public` while using `server.php`, so every static file (CSS, JS, images) was a 404 in development (files were looked up in the project root). Both pass `-t public` again; test added.
 - The rate limiter on API routes no longer asks the session guard for a user when no session is started (skips a pointless lookup and a "remember me" cookie database query on stateless routes).
 
 ### Fixed (review of #78–#94, verified on MySQL, PostgreSQL 18 and SQLite)

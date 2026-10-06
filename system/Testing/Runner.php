@@ -215,7 +215,7 @@ class Runner
 
         $serverScript = base_path('server.php');
         $cmd = is_file($serverScript)
-            ? [PHP_BINARY, '-S', "127.0.0.1:$port", $serverScript]
+            ? [PHP_BINARY, '-S', "127.0.0.1:$port", '-t', base_path('public'), $serverScript]
             : [PHP_BINARY, '-S', "127.0.0.1:$port", '-t', base_path('public')];
         // The server needs the same database extension as this process (e.g. php -d extension=pdo_pgsql bongo test)
         $driver = config('database.connections.' . config('database.default') . '.driver');
