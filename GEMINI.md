@@ -153,9 +153,16 @@
 - **`two-factor` Hardening:** Added `resolveUserId()` authentication guard to prevent unauthenticated guest requests from operating on default user ID 1 in production across setup, verification, and disabling.
 - **`seo` Hardening:** Added `JSON_HEX_TAG | JSON_HEX_AMP` to Schema.org JSON-LD structured script generation, preventing HTML script tag breakout.
 - **`api-tools` Hardening:** Encoded OpenAPI specification URL in Swagger UI template via JSON hex encoding.
-- **Package Testing:** **180 tests passing (745 assertions)** across all 20 packages in `bongo-php-packages`.
+### P. Permissions-Policy Header, Unload Deprecation Compliance & Previous URL Navigation Hardening (PR #144 in bongo-php, PR #25 in testbed)
+- **Permissions-Policy Header (`Permissions-Policy: unload=*`):** Added configurable Permissions-Policy header in `System\Http\Middleware\SecurityHeaders` (`config('security.permissions_policy')`). Sets `unload=*` by default to eliminate Chrome/Edge `[Violation] Permissions policy violation: unload is not allowed in this document` warnings triggered by extensions (like Grammarly) or legacy scripts as Chromium phases out `unload`.
+- **Cross-Origin-Opener-Policy (`same-origin-allow-popups`):** Made COOP configurable via `config('security.cross_origin_opener_policy')` and `SECURITY_COOP`. Supports `same-origin-allow-popups` so `window.opener` remains intact for file manager and OAuth popups.
+- **Previous URL Session Protection (`_previous_url`):** In `System\Routing\Router`, introduced `shouldTrackPreviousUrl()` which skips static assets, images (`.png`, `.jpg`, `.svg`, etc.), AJAX/JSON requests, and internal streaming endpoints (`/filemanager/thumb`, `/filemanager/download`, `/filemanager/read`, `/captcha`, `/api/`, `/storage/`). Prevents image thumbnails from hijacking the session's `_previous_url`.
+- **`back()` Helper Hardening:** In `system/Support/helpers.php`, updated `back()` to reject URLs ending with file extensions or matching `/thumb?` / `/download?`, falling back to same-origin HTTP_REFERER or root. Form validation failures on blog post creation/edit now cleanly return to the form with error feedback instead of raw image thumbnail views.
+- **TinyMCE 6 Submit Synchronization & Grammarly Suppression:** In `resources/views/posts/form.php`, added `data-gramm="false"` attributes and configured `tinymce.triggerSave()` on form submit to ensure textarea content is synced before POST validation.
+- **Testing:** Unit test `testShouldTrackPreviousUrlExcludesAssetsAndApiAndAjax` in `tests/Unit/RouterTest.php` and integration test `testPostCreateValidationRedirectsBackToForm` in `tests/Feature/BlogTest.php`. All 46 feature tests passing (565 assertions).
 
 ---
+
 
 ## 6. Important CLI Commands
 
