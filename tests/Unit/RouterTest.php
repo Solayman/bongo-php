@@ -68,6 +68,25 @@ namespace Tests\Unit {
             }
         }
 
+        public function testObjectsThatSendThemselvesKeepTheirStatusAndHeaders(): void
+        {
+            $response = new class {
+                public bool $sent = false;
+
+                public function send(): void
+                {
+                    $this->sent = true;   // a package response sets its own status and headers here
+                }
+            };
+            $router = new Router();
+            $router->get('/custom', fn() => $response);
+
+            ob_start();
+            $router->dispatch('GET', '/custom');
+            ob_end_clean();
+            $this->assertTrue($response->sent, 'send() is called instead of only json_encode()');
+        }
+
         public function testWrongMethodIs405(): void
         {
             try {

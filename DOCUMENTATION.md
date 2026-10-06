@@ -356,6 +356,8 @@ class ProductController extends Controller
 }
 ```
 
+**What an action can return:** a string (HTML), an array or `JsonSerializable` (JSON), or an object with a `send()` method, which then sends itself with its own status code and headers (for example `Storage::download()` or a package's JSON response class). An action may also echo, or end with `redirect()` / `back()`.
+
 ### The request
 
 Ask for the request as a parameter, and it's passed in. Route parameters can come before or after it:
