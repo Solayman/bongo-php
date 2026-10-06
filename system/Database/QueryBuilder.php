@@ -221,6 +221,7 @@ class QueryBuilder
         }
 
         $this->assertOperator((string) $operator);
+        $column = $this->column((string) $column);
         $this->wheres[] = [$boolean, "$column $operator ?"];
         $this->bindings[] = $value;
         return $this;
@@ -228,6 +229,7 @@ class QueryBuilder
 
     public function whereIn(string $column, array $values, string $boolean = 'AND', bool $not = false): self
     {
+        $column = $this->column($column);
         if (empty($values)) {
             // An empty list matches nothing (or everything for NOT IN)
             $this->wheres[] = [$boolean, $not ? '1 = 1' : '1 = 0'];
@@ -252,27 +254,40 @@ class QueryBuilder
 
     public function whereBetween(string $column, $from, $to): self
     {
-        $this->wheres[] = ['AND', "$column BETWEEN ? AND ?"];
+        $this->wheres[] = ['AND', $this->column($column) . ' BETWEEN ? AND ?'];
         array_push($this->bindings, $from, $to);
         return $this;
     }
 
     public function whereNull(string $column): self
     {
-        $this->wheres[] = ['AND', "$column IS NULL"];
+        $this->wheres[] = ['AND', $this->column($column) . ' IS NULL'];
         return $this;
     }
 
     public function whereNotNull(string $column): self
     {
-        $this->wheres[] = ['AND', "$column IS NOT NULL"];
+        $this->wheres[] = ['AND', $this->column($column) . ' IS NOT NULL'];
         return $this;
     }
 
     public function orWhereNull(string $column): self
     {
-        $this->wheres[] = ['OR', "$column IS NULL"];
+        $this->wheres[] = ['OR', $this->column($column) . ' IS NULL'];
         return $this;
+    }
+
+    /**
+     * A column name placed in SQL: letters, digits and _ with an optional "table." prefix.
+     * Column names cannot be bound like values, so one built from user input, e.g.
+     * orderBy($request->sort), would be SQL injection. Use whereRaw() for SQL expressions.
+     */
+    protected function column(string $name): string
+    {
+        if (!preg_match('/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$/', $name)) {
+            throw new InvalidArgumentException("Invalid column name [$name]. Use whereRaw() for SQL expressions.");
+        }
+        return $name;
     }
 
     /** Raw condition, e.g. whereRaw('(name LIKE ? OR sku LIKE ?)', [$q, $q]) */
@@ -294,7 +309,7 @@ class QueryBuilder
 
     public function groupBy(string ...$columns): self
     {
-        $this->groups = array_merge($this->groups, $columns);
+        $this->groups = array_merge($this->groups, array_map(fn($c) => $this->column($c), $columns));
         return $this;
     }
 
@@ -321,7 +336,7 @@ class QueryBuilder
         if (!in_array($direction, ['ASC', 'DESC'], true)) {
             throw new InvalidArgumentException("Invalid order direction [$direction]");
         }
-        $this->orders[] = "$column $direction";
+        $this->orders[] = $this->column($column) . " $direction";
         return $this;
     }
 
@@ -620,7 +635,9 @@ class QueryBuilder
             return 0;
         }
         $rows = isset($rows[0]) && is_array($rows[0]) ? $rows : [$rows];
-        $columns = array_keys($rows[0]);
+        $columns = array_map(fn($c) => $this->column((string) $c), array_keys($rows[0]));
+        $update = $update === null ? null : array_map(fn($c) => $this->column((string) $c), $update);
+        $uniqueBy = $uniqueBy === null ? null : array_map(fn($c) => $this->column((string) $c), (array) $uniqueBy);
         $placeholders = '(' . implode(',', array_fill(0, count($columns), '?')) . ')';
         $bindings = [];
         foreach ($rows as $row) {
@@ -705,11 +722,28 @@ class QueryBuilder
         return $model;
     }
 
+    /**
+     * Insert one row, or several in one statement:
+     *   insert(['name' => 'A'])
+     *   insert([['name' => 'A'], ['name' => 'B']])   // every row needs the same columns
+     */
     public function insert(array $data): bool
     {
-        $columns = implode(',', array_keys($data));
-        $placeholders = implode(',', array_fill(0, count($data), '?'));
-        $this->run("INSERT INTO {$this->table} ($columns) VALUES ($placeholders)", array_values($data));
+        if ($data === []) {
+            return true;
+        }
+        $rows = isset($data[0]) && is_array($data[0]) ? $data : [$data];
+        $keys = array_keys($rows[0]);
+        $columns = implode(',', array_map(fn($c) => $this->column((string) $c), $keys));
+        $placeholders = '(' . implode(',', array_fill(0, count($keys), '?')) . ')';
+        $bindings = [];
+        foreach ($rows as $row) {
+            if (array_keys($row) !== $keys) {
+                throw new InvalidArgumentException('insert(): every row needs the same columns in the same order');
+            }
+            array_push($bindings, ...array_values($row));
+        }
+        $this->run("INSERT INTO {$this->table} ($columns) VALUES " . implode(',', array_fill(0, count($rows), $placeholders)), $bindings);
         return true;
     }
 
@@ -717,7 +751,7 @@ class QueryBuilder
     public function insertGetId(array $data, string $idColumn = 'id'): int
     {
         if ($this->isPgsql()) {
-            $columns = implode(',', array_keys($data));
+            $columns = implode(',', array_map(fn($c) => $this->column((string) $c), array_keys($data)));
             $placeholders = implode(',', array_fill(0, count($data), '?'));
             $sql = "INSERT INTO {$this->table} ($columns) VALUES ($placeholders) RETURNING \"$idColumn\"";
             $stmt = $this->run($sql, array_values($data));
@@ -735,7 +769,7 @@ class QueryBuilder
 
         // SQLite and PostgreSQL do not accept "table.column" on the left of SET
         $column = fn($col) => str_starts_with($col, "{$this->table}.") ? substr($col, strlen($this->table) + 1) : $col;
-        $set = implode(',', array_map(fn($col) => $column($col) . ' = ?', array_keys($data)));
+        $set = implode(',', array_map(fn($col) => $column($this->column((string) $col)) . ' = ?', array_keys($data)));
         $this->run("UPDATE {$this->table} SET $set" . $this->compileWheres(), [...array_values($data), ...$this->bindings]);
         return true;
     }
@@ -744,9 +778,10 @@ class QueryBuilder
     public function increment(string $column, int|float $amount = 1, array $extra = []): bool
     {
         $this->assertHasWhere(false, 'increment');
+        $column = $this->column($column);
         $set = ["$column = $column + ?"];
         foreach (array_keys($extra) as $col) {
-            $set[] = "$col = ?";
+            $set[] = $this->column((string) $col) . ' = ?';
         }
         $this->run("UPDATE {$this->table} SET " . implode(', ', $set) . $this->compileWheres(), [$amount, ...array_values($extra), ...$this->bindings]);
         return true;
