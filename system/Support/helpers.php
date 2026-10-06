@@ -265,13 +265,16 @@ if (!function_exists('back')) {
     /** Redirect to the previous page: last GET page in the session, else a same-host Referer, else "/" */
     function back()
     {
-        $previous = Session::get('_previous_url');
-        if ($previous) {
-            redirect(url($previous));
-        }
         $referer = $_SERVER['HTTP_REFERER'] ?? '';
         $host = parse_url(config('app.url', ''), PHP_URL_HOST);
-        redirect(($referer && parse_url($referer, PHP_URL_HOST) === $host) ? $referer : url('/'));
+        $refererValid = $referer && parse_url($referer, PHP_URL_HOST) === $host;
+
+        $previous = Session::get('_previous_url');
+        if ($previous && !preg_match('/\.(png|jpe?g|gif|webp|svg|ico|pdf|zip|css|js)$/i', $previous) && !str_contains($previous, '/thumb?') && !str_contains($previous, '/download?')) {
+            redirect(url($previous));
+        }
+
+        redirect($refererValid ? $referer : url('/'));
     }
 }
 

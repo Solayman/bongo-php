@@ -39,5 +39,25 @@ return [
     // 'aamarpay',        // AamarPay payment gateway for Bangladesh (bKash, Nagad, cards, TrxCheck)
     // 'telegram',        // Telegram Bot notifications, alerts, and channel messaging
     // 'bangla-tools',    // Bengali localization toolkit (numerals, words, Taka currency, Bongabdo calendar, slugs)
+    // 'bd-locations',    // Bangladesh administrative divisions, 64 districts, upazilas, postcodes, shipping zones
+    // 'webhooks',        // Outbound webhook dispatcher with HMAC-SHA256 signing and verification
+    // 'impersonate',     // Admin user impersonation with secure session swapping
+    // 'queue-monitor',   // Web dashboard for queue jobs, pending counts, and failed job retries
+    // 'discord',         // Discord webhook alerts, notifications, and rich embed builder
+    // 'toast',           // Zero-dependency flash and dynamic toast notification system with auto-dismiss and progress bars
+    // 'sweet-alert',     // Zero-dependency modal alert and confirmation dialog engine with promise callbacks
+    // 'zoom',            // Zoom Video Communications API client for meetings, registrants, OAuth and webhooks
+    // 'google-meet',     // Google Meet and Calendar API client with Service Account RS256 JWT auth
+    // 'courier',         // Bangladesh courier & logistics engine (Steadfast and Pathao Courier with tracking)
+    // 'invoice',         // Professional invoice and POS thermal receipt generator with A4 print CSS
+    // 'whatsapp',        // Meta WhatsApp Business Cloud API client for transactional messages, OTP & media
+    // 'currency',        // Multi-currency conversion, exchange rate caching, and localized money formatting
+    // 'coupon',          // E-commerce promotions, voucher codes, percentage/fixed discounts, and cart calculation
+    // 'push-notification', // Zero-dependency Web Push (VAPID RFC 8292) and Firebase Cloud Messaging (FCM v1)
+    // 'geoip',           // IP address geolocation, visitor country resolution, and currency/timezone detection
+    // 'shopping-cart',    // Fluent shopping cart management engine with multi-instance support, taxes, and shipping
+    // 'qr-code',          // Pure-PHP QR Code generator with SVG, PNG, Data URI, ASCII, and payment presets
+    // 'device-detector',  // Zero-dependency User-Agent parser for device, browser, OS, and bot detection
+    // 'honeypot',         // Zero-friction invisible anti-spam and anti-bot form protection
     'file-manager',    // Web file manager with tree navigation, image previews, and embedded code editor
 ];
