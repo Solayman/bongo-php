@@ -100,4 +100,26 @@ class SpreadsheetTest extends TestCase
         $this->assertSame('export.xlsx', $xlsxResponse->filename);
         $this->assertSame('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', $xlsxResponse->mimeType);
     }
+
+    public function testCsvCellsCannotRunFormulasInExcel(): void
+    {
+        $csv = Spreadsheet::toCsv([['name' => '=HYPERLINK("http://evil","x")', 'qty' => -5, 'note' => '@SUM(A1)', 'ok' => 'Ana']]);
+        $this->assertContains("'=HYPERLINK", $csv);
+        $this->assertContains("'@SUM", $csv);
+        $this->assertContains(',-5,', $csv, 'real negative numbers stay numbers');
+        $this->assertNotContains("'Ana", $csv);
+    }
+
+    public function testXlsxSurvivesControlCharactersAndBadUtf8(): void
+    {
+        $xlsx = Spreadsheet::toXlsx([['text' => "bell\x07 and bad \xC3\x28 byte", 'n' => NAN]]);
+        $tmp = tempnam(sys_get_temp_dir(), 'bongo_t_') . '.xlsx';
+        file_put_contents($tmp, $xlsx);
+        try {
+            $rows = Spreadsheet::readXlsx($tmp);
+            $this->assertContains('bell and bad', (string) $rows[0]['text']);
+        } finally {
+            @unlink($tmp);
+        }
+    }
 }

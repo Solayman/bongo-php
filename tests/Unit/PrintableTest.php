@@ -78,4 +78,15 @@ class PrintableTest extends TestCase
             $this->assertNull($bin);
         }
     }
+
+    public function testPrintableEscapesEverythingThatReachesHtml(): void
+    {
+        $this->assertThrows(\InvalidArgumentException::class, fn() => Printable::invoice('1')->badge('Paid', 'red;"><script>x</script>'));
+        $html = Printable::invoice('1')
+            ->customer(['name' => '<b>Ana</b>'])
+            ->table(['A'], [['x']], ['50"><script>'], ['right"><script>'])
+            ->render();
+        $this->assertNotContains('<script>', $html);
+        $this->assertNotContains('<b>Ana</b>', $html);
+    }
 }

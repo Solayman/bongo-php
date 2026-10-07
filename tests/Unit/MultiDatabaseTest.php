@@ -29,6 +29,14 @@ class TenantItem extends Model
     }
 }
 
+class ConnectionAlpha extends Model
+{
+}
+
+class ConnectionBeta extends Model
+{
+}
+
 class MultiDatabaseTest extends TestCase
 {
     protected ?string $tenantDbPath = null;
@@ -270,6 +278,18 @@ return new class extends Migration {
         } finally {
             array_map('unlink', glob("$dir/*.php"));
             @rmdir($dir);
+        }
+    }
+
+    public function testSetConnectionNameOnlyMovesThatModel(): void
+    {
+        ConnectionAlpha::setConnectionName('tenant');
+        try {
+            $this->assertSame('tenant', ConnectionAlpha::getConnectionName());
+            $this->assertNull(ConnectionBeta::getConnectionName(), 'other models keep their connection');
+            $this->assertNull(Model::getConnectionName());
+        } finally {
+            ConnectionAlpha::setConnectionName(null);
         }
     }
 }

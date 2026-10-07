@@ -116,4 +116,13 @@ class StorageTest extends TestCase
         $this->assertNotNull($url);
         $this->assertContains('testing/file.txt', $url);
     }
+
+    public function testDownloadFilenamesAreSafeHeaders(): void
+    {
+        $header = DownloadResponse::disposition("../a\"b\r\nX-Evil: 1 চালান.pdf");
+        $this->assertNotContains("\n", $header);
+        $this->assertNotContains('../', $header);
+        $this->assertContains("filename*=UTF-8''", $header);
+        $this->assertContains(rawurlencode('চালান'), $header);
+    }
 }
