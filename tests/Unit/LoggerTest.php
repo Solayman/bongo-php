@@ -185,4 +185,21 @@ class LoggerTest extends TestCase
         $this->assertContains('Fail', $entries[0]['details']);
         $this->assertContains('solayman', $entries[1]['details']);
     }
+
+    public function testLoggerMasksSecretLikeKeysAndCannotBeForged(): void
+    {
+        $dir = sys_get_temp_dir() . '/bongo_log_' . bin2hex(random_bytes(4));
+        $logger = new Logger($dir, 'single');
+        $logger->info("hello\n[2026-01-01 00:00:00] production.EMERGENCY: fake", [
+            'api_key' => 'K1', 'access_token' => 'T1', 'client_secret' => 'S1', 'new_password' => 'P1', 'user' => 'ana',
+        ]);
+        $text = implode('', array_map('file_get_contents', glob("$dir/*.log")));
+        foreach (['K1', 'T1', 'S1', 'P1'] as $secret) {
+            $this->assertNotContains($secret, $text);
+        }
+        $this->assertContains('ana', $text);
+        $this->assertNotContains("\n[2026-01-01", $text, 'a message cannot start a new log entry');
+        array_map('unlink', glob("$dir/*"));
+        @rmdir($dir);
+    }
 }

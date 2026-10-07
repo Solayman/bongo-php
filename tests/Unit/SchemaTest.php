@@ -135,4 +135,15 @@ PHP);
             @rmdir($dir);
         }
     }
+
+    public function testBlueprintQuotesForItsOwnDatabase(): void
+    {
+        // Whatever the default connection is, each blueprint uses its own driver's quotes
+        $this->assertContains('CREATE TABLE `posts`', (new Blueprint('posts', 'mysql'))->toCreateSql());
+        $sqlite = new Blueprint('posts', 'sqlite');
+        $sqlite->id();
+        $this->assertContains('CREATE TABLE `posts`', $sqlite->toCreateStatements()[0]);
+        $this->assertSame('"a""b"', Blueprint::wrap('a"b', 'pgsql'));
+        $this->assertSame('`a``b`', Blueprint::wrap('a`b', 'mysql'));
+    }
 }
