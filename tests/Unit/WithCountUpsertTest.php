@@ -101,5 +101,41 @@ namespace Tests\Unit {
 
             $this->assertThrows(\InvalidArgumentException::class, fn() => DB::table('wc_stock')->upsert([['sku' => 'C', 'qty' => 1], ['qty' => 2, 'sku' => 'D']]));
         }
+
+        public function testUpsertWithCompositeUniqueKeysAndLaravelArgumentOrder(): void
+        {
+            Schema::dropIfExists('security_rate_limits');
+            Schema::create('security_rate_limits', function (Blueprint $t) {
+                $t->id();
+                $t->string('ip_address');
+                $t->string('action_key');
+                $t->integer('hits')->default(1);
+                $t->string('updated_at')->nullable();
+                $t->unique(['ip_address', 'action_key']);
+            });
+
+            $records = [
+                ['ip_address' => '127.0.0.1', 'action_key' => 'login', 'hits' => 1, 'updated_at' => '2026-10-18 12:00:00'],
+                ['ip_address' => '127.0.0.1', 'action_key' => 'api', 'hits' => 5, 'updated_at' => '2026-10-18 12:00:00'],
+            ];
+
+            // Initial insert
+            DB::table('security_rate_limits')->upsert($records, ['ip_address', 'action_key'], ['hits', 'updated_at']);
+            $this->assertSame(2, DB::table('security_rate_limits')->count());
+
+            // Update existing row via Laravel argument order (uniqueBy, update)
+            $updateRecords = [
+                ['ip_address' => '127.0.0.1', 'action_key' => 'login', 'hits' => 2, 'updated_at' => '2026-10-18 12:05:00'],
+                ['ip_address' => '192.168.1.1', 'action_key' => 'login', 'hits' => 1, 'updated_at' => '2026-10-18 12:05:00'],
+            ];
+            DB::table('security_rate_limits')->upsert($updateRecords, ['ip_address', 'action_key'], ['hits', 'updated_at']);
+
+            $this->assertSame(3, DB::table('security_rate_limits')->count());
+            $login = DB::table('security_rate_limits')->where('ip_address', '127.0.0.1')->where('action_key', 'login')->first();
+            $this->assertSame(2, (int) $login->hits);
+            $this->assertSame('2026-10-18 12:05:00', $login->updated_at);
+
+            Schema::dropIfExists('security_rate_limits');
+        }
     }
 }

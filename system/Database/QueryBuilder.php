@@ -672,15 +672,24 @@ class QueryBuilder
      * $uniqueBy: the conflict target columns (for PostgreSQL/SQLite; default: 'id' or first column).
      * Returns how many rows were affected.
      */
-    public function upsert(array $rows, ?array $update = null, array|string|null $uniqueBy = null): int
+    /**
+     * Insert rows, or update them when the unique key already exists (one query):
+     *   DB::table('products')->upsert($rows, ['sku'], ['price', 'stock']); // Laravel convention
+     *   DB::table('products')->upsert($rows, ['price', 'stock'], ['sku']); // Legacy Bongo convention
+     *   DB::table('products')->upsert($rows, ['price']);                    // update only
+     */
+    public function upsert(array $rows, array|string|null $arg2 = null, array|string|null $arg3 = null): int
     {
         if ($rows === []) {
             return 0;
         }
         $rows = isset($rows[0]) && is_array($rows[0]) ? $rows : [$rows];
         $rawColumns = array_keys($rows[0]);
+
+        [$uniqueBy, $update] = $this->resolveUpsertArgs($rawColumns, $arg2, $arg3);
+
         $columns = array_map(fn($c) => $this->column((string) $c), $rawColumns);
-        $update = $update === null ? null : array_map(fn($c) => $this->column((string) $c), $update);
+        $update = $update === null ? null : array_map(fn($c) => $this->column((string) $c), (array) $update);
         $uniqueBy = $uniqueBy === null ? null : array_map(fn($c) => $this->column((string) $c), (array) $uniqueBy);
         $placeholders = '(' . implode(',', array_fill(0, count($columns), '?')) . ')';
         $bindings = [];
@@ -693,6 +702,7 @@ class QueryBuilder
         $sql = "INSERT INTO " . $this->wrapTable($this->table) . ' (' . implode(',', $columns) . ') VALUES '
             . implode(',', array_fill(0, count($rows), $placeholders));
         $updateCols = $update ?? $columns;
+
         if ($this->isSqlite()) {
             $target = $uniqueBy ? '(' . implode(', ', (array) $uniqueBy) . ')' : '';
             $sql .= " ON CONFLICT $target DO UPDATE SET " . implode(', ', array_map(fn($c) => "$c = excluded.$c", $updateCols));
@@ -705,7 +715,94 @@ class QueryBuilder
         } else {
             $sql .= ' ON DUPLICATE KEY UPDATE ' . implode(', ', array_map(fn($c) => "$c = VALUES($c)", $updateCols));
         }
-        return $this->run($sql, $bindings)->rowCount();
+
+        try {
+            return $this->run($sql, $bindings)->rowCount();
+        } catch (\PDOException $e) {
+            // Reliable cross-database fallback (SELECT + INSERT/UPDATE) when conflict syntax or target is unsupported
+            return $this->fallbackUpsert($rows, $uniqueBy, $updateCols);
+        }
+    }
+
+    protected function resolveUpsertArgs(array $columns, array|string|null $arg2, array|string|null $arg3): array
+    {
+        if ($arg2 === null && $arg3 === null) {
+            return [null, null];
+        }
+
+        if ($arg3 !== null) {
+            $a = (array) $arg2;
+            $b = (array) $arg3;
+            if ($this->looksLikeUniqueTarget($b) && !$this->looksLikeUniqueTarget($a)) {
+                return [$b, $a];
+            }
+            return [$a, $b];
+        }
+
+        $a = (array) $arg2;
+        if ($this->looksLikeUniqueTarget($a)) {
+            return [$a, null];
+        }
+        return [null, $a];
+    }
+
+    protected function looksLikeUniqueTarget(array $cols): bool
+    {
+        $cols = array_map(fn($c) => trim((string) $c, '`"'), $cols);
+        if ($cols === ['id'] || in_array('id', $cols, true)) {
+            return true;
+        }
+        try {
+            if ($this->isPgsql()) {
+                return (bool) $this->pgsqlUniqueKey($cols);
+            }
+            if ($this->isSqlite()) {
+                $indexes = $this->run("PRAGMA index_list('{$this->table}')", [])->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($indexes as $idx) {
+                    if (!empty($idx['unique'])) {
+                        $info = $this->run("PRAGMA index_info('{$idx['name']}')", [])->fetchAll(PDO::FETCH_ASSOC);
+                        $idxCols = array_column($info, 'name');
+                        if (!array_diff($idxCols, $cols) && !array_diff($cols, $idxCols)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable) {
+        }
+        return false;
+    }
+
+    protected function fallbackUpsert(array $rows, ?array $uniqueBy, array $updateCols): int
+    {
+        $affected = 0;
+        foreach ($rows as $row) {
+            $matchCols = $uniqueBy ?: (array_key_exists('id', $row) ? ['id'] : [array_key_first($row)]);
+            $query = DB::table($this->table)->setConnection($this->connection);
+            foreach ($matchCols as $col) {
+                $rawCol = trim((string) $col, '`"');
+                if (array_key_exists($rawCol, $row)) {
+                    $query->where($rawCol, $row[$rawCol]);
+                }
+            }
+            if ($query->exists()) {
+                $updateData = [];
+                foreach ($updateCols as $col) {
+                    $rawCol = trim((string) $col, '`"');
+                    if (array_key_exists($rawCol, $row)) {
+                        $updateData[$rawCol] = $row[$rawCol];
+                    }
+                }
+                if ($updateData) {
+                    $query->update($updateData);
+                    $affected++;
+                }
+            } else {
+                DB::table($this->table)->setConnection($this->connection)->insert($row);
+                $affected++;
+            }
+        }
+        return $affected;
     }
 
     /** The columns of a unique index (or primary key) of this table that $columns all fill */
