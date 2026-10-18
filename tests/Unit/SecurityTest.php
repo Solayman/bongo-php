@@ -73,4 +73,40 @@ class SecurityTest extends TestCase
             putenv("APP_KEY=$original");
         }
     }
+
+    public function testCsrfTokenGraceWindow(): void
+    {
+        $_SESSION = [];
+        $token1 = \System\Http\Session::token();
+        $this->assertTrue(\System\Http\Session::isValidToken($token1));
+
+        // Regenerate token (e.g. rapid sequential POST or in-flight request)
+        \System\Http\Session::regenerateToken();
+        $token2 = \System\Http\Session::token();
+        $this->assertNotSame($token1, $token2);
+
+        // Within grace window, both new token and previous token are valid
+        $this->assertTrue(\System\Http\Session::isValidToken($token2));
+        $this->assertTrue(\System\Http\Session::isValidToken($token1));
+
+        // Invalid token still fails
+        $this->assertFalse(\System\Http\Session::isValidToken('invalid-token'));
+        $this->assertFalse(\System\Http\Session::isValidToken(''));
+
+        // Manually expire previous tokens
+        $_SESSION['_previous_tokens'][0]['expires_at'] = time() - 1;
+        $this->assertFalse(\System\Http\Session::isValidToken($token1));
+    }
+
+    public function testVerifyCsrfTokenExcludesApiRoutes(): void
+    {
+        $middleware = new \App\Http\Middleware\VerifyCsrfToken();
+        $_SERVER['REQUEST_METHOD'] = 'POST';
+        $_SERVER['REQUEST_URI'] = '/api/devices/ping';
+        unset($_POST['_token'], $_SERVER['HTTP_X_CSRF_TOKEN']);
+
+        // Should not throw HttpException(419) because /api/* is excluded
+        $middleware->handle();
+        $this->assertTrue(true);
+    }
 }
