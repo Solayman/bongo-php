@@ -92,6 +92,7 @@ class Router
             $route->middleware = (array) ($r['middleware'] ?? []);
             $route->withoutMiddleware = (array) ($r['withoutMiddleware'] ?? []);
             $route->wheres = (array) ($r['wheres'] ?? []);
+            $route->isFallback = (bool) ($r['isFallback'] ?? false);
             $router->routes[] = $route;
         }
 
@@ -116,6 +117,7 @@ class Router
                 'middleware'        => $route->middleware,
                 'withoutMiddleware' => $route->withoutMiddleware,
                 'wheres'            => $route->wheres,
+                'isFallback'        => $route->isFallback,
             ];
         }
 
@@ -182,6 +184,13 @@ class Router
         return $this->add(array_map('strtoupper', $methods), $path, $action);
     }
 
+    public function fallback(array|\Closure $action): RouteDefinition
+    {
+        $route = $this->add(self::VERBS, '/{fallbackPlaceholder?}', $action)->where('fallbackPlaceholder', '.*');
+        $route->isFallback = true;
+        return $route;
+    }
+
     /**
      * Shared attributes for the routes registered inside $routes:
      *   ['prefix' => '/admin', 'middleware' => ['auth'], 'name' => 'admin.']
@@ -234,6 +243,16 @@ class Router
         return $this->routes;
     }
 
+    /** @return RouteDefinition[] */
+    public function getSortedRoutes(): array
+    {
+        $routes = $this->routes;
+        usort($routes, function (RouteDefinition $a, RouteDefinition $b) {
+            return $b->getSpecificity() <=> $a->getSpecificity();
+        });
+        return $routes;
+    }
+
     /** Path for a named route, e.g. url('products.edit', ['id' => 5]) → "/products/5/edit" */
     public function url(string $name, array $params = []): string
     {
@@ -274,8 +293,9 @@ class Router
         }
 
         $allowed = [];
+        $routes = $this->getSortedRoutes();
 
-        foreach ($this->routes as $route) {
+        foreach ($routes as $route) {
             $params = $route->match($path);
             if ($params === null) {
                 continue;
@@ -311,7 +331,7 @@ class Router
 
             // CORS preflight / OPTIONS: run the first matching route's middleware (e.g. cors), then 204
             if ($method === 'OPTIONS') {
-                foreach ($this->routes as $route) {
+                foreach ($routes as $route) {
                     if ($route->match($path) !== null) {
                         foreach ($this->resolveMiddleware($route) as [$class, $args]) {
                             if (method_exists($class, 'preflight')) {
