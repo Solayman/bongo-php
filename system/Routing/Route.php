@@ -17,6 +17,7 @@ namespace System\Routing;
  * @method static RouteDefinition options(string $path, array|\Closure $action)
  * @method static RouteDefinition any(string $path, array|\Closure $action)
  * @method static RouteDefinition match(array $methods, string $path, array|\Closure $action)
+ * @method static RouteDefinition fallback(array|\Closure $action)
  * @method static void group(array $attributes, callable $routes)
  * @method static PendingGroup prefix(string $prefix)
  * @method static PendingGroup middleware(string|array ...$middleware)
