@@ -842,13 +842,25 @@ class QueryBuilder
         return $this->increment($column, -$amount, $extra);
     }
 
-    /** Delete record(s). Refuses to run without a where() unless $all is true. */
-    public function delete(bool $all = false): bool
+    /**
+     * Delete record(s).
+     *
+     *   DB::table('users')->where('id', 5)->delete();
+     *   DB::table('users')->delete(5);       // deletes by id
+     *   DB::table('logs')->delete();          // deletes all records (or use truncate())
+     *   DB::table('logs')->delete(false);     // refuses without a where()
+     */
+    public function delete(int|string|bool|null $idOrAll = null): bool
     {
-        $this->assertHasWhere($all, 'delete');
+        if (is_int($idOrAll) || (is_string($idOrAll) && !is_numeric($idOrAll))) {
+            return $this->where('id', $idOrAll)->delete();
+        }
+        if ($idOrAll === false) {
+            $this->assertHasWhere(false, 'delete');
+        }
         if ($this->softDeleteColumn !== null) {
             // A model with soft deletes: mark the rows instead of removing them
-            return $this->update([$this->softDeleteColumn => date('Y-m-d H:i:s')], $all);
+            return $this->update([$this->softDeleteColumn => date('Y-m-d H:i:s')], true);
         }
         $this->run("DELETE FROM " . $this->wrapTable($this->table) . $this->compileWheres(), $this->bindings);
         return true;

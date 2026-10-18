@@ -1188,7 +1188,7 @@ DB::raw('SELECT * FROM users WHERE email = ?', [$email]);   // rows for SELECT/S
 Safety rules:
 - Values are always bound with `?`.
 - Operators and `ASC`/`DESC` are whitelisted.
-- `update()`, `delete()`, `increment()` and `decrement()` **refuse to run without a `where()`**. Pass `true` to `update`/`delete` to really affect every row.
+- `update()`, `increment()` and `decrement()` **refuse to run without a `where()`** (pass `true` to `update` to affect every row). `delete()` permits unconstrained deletion to clear tables (or pass an id: `delete($id)`; or `truncate()` to reset auto-increment), while passing `false` (`delete(false)`) enforces that a `where()` must be present.
 - Column names in `where*()`, `orderBy()`, `groupBy()`, `insert()`, `update()`, `increment()` and `upsert()` must be plain names (`price` or `products.price`); anything else throws `InvalidArgumentException`. So `orderBy($request->sort)` cannot inject SQL (still whitelist it to give users a clear error). Use `whereRaw()` for SQL expressions.
 - Table names, `select()`, `join()` and `having()` are not checked: never build them from user input.
 
