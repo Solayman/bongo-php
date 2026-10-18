@@ -13,6 +13,7 @@ class RouteDefinition
     public array $middleware = [];
     public array $withoutMiddleware = [];
     public array $wheres = [];
+    public bool $isFallback = false;
     protected ?string $regex = null;
     protected array $paramNames = [];
 
@@ -119,5 +120,45 @@ class RouteDefinition
 
         $path = '/' . trim(preg_replace('#/+#', '/', $path), '/');
         return $path . ($params ? '?' . http_build_query($params) : '');
+    }
+
+    public function getSpecificity(): int
+    {
+        if ($this->isFallback) {
+            return -100000;
+        }
+
+        $path = trim($this->path, '/');
+        if ($path === '') {
+            return 1000;
+        }
+
+        $segments = explode('/', $path);
+        $score = 0;
+        $weight = 10000;
+
+        foreach ($segments as $segment) {
+            if (!str_contains($segment, '{')) {
+                $score += $weight * 10;
+            } else {
+                if (preg_match('/^\{(\w+)(\?)?\}$/', $segment, $m)) {
+                    $paramName = $m[1];
+                    $isOptional = !empty($m[2]);
+                    $pattern = $this->wheres[$paramName] ?? '[^/]+';
+                    if (str_contains($pattern, '.*') || str_contains($pattern, '.+') || str_contains($pattern, '/')) {
+                        $score += $weight * ($isOptional ? 0 : 1);
+                    } elseif ($pattern !== '[^/]+') {
+                        $score += $weight * 5;
+                    } else {
+                        $score += $weight * 3;
+                    }
+                } else {
+                    $score += $weight * 2;
+                }
+            }
+            $weight = max(1, (int) ($weight / 10));
+        }
+
+        return $score;
     }
 }

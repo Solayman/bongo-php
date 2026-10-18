@@ -144,5 +144,47 @@ namespace Tests\Unit {
             $this->assertSame(url('/system'), route('system'));
             $this->assertSame(url('/plain/path'), route('/plain/path'));
         }
+
+        public function testExactRoutesTakePrecedenceOverWildcards(): void
+        {
+            $router = new Router();
+            // Wildcard registered FIRST
+            $router->get('/admin/{any?}', fn() => 'spa_shell')->where('any', '.*');
+            // Exact API endpoint registered AFTER
+            $router->get('/admin/api/overview', fn() => 'api_overview');
+            $router->get('/admin/api/{endpoint}', fn($endpoint) => "api_$endpoint");
+
+            ob_start();
+            $router->dispatch('GET', '/admin/api/overview');
+            $exact = ob_get_clean();
+            $this->assertSame('api_overview', $exact, 'Exact match takes precedence over wildcard pattern registered earlier');
+
+            ob_start();
+            $router->dispatch('GET', '/admin/api/devices');
+            $param = ob_get_clean();
+            $this->assertSame('api_devices', $param, 'Specific param route takes precedence over catch-all .*');
+
+            ob_start();
+            $router->dispatch('GET', '/admin/dashboard');
+            $spa = ob_get_clean();
+            $this->assertSame('spa_shell', $spa, 'Catch-all handles non-API paths');
+        }
+
+        public function testFallbackRouteExecutesOnlyWhenNoOtherRouteMatches(): void
+        {
+            $router = new Router();
+            $router->fallback(fn() => 'global_fallback');
+            $router->get('/exact/route', fn() => 'exact_response');
+
+            ob_start();
+            $router->dispatch('GET', '/exact/route');
+            $exact = ob_get_clean();
+            $this->assertSame('exact_response', $exact);
+
+            ob_start();
+            $router->dispatch('GET', '/non-existent/deep/path');
+            $fallback = ob_get_clean();
+            $this->assertSame('global_fallback', $fallback);
+        }
     }
 }
