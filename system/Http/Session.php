@@ -119,6 +119,9 @@ class Session
 
     public static function token(): string
     {
+        if (!isset($_SESSION) || !is_array($_SESSION)) {
+            $_SESSION = [];
+        }
         if (empty($_SESSION['_token'])) {
             $_SESSION['_token'] = bin2hex(random_bytes(32));
         }
@@ -127,6 +130,42 @@ class Session
 
     public static function regenerateToken(): void
     {
+        if (!isset($_SESSION) || !is_array($_SESSION)) {
+            $_SESSION = [];
+        }
+        if (!empty($_SESSION['_token'])) {
+            $window = (int) config('session.token_grace_window', 10);
+            $_SESSION['_previous_tokens'][] = [
+                'token'      => $_SESSION['_token'],
+                'expires_at' => time() + $window,
+            ];
+            // Prune expired previous tokens
+            $_SESSION['_previous_tokens'] = array_values(array_filter(
+                $_SESSION['_previous_tokens'],
+                fn($item) => ($item['expires_at'] ?? 0) >= time()
+            ));
+        }
         $_SESSION['_token'] = bin2hex(random_bytes(32));
+    }
+
+    public static function isValidToken(?string $token): bool
+    {
+        if (!is_string($token) || $token === '') {
+            return false;
+        }
+        if (hash_equals(self::token(), $token)) {
+            return true;
+        }
+        if (!empty($_SESSION['_previous_tokens']) && is_array($_SESSION['_previous_tokens'])) {
+            $now = time();
+            foreach ($_SESSION['_previous_tokens'] as $prev) {
+                if (isset($prev['token'], $prev['expires_at']) && $prev['expires_at'] >= $now) {
+                    if (hash_equals((string) $prev['token'], $token)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 }

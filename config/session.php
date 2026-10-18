@@ -15,4 +15,8 @@ return [
 
     // Lax: the cookie is not sent on cross-site POSTs (extra CSRF protection)
     'same_site' => env('SESSION_SAME_SITE', 'Lax'),
+
+    // Grace period (seconds) during which recently rotated CSRF tokens remain valid
+    // to prevent rapid sequential or in-flight requests from failing with 419.
+    'token_grace_window' => (int) env('SESSION_TOKEN_GRACE_WINDOW', 10),
 ];
