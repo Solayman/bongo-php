@@ -93,6 +93,15 @@ class SecurityCheck
             ? 'A .env file is inside public/ and can be downloaded. Move it to the project root.'
             : 'Point the web server at public/ only, so .env, config and source stay private.');
 
+        // Root .htaccess safety
+        $rootHtaccess = BASE_PATH . '/.htaccess';
+        if (is_file($rootHtaccess)) {
+            $htContent = (string) @file_get_contents($rootHtaccess);
+            if (stripos($htContent, '<VirtualHost') !== false || stripos($htContent, '<Directory') !== false) {
+                $add('Root .htaccess', 'fail', 'Root .htaccess contains Apache server configuration (<VirtualHost> or <Directory>) which causes 500 errors on shared hosting. Remove it.');
+            }
+        }
+
         // Demo credentials
         try {
             $admin = \System\Database\DB::table('users')->where('email', 'admin@example.com')->first();
