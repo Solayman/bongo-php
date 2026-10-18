@@ -139,6 +139,25 @@ class QueryBuilderTest extends TestCase
         $this->assertTrue(is_array(DB::table('qb_items')->asArray()->first()));
     }
 
+    public function testCountWithJoinsReturnsDistinctParentCount(): void
+    {
+        // 2 groups have 20 items in total (10 each)
+        // With joins, count() on qb_groups should count distinct groups (2), not inflated child rows (20)
+        $count = DB::table('qb_groups')
+            ->leftJoin('qb_items', 'qb_items.group_id', '=', 'qb_groups.id')
+            ->count();
+
+        $this->assertSame(2, $count);
+
+        // Explicit distinct count
+        $distinctCount = DB::table('qb_groups')
+            ->distinct()
+            ->leftJoin('qb_items', 'qb_items.group_id', '=', 'qb_groups.id')
+            ->count('qb_groups.id');
+
+        $this->assertSame(2, $distinctCount);
+    }
+
     public function testModelHelpers(): void
     {
         $this->assertSame('admin@example.com', User::find(1)->email);

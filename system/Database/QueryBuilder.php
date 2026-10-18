@@ -591,7 +591,8 @@ class QueryBuilder
             if ($inner->columns === ['*']) {
                 $inner->columns = $inner->groups; // valid under ONLY_FULL_GROUP_BY
             }
-            $sql = "SELECT $expression AS aggregate FROM (" . $inner->toSql() . ') AS grouped';
+            $agg = str_starts_with($expression, 'COUNT(') ? 'COUNT(*)' : $expression;
+            $sql = "SELECT $agg AS aggregate FROM (" . $inner->toSql() . ') AS grouped';
         } else {
             $sql = "SELECT $expression AS aggregate" . $this->compileFromJoinsWheres();
         }
@@ -601,7 +602,25 @@ class QueryBuilder
 
     public function count(string $column = '*'): int
     {
-        $target = $column === '*' ? '*' : $this->column($column);
+        $primaryKey = ($this->model !== null && method_exists($this->model, 'primaryKey'))
+            ? ($this->model)::primaryKey()
+            : 'id';
+
+        $tableRef = $this->table;
+        if (preg_match('/\s+as\s+([A-Za-z_][A-Za-z0-9_]*)$/i', $tableRef, $m) || preg_match('/\s+([A-Za-z_][A-Za-z0-9_]*)$/i', $tableRef, $m)) {
+            $tableRef = $m[1];
+        }
+
+        if ($column === '*') {
+            if ($this->distinct || !empty($this->joins)) {
+                $target = 'DISTINCT ' . $this->column("$tableRef.$primaryKey");
+            } else {
+                $target = '*';
+            }
+        } else {
+            $target = ($this->distinct ? 'DISTINCT ' : '') . $this->column($column);
+        }
+
         return (int) $this->aggregate("COUNT($target)");
     }
 
