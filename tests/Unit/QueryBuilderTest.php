@@ -64,8 +64,8 @@ class QueryBuilderTest extends TestCase
             ->toSql();
 
         $this->assertSame(
-            'SELECT qb_items.id, qb_groups.name AS grp FROM qb_items LEFT JOIN qb_groups ON qb_groups.id = qb_items.group_id'
-            . ' WHERE price > ? AND status IN (?,?) ORDER BY price DESC LIMIT 5 OFFSET 10',
+            'SELECT `qb_items`.`id`, `qb_groups`.`name` AS `grp` FROM `qb_items` LEFT JOIN `qb_groups` ON `qb_groups`.`id` = `qb_items`.`group_id`'
+            . ' WHERE `price` > ? AND `status` IN (?,?) ORDER BY `price` DESC LIMIT 5 OFFSET 10',
             $sql
         );
     }

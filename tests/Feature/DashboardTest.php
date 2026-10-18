@@ -50,7 +50,7 @@ class DashboardTest extends HttpTestCase
         $response = $this->get('/dashboard');
         $response->assertSee('bongo-debugbar');
         $response->assertSee('Queries');
-        $response->assertSee('SELECT COUNT(*) AS aggregate FROM users');
+        $response->assertSee('SELECT COUNT(*) AS aggregate FROM `users`');
     }
 
     public function testProfileUpdate(): void

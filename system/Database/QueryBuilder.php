@@ -176,7 +176,7 @@ class QueryBuilder
     public function join(string $table, string $first, string $operator, string $second, string $type = 'INNER'): self
     {
         $this->assertOperator($operator);
-        $this->joins[] = "$type JOIN $table ON $first $operator $second";
+        $this->joins[] = "$type JOIN " . $this->wrapTable($table) . ' ON ' . $this->column($first) . " $operator " . $this->column($second);
         return $this;
     }
 
@@ -277,6 +277,43 @@ class QueryBuilder
         return $this;
     }
 
+    public function wrapIdentifier(string $identifier): string
+    {
+        $char = ($this->isPgsql() || $this->isSqlite()) ? '"' : '`';
+        if (str_starts_with($identifier, $char) && str_ends_with($identifier, $char)) {
+            return $identifier;
+        }
+        return $char . str_replace($char, $char . $char, $identifier) . $char;
+    }
+
+    public function wrapTable(string $table): string
+    {
+        if (preg_match('/^([A-Za-z_][A-Za-z0-9_]*)\s+as\s+([A-Za-z_][A-Za-z0-9_]*)$/i', $table, $m)) {
+            return $this->wrapIdentifier($m[1]) . ' AS ' . $this->wrapIdentifier($m[2]);
+        }
+        if (preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $table)) {
+            return $this->wrapIdentifier($table);
+        }
+        return $table;
+    }
+
+    protected function wrapSelectColumn(string $column): string
+    {
+        if ($column === '*') {
+            return '*';
+        }
+        if (preg_match('/^([A-Za-z_][A-Za-z0-9_]*)\.\*$/', $column, $m)) {
+            return $this->wrapIdentifier($m[1]) . '.*';
+        }
+        if (preg_match('/^([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?)\s+AS\s+([A-Za-z_][A-Za-z0-9_]*)$/i', $column, $m)) {
+            return $this->column($m[1]) . ' AS ' . $this->wrapIdentifier($m[2]);
+        }
+        if (preg_match('/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$/', $column)) {
+            return $this->column($column);
+        }
+        return $column;
+    }
+
     /**
      * A column name placed in SQL: letters, digits and _ with an optional "table." prefix.
      * Column names cannot be bound like values, so one built from user input, e.g.
@@ -284,10 +321,13 @@ class QueryBuilder
      */
     protected function column(string $name): string
     {
-        if (!preg_match('/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$/', $name)) {
+        $char = ($this->isPgsql() || $this->isSqlite()) ? '"' : '`';
+        $unquoted = str_replace($char, '', $name);
+        if (!preg_match('/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$/', $unquoted)) {
             throw new InvalidArgumentException("Invalid column name [$name]. Use whereRaw() for SQL expressions.");
         }
-        return $name;
+        $parts = explode('.', $unquoted);
+        return implode('.', array_map([$this, 'wrapIdentifier'], $parts));
     }
 
     /** Raw condition, e.g. whereRaw('(name LIKE ? OR sku LIKE ?)', [$q, $q]) */
@@ -398,7 +438,7 @@ class QueryBuilder
         }
         // Soft deletes (top level only; wraps the rest so an OR can't bring trashed rows back)
         if ($withKeyword && $this->softDeleteColumn !== null && $this->trashed !== 'with') {
-            $trashed = $this->softDeleteColumn . ($this->trashed === 'only' ? ' IS NOT NULL' : ' IS NULL');
+            $trashed = $this->column($this->softDeleteColumn) . ($this->trashed === 'only' ? ' IS NOT NULL' : ' IS NULL');
             $sql = $sql === '' ? $trashed : "($sql) AND $trashed";
         }
         if ($sql === '') {
@@ -409,7 +449,7 @@ class QueryBuilder
 
     protected function compileFromJoinsWheres(): string
     {
-        $sql = " FROM {$this->table}";
+        $sql = " FROM " . $this->wrapTable($this->table);
         if ($this->joins) {
             $sql .= ' ' . implode(' ', $this->joins);
         }
@@ -430,7 +470,8 @@ class QueryBuilder
 
     public function toSql(): string
     {
-        $sql = 'SELECT ' . ($this->distinct ? 'DISTINCT ' : '') . implode(', ', $this->columns)
+        $cols = array_map(fn($c) => $this->wrapSelectColumn($c), $this->columns);
+        $sql = 'SELECT ' . ($this->distinct ? 'DISTINCT ' : '') . implode(', ', $cols)
             . $this->compileFromJoinsWheres() . $this->compileGroupsHavings();
 
         if ($this->orders) {
@@ -513,11 +554,12 @@ class QueryBuilder
     /** The key PDO uses for a selected column: "users.name" → "name", "COUNT(*) AS n" → "n" */
     protected static function resultKey(string $column): string
     {
-        if (preg_match('/\s+AS\s+(\w+)$/i', $column, $m)) {
+        if (preg_match('/\s+AS\s+[`"]?(\w+)[`"]?$/i', $column, $m)) {
             return $m[1];
         }
         $dot = strrpos($column, '.');
-        return $dot === false ? $column : substr($column, $dot + 1);
+        $raw = $dot === false ? $column : substr($column, $dot + 1);
+        return trim($raw, '`"');
     }
 
     /** One column of the first row */
@@ -559,28 +601,29 @@ class QueryBuilder
 
     public function count(string $column = '*'): int
     {
-        return (int) $this->aggregate("COUNT($column)");
+        $target = $column === '*' ? '*' : $this->column($column);
+        return (int) $this->aggregate("COUNT($target)");
     }
 
     public function sum(string $column): float
     {
-        return (float) ($this->aggregate("SUM($column)") ?? 0);
+        return (float) ($this->aggregate("SUM(" . $this->column($column) . ")") ?? 0);
     }
 
     public function avg(string $column): ?float
     {
-        $value = $this->aggregate("AVG($column)");
+        $value = $this->aggregate("AVG(" . $this->column($column) . ")");
         return $value === null ? null : (float) $value;
     }
 
     public function max(string $column)
     {
-        return $this->aggregate("MAX($column)");
+        return $this->aggregate("MAX(" . $this->column($column) . ")");
     }
 
     public function min(string $column)
     {
-        return $this->aggregate("MIN($column)");
+        return $this->aggregate("MIN(" . $this->column($column) . ")");
     }
 
     /**
@@ -635,30 +678,32 @@ class QueryBuilder
             return 0;
         }
         $rows = isset($rows[0]) && is_array($rows[0]) ? $rows : [$rows];
-        $columns = array_map(fn($c) => $this->column((string) $c), array_keys($rows[0]));
+        $rawColumns = array_keys($rows[0]);
+        $columns = array_map(fn($c) => $this->column((string) $c), $rawColumns);
         $update = $update === null ? null : array_map(fn($c) => $this->column((string) $c), $update);
         $uniqueBy = $uniqueBy === null ? null : array_map(fn($c) => $this->column((string) $c), (array) $uniqueBy);
         $placeholders = '(' . implode(',', array_fill(0, count($columns), '?')) . ')';
         $bindings = [];
         foreach ($rows as $row) {
-            if (array_keys($row) !== $columns) {
+            if (array_keys($row) !== $rawColumns) {
                 throw new \InvalidArgumentException('upsert(): every row needs the same columns in the same order');
             }
             array_push($bindings, ...array_values($row));
         }
-        $sql = "INSERT INTO {$this->table} (" . implode(',', $columns) . ') VALUES '
+        $sql = "INSERT INTO " . $this->wrapTable($this->table) . ' (' . implode(',', $columns) . ') VALUES '
             . implode(',', array_fill(0, count($rows), $placeholders));
+        $updateCols = $update ?? $columns;
         if ($this->isSqlite()) {
             $target = $uniqueBy ? '(' . implode(', ', (array) $uniqueBy) . ')' : '';
-            $sql .= " ON CONFLICT $target DO UPDATE SET " . implode(', ', array_map(fn($c) => "$c = excluded.$c", $update ?? $columns));
+            $sql .= " ON CONFLICT $target DO UPDATE SET " . implode(', ', array_map(fn($c) => "$c = excluded.$c", $updateCols));
         } elseif ($this->isPgsql()) {
             // PostgreSQL needs the conflict columns: use $uniqueBy, or find the table's unique index they fill
-            $targetCols = $uniqueBy ? (array) $uniqueBy : $this->pgsqlUniqueKey($columns);
+            $targetCols = $uniqueBy ? (array) $uniqueBy : array_map([$this, 'wrapIdentifier'], $this->pgsqlUniqueKey($rawColumns));
             // Same (unquoted) names as the INSERT list, so both fold to the same case
             $sql .= ' ON CONFLICT (' . implode(', ', $targetCols) . ') DO UPDATE SET '
-                . implode(', ', array_map(fn($c) => "$c = EXCLUDED.$c", $update ?? $columns));
+                . implode(', ', array_map(fn($c) => "$c = EXCLUDED.$c", $updateCols));
         } else {
-            $sql .= ' ON DUPLICATE KEY UPDATE ' . implode(', ', array_map(fn($c) => "$c = VALUES($c)", $update ?? $columns));
+            $sql .= ' ON DUPLICATE KEY UPDATE ' . implode(', ', array_map(fn($c) => "$c = VALUES($c)", $updateCols));
         }
         return $this->run($sql, $bindings)->rowCount();
     }
@@ -743,7 +788,7 @@ class QueryBuilder
             }
             array_push($bindings, ...array_values($row));
         }
-        $this->run("INSERT INTO {$this->table} ($columns) VALUES " . implode(',', array_fill(0, count($rows), $placeholders)), $bindings);
+        $this->run("INSERT INTO " . $this->wrapTable($this->table) . " ($columns) VALUES " . implode(',', array_fill(0, count($rows), $placeholders)), $bindings);
         return true;
     }
 
@@ -753,7 +798,7 @@ class QueryBuilder
         if ($this->isPgsql()) {
             $columns = implode(',', array_map(fn($c) => $this->column((string) $c), array_keys($data)));
             $placeholders = implode(',', array_fill(0, count($data), '?'));
-            $sql = "INSERT INTO {$this->table} ($columns) VALUES ($placeholders) RETURNING \"$idColumn\"";
+            $sql = "INSERT INTO " . $this->wrapTable($this->table) . " ($columns) VALUES ($placeholders) RETURNING " . $this->wrapIdentifier($idColumn);
             $stmt = $this->run($sql, array_values($data));
             return (int) $stmt->fetchColumn();
         }
@@ -768,9 +813,14 @@ class QueryBuilder
         $this->assertHasWhere($all, 'update');
 
         // SQLite and PostgreSQL do not accept "table.column" on the left of SET
-        $column = fn($col) => str_starts_with($col, "{$this->table}.") ? substr($col, strlen($this->table) + 1) : $col;
-        $set = implode(',', array_map(fn($col) => $column($this->column((string) $col)) . ' = ?', array_keys($data)));
-        $this->run("UPDATE {$this->table} SET $set" . $this->compileWheres(), [...array_values($data), ...$this->bindings]);
+        $stripTable = function (string $key): string {
+            if (str_starts_with($key, "{$this->table}.")) {
+                return substr($key, strlen($this->table) + 1);
+            }
+            return $key;
+        };
+        $set = implode(',', array_map(fn($col) => $this->column($stripTable((string) $col)) . ' = ?', array_keys($data)));
+        $this->run("UPDATE " . $this->wrapTable($this->table) . " SET $set" . $this->compileWheres(), [...array_values($data), ...$this->bindings]);
         return true;
     }
 
@@ -778,12 +828,12 @@ class QueryBuilder
     public function increment(string $column, int|float $amount = 1, array $extra = []): bool
     {
         $this->assertHasWhere(false, 'increment');
-        $column = $this->column($column);
-        $set = ["$column = $column + ?"];
-        foreach (array_keys($extra) as $col) {
-            $set[] = $this->column((string) $col) . ' = ?';
+        $col = $this->column($column);
+        $set = ["$col = $col + ?"];
+        foreach (array_keys($extra) as $c) {
+            $set[] = $this->column((string) $c) . ' = ?';
         }
-        $this->run("UPDATE {$this->table} SET " . implode(', ', $set) . $this->compileWheres(), [$amount, ...array_values($extra), ...$this->bindings]);
+        $this->run("UPDATE " . $this->wrapTable($this->table) . " SET " . implode(', ', $set) . $this->compileWheres(), [$amount, ...array_values($extra), ...$this->bindings]);
         return true;
     }
 
@@ -800,7 +850,7 @@ class QueryBuilder
             // A model with soft deletes: mark the rows instead of removing them
             return $this->update([$this->softDeleteColumn => date('Y-m-d H:i:s')], $all);
         }
-        $this->run("DELETE FROM {$this->table}" . $this->compileWheres(), $this->bindings);
+        $this->run("DELETE FROM " . $this->wrapTable($this->table) . $this->compileWheres(), $this->bindings);
         return true;
     }
 
@@ -813,17 +863,18 @@ class QueryBuilder
 
     public function truncate(): bool
     {
+        $table = $this->wrapTable($this->table);
         if ($this->isSqlite()) {
-            $this->run("DELETE FROM {$this->table}", []);
+            $this->run("DELETE FROM $table", []);
             // Restart the ids at 1 (sqlite_sequence only exists once an AUTOINCREMENT table does)
             try {
                 $this->run('DELETE FROM sqlite_sequence WHERE name = ?', [$this->table]);
             } catch (\PDOException) {
             }
         } elseif ($this->isPgsql()) {
-            $this->run("TRUNCATE TABLE {$this->table} RESTART IDENTITY CASCADE", []);
+            $this->run("TRUNCATE TABLE $table RESTART IDENTITY CASCADE", []);
         } else {
-            $this->run("TRUNCATE TABLE {$this->table}", []);
+            $this->run("TRUNCATE TABLE $table", []);
         }
         return true;
     }

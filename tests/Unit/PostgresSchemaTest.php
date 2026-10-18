@@ -98,9 +98,11 @@ class PostgresSchemaTest extends TestCase
 
     public function testPostgresQueryBuilderSqlGeneration(): void
     {
-        // Test lock syntax
         $qb = new QueryBuilder('users');
         $qb->where('id', 1);
-        $this->assertSame('SELECT * FROM users WHERE id = ?', $qb->toSql());
+        $this->assertSame('SELECT * FROM `users` WHERE `id` = ?', $qb->toSql());
+        $qbPg = (new QueryBuilder('users'))->setConnection('pgsql');
+        $qbPg->where('id', 1);
+        $this->assertSame('SELECT * FROM "users" WHERE "id" = ?', $qbPg->toSql());
     }
 }
