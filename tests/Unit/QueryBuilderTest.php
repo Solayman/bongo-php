@@ -108,9 +108,19 @@ class QueryBuilderTest extends TestCase
     public function testRefusesToUpdateOrDeleteEveryRow(): void
     {
         $this->assertThrows(\LogicException::class, fn() => DB::table('qb_items')->update(['price' => 0]));
-        $this->assertThrows(\LogicException::class, fn() => DB::table('qb_items')->delete());
+        $this->assertThrows(\LogicException::class, fn() => DB::table('qb_items')->delete(false));
         $this->assertTrue(DB::table('qb_items')->update(['price' => 1], true));
         $this->assertEquals(20, DB::table('qb_items')->sum('price'));
+    }
+
+    public function testDeleteUnconstrainedAndById(): void
+    {
+        $id = DB::table('qb_items')->insertGetId(['name' => 'To Delete', 'price' => 10]);
+        $this->assertTrue(DB::table('qb_items')->delete($id));
+        $this->assertNull(DB::table('qb_items')->where('id', $id)->first());
+
+        $this->assertTrue(DB::table('qb_items')->delete());
+        $this->assertSame(0, DB::table('qb_items')->count());
     }
 
     public function testAggregatesAndPaginate(): void
