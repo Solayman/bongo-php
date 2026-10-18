@@ -126,4 +126,37 @@ class SecurityHardeningTest extends TestCase
         $this->assertFalse(str_contains($clean, "\r"));
         $this->assertFalse(str_contains($clean, "\n"));
     }
+
+    public function testRootHtaccessHasNoVirtualHost(): void
+    {
+        $root = dirname(__DIR__, 2);
+        foreach ([$root . '/.htaccess', $root . '/public/.htaccess'] as $file) {
+            if (file_exists($file)) {
+                $content = (string) file_get_contents($file);
+                $this->assertFalse(stripos($content, '<VirtualHost') !== false, "$file must not contain <VirtualHost>");
+                $this->assertFalse(stripos($content, '<Directory') !== false, "$file must not contain <Directory>");
+            }
+        }
+    }
+
+    public function testSecurityCheckDetectsDangerousRootHtaccess(): void
+    {
+        $rootHtaccess = BASE_PATH . '/.htaccess';
+        $hadFile = file_exists($rootHtaccess);
+        $original = $hadFile ? (string) file_get_contents($rootHtaccess) : null;
+
+        try {
+            file_put_contents($rootHtaccess, "<VirtualHost *:80>\nServerName bad.local\n</VirtualHost>");
+            $results = array_column(SecurityCheck::run(), null, 'check');
+            $this->assertArrayHasKey('Root .htaccess', $results);
+            $this->assertSame('fail', $results['Root .htaccess']['status']);
+        } finally {
+            if ($hadFile && $original !== null) {
+                file_put_contents($rootHtaccess, $original);
+            } elseif (file_exists($rootHtaccess)) {
+                unlink($rootHtaccess);
+            }
+        }
+    }
 }
+

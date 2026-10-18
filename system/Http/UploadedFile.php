@@ -96,8 +96,12 @@ class UploadedFile
     public function mimeType(): string
     {
         if ($this->mime === null) {
+            if (!is_file($this->path)) {
+                return 'application/octet-stream';
+            }
             $finfo = function_exists('finfo_open') ? finfo_open(FILEINFO_MIME_TYPE) : false;
-            $this->mime = $finfo ? (string) finfo_file($finfo, $this->path) : 'application/octet-stream';
+            $detected = $finfo ? (string) @finfo_file($finfo, $this->path) : '';
+            $this->mime = ($detected !== '' && $detected !== false) ? $detected : 'application/octet-stream';
             if ($finfo) {
                 finfo_close($finfo);
             }
