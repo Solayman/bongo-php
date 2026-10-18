@@ -64,4 +64,54 @@ class ValidatorTest extends TestCase
     {
         $this->assertThrows(\InvalidArgumentException::class, fn() => Validator::make(['a' => 'x'], ['a' => 'banana']));
     }
+
+    public function testIpAndMacRules(): void
+    {
+        $valid = [
+            'ip4'  => '192.168.1.1',
+            'ip6'  => '2001:0db8:85a3:0000:0000:8a2e:0370:7334',
+            'mac1' => '00:1A:2B:3C:4D:5E',
+            'mac2' => '00-1A-2B-3C-4D-5E',
+        ];
+        $errors = Validator::make($valid, [
+            'ip4'  => 'ip|ipv4',
+            'ip6'  => 'ip|ipv6',
+            'mac1' => 'mac',
+            'mac2' => 'mac_address',
+        ]);
+        $this->assertSame([], $errors);
+
+        $invalid = [
+            'ip4'  => '999.999.999.999',
+            'ip6'  => '192.168.1.1',
+            'mac1' => 'not-a-mac',
+            'mac2' => '00:1A:2B:3C:4D',
+        ];
+        $bad = Validator::make($invalid, [
+            'ip4'  => 'ipv4',
+            'ip6'  => 'ipv6',
+            'mac1' => 'mac',
+            'mac2' => 'mac_address',
+        ]);
+        $this->assertCount(4, $bad);
+        $this->assertSame('The ip4 must be a valid IPv4 address.', $bad['ip4']);
+        $this->assertSame('The ip6 must be a valid IPv6 address.', $bad['ip6']);
+        $this->assertSame('The mac1 must be a valid MAC address.', $bad['mac1']);
+        $this->assertSame('The mac2 must be a valid MAC address.', $bad['mac2']);
+    }
+
+    public function testOmittedNullableFields(): void
+    {
+        $v = new Validator([], [
+            'ip_address'    => 'nullable|ip',
+            'secondary_mac' => 'nullable|mac',
+            'name'          => 'required|string',
+        ]);
+        $errors = $v->validate();
+        $this->assertSame(['name' => 'The name field is required.'], $errors);
+
+        $validated = $v->validated();
+        $this->assertNull($validated['ip_address']);
+        $this->assertNull($validated['secondary_mac']);
+    }
 }

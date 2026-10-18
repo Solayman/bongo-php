@@ -53,8 +53,16 @@ class Request
         if ($errors) {
             \System\Validation\Validator::respondWithErrors($errors, $data);
         }
-        $keys = array_unique(array_map(fn($field) => explode('.', $field)[0], array_keys($rules)));
-        return array_intersect_key($data, array_flip($keys));
+        $keys = array_unique(array_map(fn($field) => explode('.', (string) $field)[0], array_keys($rules)));
+        $validated = array_intersect_key($data, array_flip($keys));
+        foreach ($rules as $pattern => $ruleList) {
+            $root = explode('.', (string) $pattern)[0];
+            $ruleListArray = is_array($ruleList) ? $ruleList : explode('|', (string) $ruleList);
+            if (in_array('nullable', $ruleListArray, true) && !array_key_exists($root, $validated)) {
+                $validated[$root] = null;
+            }
+        }
+        return $validated;
     }
 
     /** Was the field sent at all (even empty)? has('name') · has(['name', 'email']) = all of them */
