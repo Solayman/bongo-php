@@ -473,7 +473,7 @@ Outside controllers: `System\Validation\Validator::make($data, $rules, $messages
 | --- | --- |
 | Presence | `required`, `nullable`, `sometimes` (validate only if the field was sent), `accepted` (a checkbox that must be ticked: `1`, `on`, `yes`, `true`) |
 | Required when… | `required_if:field,a,b` · `required_unless:field,a,b` · `required_with:a,b` (any of them is filled) · `required_with_all:a,b` · `required_without:a,b` (any of them is empty) · `required_without_all:a,b` |
-| Types | `string`, `numeric`, `integer`, `boolean`, `array`, `email`, `url`, `date` |
+| Types | `string`, `numeric`, `integer`, `boolean`, `array`, `email`, `url`, `date`, `ip`, `ipv4`, `ipv6`, `mac` / `mac_address` |
 | Size | `min:n`, `max:n`, `between:a,b`. These compare the value (with `numeric`/`integer`), the item count (arrays), kilobytes (files), or otherwise the length. |
 | Format | `digits:n`, `alpha`, `alpha_num`, `alpha_dash`, `regex:pattern`, `starts_with:a,b`, `ends_with:a,b` |
 | Choices | `in:a,b,c`, `not_in:a,b` |

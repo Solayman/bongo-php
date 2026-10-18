@@ -21,7 +21,7 @@ use System\Http\UploadedFile;
  *        min:n, max:n, between:a,b, digits:n, in:a,b, not_in:a,b, alpha, alpha_num, alpha_dash,
  *        regex:pattern, starts_with:a,b, ends_with:a,b, date, before:date|field, after:date|field,
  *        same:field, different:field, confirmed, unique:table,column[,ignoreId], exists:table,column,
- *        file, image, mimes:jpg,png, accepted,
+ *        file, image, mimes:jpg,png, accepted, ip, ipv4, ipv6, mac, mac_address,
  *        required_if:field,a,b  required_unless:field,a,b  required_with:a,b  required_with_all:a,b
  *        required_without:a,b  required_without_all:a,b   ("items.*.x" refers to the same row)
  * Custom: a closure fn($attribute, $value, $fail) { if (...) $fail('The :attribute ...'); } or a Rule object.
@@ -96,6 +96,24 @@ class Validator
         return $this->errors;
     }
 
+    /**
+     * Return only validated input fields. Any missing field marked nullable is returned as null.
+     */
+    public function validated(): array
+    {
+        $validated = [];
+        foreach ($this->rules as $pattern => $ruleList) {
+            $ruleList = is_array($ruleList) ? $ruleList : explode('|', (string) $ruleList);
+            $root = explode('.', (string) $pattern)[0];
+            if (self::has($this->data, $root)) {
+                $validated[$root] = self::get($this->data, $root);
+            } elseif (in_array('nullable', $ruleList, true)) {
+                $validated[$root] = null;
+            }
+        }
+        return $validated;
+    }
+
     /** "items.*.qty" → ["items.0.qty", "items.1.qty"] for the data present */
     protected function expand(string $pattern): array
     {
@@ -126,6 +144,11 @@ class Validator
         $value = self::get($this->data, $field);
 
         if (in_array('sometimes', $rules, true) && !self::has($this->data, $field)) {
+            return;
+        }
+
+        if (in_array('nullable', $rules, true) && !self::has($this->data, $field)) {
+            $this->data[$field] = null;
             return;
         }
 
@@ -317,6 +340,19 @@ class Validator
 
             case 'url':
                 return is_string($value) && filter_var($value, FILTER_VALIDATE_URL) && preg_match('#^https?://#i', $value) ? null : 'The :attribute must be a valid URL.';
+
+            case 'ip':
+                return is_string($value) && filter_var($value, FILTER_VALIDATE_IP) !== false ? null : 'The :attribute must be a valid IP address.';
+
+            case 'ipv4':
+                return is_string($value) && filter_var($value, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false ? null : 'The :attribute must be a valid IPv4 address.';
+
+            case 'ipv6':
+                return is_string($value) && filter_var($value, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false ? null : 'The :attribute must be a valid IPv6 address.';
+
+            case 'mac':
+            case 'mac_address':
+                return is_string($value) && filter_var($value, FILTER_VALIDATE_MAC) !== false ? null : 'The :attribute must be a valid MAC address.';
 
             case 'numeric':
                 return is_numeric($value) ? null : 'The :attribute must be a number.';

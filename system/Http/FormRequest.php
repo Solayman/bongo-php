@@ -69,8 +69,15 @@ abstract class FormRequest implements WhenResolved
         }
 
         // Only the fields that have rules ("items.*.qty" keeps "items")
-        $keys = array_unique(array_map(fn($field) => explode('.', $field)[0], array_keys($rules)));
+        $keys = array_unique(array_map(fn($field) => explode('.', (string) $field)[0], array_keys($rules)));
         $this->validated = array_intersect_key($this->data, array_flip($keys));
+        foreach ($rules as $pattern => $ruleList) {
+            $root = explode('.', (string) $pattern)[0];
+            $ruleListArray = is_array($ruleList) ? $ruleList : explode('|', (string) $ruleList);
+            if (in_array('nullable', $ruleListArray, true) && !array_key_exists($root, $this->validated)) {
+                $this->validated[$root] = null;
+            }
+        }
     }
 
     /** The validated input, or one field of it */
