@@ -209,7 +209,7 @@ namespace Tests\Unit {
             DB::enableQueryLog();
             $category->save();
             $update = DB::getQueryLog()[0];
-            $this->assertSame('UPDATE orm_categories SET name = ? WHERE id = ?', $update['sql'], 'only the changed column is written');
+            $this->assertSame('UPDATE `orm_categories` SET `name` = ? WHERE `id` = ?', $update['sql'], 'only the changed column is written');
             $this->assertSame('ORM Renamed', OrmCategory::find($category->id)->name);
             $this->assertSame('orm-test', $category->getOriginal('slug'));
 
@@ -302,7 +302,7 @@ namespace Tests\Unit {
             $sql = DB::table('orm_products')->where('status', 'active')
                 ->where(fn($q) => $q->where('price', '<', 10)->orWhere('stock', '<', 5))
                 ->orWhereNull('category_id')->toSql();
-            $this->assertSame('SELECT * FROM orm_products WHERE status = ? AND (price < ? OR stock < ?) OR category_id IS NULL', $sql);
+            $this->assertSame('SELECT * FROM `orm_products` WHERE `status` = ? AND (`price` < ? OR `stock` < ?) OR `category_id` IS NULL', $sql);
 
             $rows = DB::table('orm_products')->where('status', 'active')
                 ->where(fn($q) => $q->where('price', '<', 10)->orWhere('sku', 'BG-1000'))->pluck('sku');
@@ -398,9 +398,61 @@ namespace Tests\Unit {
             DB::enableQueryLog();
             DB::table('users')->where('email', 'admin@example.com')->first();
             $log = DB::getQueryLog();
-            $this->assertSame('SELECT * FROM users WHERE email = ? LIMIT 1', $log[0]['sql']);
+            $this->assertSame('SELECT * FROM `users` WHERE `email` = ? LIMIT 1', $log[0]['sql']);
             $this->assertSame(['admin@example.com'], $log[0]['bindings']);
             $this->assertTrue(is_float($log[0]['ms']) || is_int($log[0]['ms']));
+        }
+
+        public function testReservedWordColumnsWorkInQueries(): void
+        {
+            Schema::dropIfExists('orm_reserved_settings');
+            Schema::create('orm_reserved_settings', function (Blueprint $t) {
+                $t->id();
+                $t->string('key')->unique();
+                $t->string('order');
+                $t->string('group');
+                $t->string('value');
+            });
+
+            // Insert with reserved words
+            DB::table('orm_reserved_settings')->insert([
+                'key' => 'app_name',
+                'order' => '1',
+                'group' => 'general',
+                'value' => 'Bongo',
+            ]);
+
+            // Select & Where with reserved words
+            $row = DB::table('orm_reserved_settings')
+                ->where('key', 'app_name')
+                ->where('group', 'general')
+                ->orderBy('order', 'ASC')
+                ->first();
+
+            $this->assertNotNull($row);
+            $this->assertSame('Bongo', $row->value);
+
+            // Update with reserved words
+            DB::table('orm_reserved_settings')
+                ->where('key', 'app_name')
+                ->update(['value' => 'BongoMvc', 'order' => '2']);
+
+            $this->assertSame('BongoMvc', DB::table('orm_reserved_settings')->where('key', 'app_name')->value('value'));
+
+            // Upsert with reserved words
+            DB::table('orm_reserved_settings')->upsert([
+                ['key' => 'app_name', 'order' => '3', 'group' => 'general', 'value' => 'Bongo Framework'],
+                ['key' => 'theme', 'order' => '4', 'group' => 'ui', 'value' => 'dark'],
+            ], ['value', 'order']);
+
+            $this->assertSame('Bongo Framework', DB::table('orm_reserved_settings')->where('key', 'app_name')->value('value'));
+            $this->assertSame('dark', DB::table('orm_reserved_settings')->where('key', 'theme')->value('value'));
+
+            // Group by reserved word
+            $groups = DB::table('orm_reserved_settings')->groupBy('group')->pluck('group');
+            $this->assertCount(2, $groups);
+
+            Schema::dropIfExists('orm_reserved_settings');
         }
     }
 }
