@@ -159,11 +159,20 @@ class Connection
         }
     }
 
+    protected static function syncTimezone(): void
+    {
+        $tz = (string) config('app.timezone', 'UTC');
+        if ($tz !== '' && date_default_timezone_get() !== $tz) {
+            @date_default_timezone_set($tz);
+        }
+    }
+
     protected static function connectMysql(array $db): PDO
     {
         $dsn = "mysql:host={$db['host']};port={$db['port']};dbname={$db['database']};charset={$db['charset']}";
         $pdo = new PDO($dsn, $db['username'], $db['password'], self::options($db));
         self::cleanPersistent($pdo, $db);
+        self::syncTimezone();
         // Same clock as PHP, so CURRENT_TIMESTAMP matches date() and log times
         $pdo->exec("SET time_zone = '" . date('P') . "'");
         return $pdo;
@@ -171,6 +180,7 @@ class Connection
 
     protected static function connectSqlite(array $db): PDO
     {
+        self::syncTimezone();
         if (!in_array('sqlite', PDO::getAvailableDrivers(), true)) {
             throw new PDOException('the pdo_sqlite PHP extension is not enabled. Add "extension=pdo_sqlite" to php.ini.');
         }
@@ -186,6 +196,7 @@ class Connection
 
     protected static function connectPgsql(array $db): PDO
     {
+        self::syncTimezone();
         if (!in_array('pgsql', PDO::getAvailableDrivers(), true)) {
             throw new PDOException('The pdo_pgsql PHP extension is not enabled. Add "extension=pdo_pgsql" to php.ini.');
         }
