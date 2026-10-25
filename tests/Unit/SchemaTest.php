@@ -59,6 +59,19 @@ class SchemaTest extends TestCase
         $this->assertNull((new Blueprint('x'))->toAlterSql());
     }
 
+    public function testAlterTableColumnChangeAndDropForeign(): void
+    {
+        $table = new Blueprint('posts');
+        $table->string('email', 150)->nullable()->change();
+        $table->dropForeign(['user_id']); // Array resolution
+        $table->dropForeign('posts_author_id_foreign'); // Direct string constraint
+
+        $sql = $table->toAlterSql();
+        $this->assertContains('MODIFY COLUMN `email` VARCHAR(150) NULL', $sql);
+        $this->assertContains('DROP FOREIGN KEY `posts_user_id_foreign`', $sql);
+        $this->assertContains('DROP FOREIGN KEY `posts_author_id_foreign`', $sql);
+    }
+
     public function testInvalidForeignKeyActionIsRejected(): void
     {
         $table = new Blueprint('t');

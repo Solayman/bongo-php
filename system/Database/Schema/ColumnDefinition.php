@@ -21,6 +21,7 @@ class ColumnDefinition
     public ?string $onUpdate = null;
     public ?string $comment = null;
     public ?string $after = null;
+    public bool $change = false;
 
     /** Foreign key: [table, column, onDelete, onUpdate] */
     public ?array $foreign = null;
@@ -94,6 +95,13 @@ class ColumnDefinition
     public function after(string $column): static
     {
         $this->after = $column;
+        return $this;
+    }
+
+    /** Modify an existing column definition in an ALTER TABLE */
+    public function change(): static
+    {
+        $this->change = true;
         return $this;
     }
 

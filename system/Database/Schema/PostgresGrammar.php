@@ -62,6 +62,20 @@ trait PostgresGrammar
             $statements[] = "$table RENAME COLUMN " . self::wrapPgsql($from) . ' TO ' . self::wrapPgsql($to);
         }
         foreach ($this->columns as $column) {
+            if ($column->change) {
+                $colName = self::wrapPgsql($column->name);
+                $pgType = $this->pgsqlType($column);
+                $statements[] = "$table ALTER COLUMN $colName TYPE $pgType";
+                if ($column->nullable) {
+                    $statements[] = "$table ALTER COLUMN $colName DROP NOT NULL";
+                } else {
+                    $statements[] = "$table ALTER COLUMN $colName SET NOT NULL";
+                }
+                if ($column->hasDefault) {
+                    $statements[] = "$table ALTER COLUMN $colName SET DEFAULT " . $this->pgsqlValue($column->default, $pgType);
+                }
+                continue;
+            }
             if ($column->primary) {
                 throw new \LogicException("PostgreSQL cannot add the primary key column [{$column->name}] to an existing table directly. Use a separate migration constraint.");
             }
@@ -73,6 +87,33 @@ trait PostgresGrammar
         }
 
         return [...$statements, ...$this->pgsqlIndexes(), ...$this->pgsqlComments(), ...$this->pgsqlTriggers()];
+    }
+
+    protected function pgsqlType(ColumnDefinition $c): string
+    {
+        $type = $c->type;
+        if (preg_match('/^ENUM\((.*)\)$/s', $type, $m)) {
+            return 'VARCHAR(50)';
+        } elseif ($type === 'TINYINT(1)') {
+            return 'BOOLEAN';
+        } elseif ($type === 'TINYINT' || $type === 'SMALLINT') {
+            return 'SMALLINT';
+        } elseif ($type === 'INT' || $type === 'INTEGER') {
+            return 'INTEGER';
+        } elseif ($type === 'BIGINT') {
+            return 'BIGINT';
+        } elseif ($type === 'FLOAT') {
+            return 'REAL';
+        } elseif ($type === 'DOUBLE') {
+            return 'DOUBLE PRECISION';
+        } elseif (in_array($type, ['LONGTEXT', 'MEDIUMTEXT'], true)) {
+            return 'TEXT';
+        } elseif ($type === 'JSON') {
+            return 'JSONB';
+        } elseif (in_array($type, ['DATETIME', 'TIMESTAMP'], true)) {
+            return 'TIMESTAMP';
+        }
+        return $type;
     }
 
     protected function pgsqlColumn(ColumnDefinition $c, bool $creating): string

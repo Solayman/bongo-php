@@ -1397,9 +1397,9 @@ return new class extends Migration
 
 **Column types:** `id`, `foreignId`, `string(len)`, `char(len)`, `text`, `longText`, `integer`, `tinyInteger`, `bigInteger`, `decimal(p, s)`, `float`, `boolean`, `enum([...])`, `json`, `date`, `dateTime`, `timestamp`, `timestamps()`.
 
-**Modifiers:** `nullable()`, `default(v)`, `unsigned()`, `unique()`, `index()`, `useCurrent()`, `useCurrentOnUpdate()`, `comment()`, `after('col')`, `references('table', 'col')`, `onDelete('cascade' | 'set null' | 'restrict')`, `onUpdate(...)`.
+**Modifiers:** `nullable()`, `default(v)`, `unsigned()`, `unique()`, `index()`, `change()`, `useCurrent()`, `useCurrentOnUpdate()`, `comment()`, `after('col')`, `references('table', 'col')`, `onDelete('cascade' | 'set null' | 'restrict')`, `onUpdate(...)`.
 
-**Table-level methods:** `index([...])`, `unique([...])`, and, inside `Schema::table()`, `dropColumn`, `dropIndex`, `dropForeign`, `renameColumn`.
+**Table-level methods:** `index([...])`, `unique([...])`, and, inside `Schema::table()`, `dropColumn`, `dropIndex`, `dropForeign(string|array $keys)`, `renameColumn`, and column `->change()` (modifies types/nullability/defaults across MySQL and PostgreSQL, safe no-op on SQLite).
 
 **Schema:** `create`, `table` (alter), `drop`, `dropIfExists`, `rename`, `hasTable`, `hasColumn`.
 
