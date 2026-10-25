@@ -76,6 +76,10 @@ namespace Tests\Unit {
             $this->assertSame((int) $categories[0]->products_count, (int) $one->products_count);
 
             $this->assertThrows(\BadMethodCallException::class, fn() => WcCategory::withCount('nothing')->get());
+
+            // withCount accepts array of relations
+            $arrayCategories = WcCategory::withCount(['products'])->orderBy('name')->get();
+            $this->assertSame((int) $categories[0]->products_count, (int) $arrayCategories[0]->products_count);
         }
 
         public function testUpsertInsertsAndUpdatesInOneQuery(): void
