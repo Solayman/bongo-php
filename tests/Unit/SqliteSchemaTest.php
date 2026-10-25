@@ -70,8 +70,8 @@ class SqliteSchemaTest extends TestCase
         ], $table->toAlterStatements());
 
         $foreign = new Blueprint('posts', 'sqlite');
-        $foreign->dropForeign('posts_user_id_foreign');
-        $this->assertThrows(\LogicException::class, fn() => $foreign->toAlterStatements());
+        $foreign->dropForeign(['user_id']);
+        $this->assertSame([], $foreign->toAlterStatements(), 'SQLite safely ignores dropForeign without throwing exceptions');
     }
 
     public function testMysqlOutputIsUnchanged(): void

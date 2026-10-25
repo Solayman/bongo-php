@@ -148,22 +148,25 @@ class Migrator
         $files = $this->files();
 
         return $this->withConnectionScope(function () use ($stmt, $files, $log) {
-            $done = [];
-            foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $name) {
-                if (!isset($files[$name])) {
-                    throw new RuntimeException("Cannot roll back [$name]: its file is missing from database/migrations");
-                }
+            $schema = Schema\Schema::connection($this->connection);
+            return $schema->withoutForeignKeyChecks(function () use ($stmt, $files, $log) {
+                $done = [];
+                foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $name) {
+                    if (!isset($files[$name])) {
+                        throw new RuntimeException("Cannot roll back [$name]: its file is missing from database/migrations");
+                    }
 
-                $this->resolve($files[$name])->down();
-                $this->pdo->prepare('DELETE FROM ' . self::TABLE . ' WHERE migration = ?')->execute([$name]);
-                Log::info('Rolled back {migration}', ['migration' => $name, 'connection' => $this->connection]);
+                    $this->resolve($files[$name])->down();
+                    $this->pdo->prepare('DELETE FROM ' . self::TABLE . ' WHERE migration = ?')->execute([$name]);
+                    Log::info('Rolled back {migration}', ['migration' => $name, 'connection' => $this->connection]);
 
-                $done[] = $name;
-                if ($log) {
-                    $log($name);
+                    $done[] = $name;
+                    if ($log) {
+                        $log($name);
+                    }
                 }
-            }
-            return $done;
+                return $done;
+            });
         });
     }
 

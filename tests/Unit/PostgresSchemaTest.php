@@ -90,6 +90,18 @@ class PostgresSchemaTest extends TestCase
         $this->assertThrows(\LogicException::class, fn() => $primaryTable->toAlterStatements());
     }
 
+    public function testAlterColumnChangeForPostgres(): void
+    {
+        $table = new Blueprint('posts', 'pgsql');
+        $table->string('email', 150)->nullable()->change();
+        $table->dropForeign(['user_id']);
+
+        $statements = $table->toAlterStatements();
+        $this->assertSame('ALTER TABLE "posts" DROP CONSTRAINT IF EXISTS "posts_user_id_foreign"', $statements[0]);
+        $this->assertSame('ALTER TABLE "posts" ALTER COLUMN "email" TYPE VARCHAR(150)', $statements[1]);
+        $this->assertSame('ALTER TABLE "posts" ALTER COLUMN "email" DROP NOT NULL', $statements[2]);
+    }
+
     public function testIdentifierQuotingUsesDoubleQuotes(): void
     {
         $this->assertSame('"users"', Blueprint::wrap('users', 'pgsql'));

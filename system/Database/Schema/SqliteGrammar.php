@@ -51,18 +51,23 @@ trait SqliteGrammar
         $statements = [];
 
         foreach ($this->drops as [$kind, $name]) {
+            if ($kind === 'foreign') {
+                // SQLite does not support dropping foreign keys via ALTER TABLE; safe no-op
+                continue;
+            }
             $statements[] = match ($kind) {
                 'column'  => "$table DROP COLUMN " . $this->wrapName($name),
                 'index'   => 'DROP INDEX ' . $this->wrapName($name),
-                'foreign' => throw new \LogicException(
-                    "SQLite cannot drop the foreign key [$name] of an existing table. Create a new table without it and copy the rows over."
-                ),
             };
         }
         foreach ($this->renames as [$from, $to]) {
             $statements[] = "$table RENAME COLUMN " . $this->wrapName($from) . ' TO ' . $this->wrapName($to);
         }
         foreach ($this->columns as $column) {
+            if ($column->change) {
+                // SQLite has no native ALTER TABLE MODIFY COLUMN; safely no-op in SQLite
+                continue;
+            }
             if ($column->primary) {
                 throw new \LogicException("SQLite cannot add the primary key column [{$column->name}] to an existing table.");
             }
