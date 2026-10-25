@@ -180,9 +180,28 @@ class Blueprint
         $this->drops[] = ['index', $name];
     }
 
-    public function dropForeign(string $name): void
+    public function dropForeign(string|array $keys): void
     {
-        $this->drops[] = ['foreign', $name];
+        if (is_array($keys)) {
+            $allForeignNames = true;
+            foreach ($keys as $k) {
+                if (!str_ends_with((string) $k, '_foreign')) {
+                    $allForeignNames = false;
+                    break;
+                }
+            }
+            if ($allForeignNames && count($keys) > 0) {
+                foreach ($keys as $k) {
+                    $this->drops[] = ['foreign', (string) $k];
+                }
+            } else {
+                $name = $this->table . '_' . implode('_', $keys) . '_foreign';
+                $this->drops[] = ['foreign', $name];
+            }
+        } else {
+            $name = str_ends_with($keys, '_foreign') ? $keys : $this->table . '_' . $keys . '_foreign';
+            $this->drops[] = ['foreign', $name];
+        }
     }
 
     public function renameColumn(string $from, string $to): void
@@ -258,9 +277,10 @@ class Blueprint
             $parts[] = 'RENAME COLUMN ' . $this->wrapName($from) . ' TO ' . $this->wrapName($to);
         }
         foreach ($this->columns as $column) {
-            $parts[] = 'ADD COLUMN ' . $this->columnSql($column)
+            $prefix = $column->change ? 'MODIFY COLUMN ' : 'ADD COLUMN ';
+            $parts[] = $prefix . $this->columnSql($column)
                 . ($column->after ? ' AFTER ' . $this->wrapName($column->after) : '');
-            if ($column->primary) {
+            if ($column->primary && !$column->change) {
                 $parts[] = 'ADD PRIMARY KEY (' . $this->wrapName($column->name) . ')';
             }
         }

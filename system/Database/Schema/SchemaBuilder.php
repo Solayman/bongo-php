@@ -112,7 +112,7 @@ class SchemaBuilder
     }
 
     /** Run a callback with foreign key checks off (for drops in any order) */
-    public function withoutForeignKeyChecks(callable $callback): void
+    public function withoutForeignKeyChecks(callable $callback): mixed
     {
         $pdo = $this->pdo();
         $disable = match (true) {
@@ -134,11 +134,10 @@ class SchemaBuilder
             if (!$this->isPgsql()) {
                 throw $e;
             }
-            $callback();
-            return;
+            return $callback();
         }
         try {
-            $callback();
+            return $callback();
         } finally {
             $pdo->exec($enable);
         }
