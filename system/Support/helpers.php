@@ -457,6 +457,22 @@ if (!function_exists('is_active')) {
     }
 }
 
+if (!function_exists('now')) {
+    /** The current date/time in the configured app timezone */
+    function now(?string $timezone = null): \System\Support\Date
+    {
+        return \System\Support\Date::now($timezone);
+    }
+}
+
+if (!function_exists('today')) {
+    /** The start of today in the configured app timezone */
+    function today(?string $timezone = null): \System\Support\Date
+    {
+        return \System\Support\Date::today($timezone);
+    }
+}
+
 if (!function_exists('clean_html')) {
     /**
      * Clean untrusted HTML of XSS attack vectors while preserving safe rich-text markup.

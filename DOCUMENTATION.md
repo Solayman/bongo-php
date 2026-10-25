@@ -1252,7 +1252,7 @@ class Order extends Model
     protected static $table = 'orders';                        // default: lowercase class + "s"
     protected array $fillable = ['user_id', 'status', 'total']; // what create()/fill() may set
     protected array $hidden = [];                              // left out of toArray()/JSON
-    protected array $casts = ['total' => 'float'];             // int, float, bool, string, array/json
+    protected array $casts = ['total' => 'float', 'published_at' => 'datetime']; // int, float, bool, string, array/json, date, datetime/timestamp
 
     public function items(): HasMany  { return $this->hasMany(OrderItem::class); }  // order_items.order_id
     public function user(): BelongsTo { return $this->belongsTo(User::class); }     // orders.user_id
@@ -2314,6 +2314,7 @@ You can build and register your own CLI commands in seconds:
 | `response($data, 'json', 200)` | JSON or HTML response and stop |
 | `__('text', [...])`, `trans_choice()`, `locale()` | Translation |
 | `e($value)` | HTML-escape |
+| `now($tz)`, `today($tz)` | Current time / start of today (`System\Support\Date`) respecting `APP_TIMEZONE` |
 | `clean_html($html, $tags)` | Sanitize untrusted rich-text HTML against XSS (Unicode-safe native DOM parser) |
 | `money($n)`, `is_active('/prefix')` | Formatting and nav helpers |
 | `base_path('x')` | Absolute project path |
