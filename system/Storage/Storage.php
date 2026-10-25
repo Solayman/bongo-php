@@ -70,6 +70,13 @@ class Storage
             return self::$disks[$name] = (self::$customDrivers[$driver])($config, $name);
         }
 
+        if ($driver === 'ftp') {
+            return self::$disks[$name] = new \System\Storage\Drivers\FtpDriver($name, $config);
+        }
+        if ($driver === 'sftp') {
+            return self::$disks[$name] = new \System\Storage\Drivers\SftpDriver($name, $config);
+        }
+
         return self::$disks[$name] = new Disk($name, $config);
     }
 
