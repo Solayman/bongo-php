@@ -3014,6 +3014,7 @@ Extends Bongo's `Storage` facade with native FTP and FTPS (FTP over SSL/TLS) fil
   return Storage::disk('ftp')->download('backups/db.sql', 'db_backup.sql');
   ```
 * **CLI Health Check:** `php bongo ftp:check`
+* **Chroot Fallback & Timeouts:** Native FTP (`System\Storage\Drivers\FtpDriver`) and SFTP (`System\Storage\Drivers\SftpDriver`) drivers automatically detect virtual FTP users chrooted into home directories (e.g. cPanel `550 CWD failed`) and fallback to jailed relative paths. Remote probes clamp connection timeouts to max 4s and operation timeouts to max 8s to prevent gateway hangs, with non-interactive SSH host key verification bypass via `'hostkey_verify' => false`.
 
 #### 14. `paypal` — PayPal REST API v2 Checkout, Orders, Refunds & Webhooks
 Production-ready PayPal payment gateway client utilizing the official PayPal REST API v2 Checkout. Supports hosted redirect approvals, order creation, payment capture, authorization holds, partial/full refunds, and cryptographically verified webhooks via pure PHP without external Composer libraries.
