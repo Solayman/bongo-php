@@ -15,15 +15,18 @@ class QueryBuilder
 {
     protected string $table;
     protected array $columns = ['*'];
+    protected array $selectBindings = [];
     protected bool $distinct = false;
     protected array $joins = [];
     /** @var array<int, array{0: string, 1: string}> [boolean, sql] */
     protected array $wheres = [];
     protected array $bindings = [];
     protected array $groups = [];
+    protected array $groupBindings = [];
     protected array $havings = [];
     protected array $havingBindings = [];
     protected array $orders = [];
+    protected array $orderBindings = [];
     protected ?int $limit = null;
     protected ?int $offset = null;
     protected bool $asObject = true;
@@ -164,6 +167,28 @@ class QueryBuilder
     public function select(string ...$columns): self
     {
         $this->columns = $columns ?: ['*'];
+        $this->selectBindings = [];
+        return $this;
+    }
+
+    public function selectRaw(string $sql, array $bindings = []): self
+    {
+        if ($this->columns === ['*']) {
+            $this->columns = [$sql];
+        } else {
+            $this->columns[] = $sql;
+        }
+        $this->selectBindings = array_merge($this->selectBindings, $bindings);
+        return $this;
+    }
+
+    public function addSelect(string ...$columns): self
+    {
+        if ($this->columns === ['*']) {
+            $this->columns = $columns;
+        } else {
+            $this->columns = array_merge($this->columns, $columns);
+        }
         return $this;
     }
 
@@ -347,6 +372,13 @@ class QueryBuilder
     // GROUP / HAVING / ORDER / LIMIT
     // ------------------------------------------------------------------
 
+    public function groupByRaw(string $sql, array $bindings = []): self
+    {
+        $this->groups[] = $sql;
+        $this->groupBindings = array_merge($this->groupBindings, $bindings);
+        return $this;
+    }
+
     public function groupBy(string ...$columns): self
     {
         $this->groups = array_merge($this->groups, array_map(fn($c) => $this->column($c), $columns));
@@ -377,6 +409,13 @@ class QueryBuilder
             throw new InvalidArgumentException("Invalid order direction [$direction]");
         }
         $this->orders[] = $this->column($column) . " $direction";
+        return $this;
+    }
+
+    public function orderByRaw(string $sql, array $bindings = []): self
+    {
+        $this->orders[] = $sql;
+        $this->orderBindings = array_merge($this->orderBindings, $bindings);
         return $this;
     }
 
@@ -490,7 +529,13 @@ class QueryBuilder
     /** All bindings in SQL order */
     public function getBindings(): array
     {
-        return array_merge($this->bindings, $this->havingBindings);
+        return array_merge(
+            $this->selectBindings,
+            $this->bindings,
+            $this->groupBindings,
+            $this->havingBindings,
+            $this->orderBindings
+        );
     }
 
     // ------------------------------------------------------------------
@@ -538,6 +583,7 @@ class QueryBuilder
             return $name;
         };
         $clone->columns = $key ? [$expression($column), $expression($key)] : [$expression($column)];
+        $clone->selectBindings = [];
 
         $out = [];
         foreach ($clone->get() as $row) {
@@ -571,7 +617,8 @@ class QueryBuilder
 
     public function exists(): bool
     {
-        $stmt = $this->run('SELECT EXISTS(SELECT 1' . $this->compileFromJoinsWheres() . $this->compileGroupsHavings() . ') AS e', $this->getBindings());
+        $bindings = array_merge($this->bindings, $this->groupBindings, $this->havingBindings);
+        $stmt = $this->run('SELECT EXISTS(SELECT 1' . $this->compileFromJoinsWheres() . $this->compileGroupsHavings() . ') AS e', $bindings);
         return (bool) $stmt->fetchColumn();
     }
 
@@ -586,6 +633,7 @@ class QueryBuilder
             // Aggregate over the grouped result
             $inner = (clone $this);
             $inner->orders = [];
+            $inner->orderBindings = [];
             $inner->limit = $inner->offset = null;
             $inner->model = null;
             if ($inner->columns === ['*']) {
@@ -596,7 +644,7 @@ class QueryBuilder
         } else {
             $sql = "SELECT $expression AS aggregate" . $this->compileFromJoinsWheres();
         }
-        $stmt = $this->run($sql, $this->getBindings());
+        $stmt = $this->run($sql, $this->groups ? $inner->getBindings() : $this->bindings);
         return $stmt->fetchColumn();
     }
 
@@ -851,8 +899,11 @@ class QueryBuilder
      * Add "{relation}_count" columns: Category::withCount('products')->get() → $category->products_count.
      * Works for hasMany, hasOne and belongsToMany relations of the model.
      */
-    public function withCount(string ...$relations): self
+    public function withCount(...$relations): self
     {
+        if (count($relations) === 1 && is_array($relations[0])) {
+            $relations = $relations[0];
+        }
         if ($this->model === null) {
             throw new \LogicException('withCount() needs a model query: Category::withCount(\'products\')');
         }

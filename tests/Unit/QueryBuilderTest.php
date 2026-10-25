@@ -195,4 +195,35 @@ class QueryBuilderTest extends TestCase
         // Plain and table-qualified names keep working
         $this->assertSame(20, $qb()->orderBy('qb_items.name')->where('qb_items.price', '>=', 0)->count());
     }
+
+    public function testRawClausesAndBindings(): void
+    {
+        // selectRaw with binding and addSelect
+        $row = DB::table('qb_items')
+            ->selectRaw('price * ? AS double_price', [2])
+            ->addSelect('name')
+            ->where('name', 'Item 1')
+            ->first();
+
+        $this->assertNotNull($row);
+        $this->assertSame('Item 1', $row->name);
+        $this->assertEquals(3.0, (float) $row->double_price);
+
+        // orderByRaw with bindings/custom expression
+        $items = DB::table('qb_items')
+            ->whereIn('id', [1, 2, 3])
+            ->orderByRaw('CASE WHEN id = ? THEN 0 ELSE 1 END', [2])
+            ->get();
+        $this->assertSame('Item 2', $items[0]->name);
+
+        // groupByRaw
+        $grouped = DB::table('qb_items')
+            ->select('status')
+            ->selectRaw('COUNT(*) AS cnt')
+            ->groupByRaw('status')
+            ->pluck('cnt', 'status');
+
+        $this->assertSame(16, (int) $grouped['active']);
+        $this->assertSame(4, (int) $grouped['draft']);
+    }
 }
