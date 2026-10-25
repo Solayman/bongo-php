@@ -405,7 +405,7 @@ class Model implements \JsonSerializable
             return false;
         }
         if (static::$softDeletes) {
-            $now = date('Y-m-d H:i:s');
+            $now = \System\Support\Date::now()->toDateTimeString();
             $this->keyQuery()->update(['deleted_at' => $now]);
             $this->attributes['deleted_at'] = $this->original['deleted_at'] = $now;
         } else {
@@ -533,7 +533,11 @@ class Model implements \JsonSerializable
         $data = [];
         foreach ($this->attributes as $key => $value) {
             if (!in_array($key, $this->hidden, true)) {
-                $data[$key] = $this->castGet($key, $value);
+                $val = $this->castGet($key, $value);
+                if ($val instanceof \DateTimeInterface) {
+                    $val = ($val instanceof \System\Support\Date ? $val : \System\Support\Date::parse($val))->toIsoString();
+                }
+                $data[$key] = $val;
             }
         }
         foreach ($this->relations as $key => $value) {
@@ -587,21 +591,36 @@ class Model implements \JsonSerializable
 
     protected function castGet(string $key, $value)
     {
-        if ($value === null || !isset($this->casts[$key])) {
+        if ($value === null) {
+            return null;
+        }
+
+        $cast = $this->casts[$key] ?? null;
+        if ($cast === null && in_array($key, ['created_at', 'updated_at', 'deleted_at'], true)) {
+            $cast = 'datetime';
+        }
+
+        if ($cast === null) {
             return $value;
         }
-        return match ($this->casts[$key]) {
+
+        return match ($cast) {
             'int', 'integer' => (int) $value,
             'float', 'double', 'decimal' => (float) $value,
             'bool', 'boolean' => (bool) $value,
             'string' => (string) $value,
             'array', 'json' => is_string($value) ? (json_decode($value, true) ?? []) : $value,
+            'date' => \System\Support\Date::parse($value)->toDateString(),
+            'datetime', 'timestamp' => \System\Support\Date::parse($value),
             default => $value,
         };
     }
 
     protected function castSet(string $key, $value)
     {
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d H:i:s');
+        }
         if (in_array($this->casts[$key] ?? null, ['array', 'json'], true) && !is_string($value) && $value !== null) {
             return json_encode($value);
         }
