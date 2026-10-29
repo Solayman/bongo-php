@@ -126,7 +126,9 @@ class Request
     public static function url(): string
     {
         $scheme = self::isSecure() ? 'https' : 'http';
-        $host = (string) ($_SERVER['HTTP_HOST'] ?? parse_url((string) config('app.url', 'http://localhost'), PHP_URL_HOST) ?? 'localhost');
+        $rawHost = (string) ($_SERVER['HTTP_HOST'] ?? '');
+        $defaultHost = (string) (parse_url((string) config('app.url', 'http://localhost'), PHP_URL_HOST) ?? 'localhost');
+        $host = ($rawHost !== '' && preg_match('/^[a-zA-Z0-9.\-_]+(:[0-9]+)?$/', $rawHost)) ? $rawHost : $defaultHost;
         return $scheme . '://' . $host . (parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/');
     }
 

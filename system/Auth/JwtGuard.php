@@ -95,7 +95,8 @@ class JwtGuard extends Guard
     {
         $claims = $this->claims();
         if ($claims) {
-            $this->revoke($claims['jti'], (int) $claims['exp']);
+            $windowEnds = ($claims['iat'] ?? 0) + (int) config('jwt.refresh_ttl', 20160) * 60;
+            $this->revoke($claims['jti'], max((int) ($claims['exp'] ?? 0), $windowEnds));
             Log::info('API token revoked for user {user_id}', ['user_id' => $claims['sub'] ?? null]);
         }
         $this->setUser(null);

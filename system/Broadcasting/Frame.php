@@ -63,8 +63,8 @@ class Frame
             $length = unpack('J', substr($buffer, 2, 8))[1];
             $offset = 10;
         }
-        if ($length > $maxBytes) {
-            throw new \LengthException("WebSocket frame of $length bytes is over the $maxBytes byte limit");
+        if ($length < 0 || $length > $maxBytes) {
+            throw new \LengthException("WebSocket frame of $length bytes is invalid or over the $maxBytes byte limit");
         }
 
         $key = '';

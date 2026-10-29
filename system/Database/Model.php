@@ -222,8 +222,16 @@ class Model implements \JsonSerializable
     public function fill(array $attributes): static
     {
         foreach ($attributes as $key => $value) {
-            if ($this->isFillable($key)) {
-                $this->setAttribute($key, $value);
+            $keyStr = (string) $key;
+            if ($this->isFillable($keyStr)) {
+                $targetKey = $this->normalizeAttributeKey($keyStr);
+                foreach ($this->fillable as $fKey) {
+                    if (strcasecmp($this->normalizeAttributeKey((string) $fKey), $targetKey) === 0) {
+                        $targetKey = (string) $fKey;
+                        break;
+                    }
+                }
+                $this->setAttribute($targetKey, $value);
             }
         }
         return $this;
@@ -231,10 +239,41 @@ class Model implements \JsonSerializable
 
     public function isFillable(string $key): bool
     {
-        if (in_array($key, $this->guarded, true) && !in_array($key, $this->fillable, true)) {
+        $clean = $this->normalizeAttributeKey($key);
+        $cleanLower = strtolower($clean);
+
+        if (in_array('*', $this->guarded, true)) {
+            return $this->matchesKeyList($cleanLower, $this->fillable);
+        }
+
+        if ($this->matchesKeyList($cleanLower, $this->guarded) && !$this->matchesKeyList($cleanLower, $this->fillable)) {
             return false;
         }
-        return $this->fillable === [] || in_array($key, $this->fillable, true);
+
+        return $this->fillable === [] || $this->matchesKeyList($cleanLower, $this->fillable);
+    }
+
+    protected function matchesKeyList(string $needleLower, array $list): bool
+    {
+        foreach ($list as $item) {
+            $itemClean = strtolower($this->normalizeAttributeKey((string) $item));
+            if ($itemClean === $needleLower) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    protected function normalizeAttributeKey(string $key): string
+    {
+        $key = trim($key);
+        $key = trim($key, "\"'`[] \t\n\r\0\x0B");
+        if (str_contains($key, '.')) {
+            $parts = explode('.', $key);
+            $key = end($parts);
+            $key = trim($key, "\"'`[] \t\n\r\0\x0B");
+        }
+        return $key;
     }
 
     public function getAttribute(string $key)
@@ -516,6 +555,13 @@ class Model implements \JsonSerializable
     public static function eagerLoad(array $models, array $relations): void
     {
         foreach ($relations as $name) {
+            if (!method_exists($models[0], $name)) {
+                throw new \BadMethodCallException(static::class . " has no $name() relation");
+            }
+            $ref = new \ReflectionMethod($models[0], $name);
+            if ($ref->getDeclaringClass()->getName() === self::class || $ref->getNumberOfRequiredParameters() > 0) {
+                throw new \BadMethodCallException(static::class . "::$name is not a relation");
+            }
             $relation = $models[0]->$name();
             if (!$relation instanceof Relation) {
                 throw new \LogicException(static::class . "::$name() is not a relation");

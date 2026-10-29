@@ -580,7 +580,7 @@ class QueryBuilder
                     return $selected;
                 }
             }
-            return $name;
+            return $this->column($name);
         };
         $clone->columns = $key ? [$expression($column), $expression($key)] : [$expression($column)];
         $clone->selectBindings = [];
@@ -915,7 +915,15 @@ class QueryBuilder
             if (!method_exists($model, $name)) {
                 throw new \BadMethodCallException("withCount('$name'): {$this->model} has no $name() relation");
             }
-            $this->columns[] = $model->$name()->countSubquery($this->table) . " AS {$name}_count";
+            $ref = new \ReflectionMethod($model, $name);
+            if ($ref->getDeclaringClass()->getName() === Model::class || $ref->getNumberOfRequiredParameters() > 0) {
+                throw new \BadMethodCallException("withCount('$name'): {$this->model}::$name is not a relation");
+            }
+            $relation = $model->$name();
+            if (!$relation instanceof Relation) {
+                throw new \BadMethodCallException("withCount('$name'): {$this->model}::$name() is not a relation");
+            }
+            $this->columns[] = $relation->countSubquery($this->table) . " AS {$name}_count";
         }
         return $this;
     }
@@ -1019,7 +1027,7 @@ class QueryBuilder
      */
     public function delete(int|string|bool|null $idOrAll = null): bool
     {
-        if (is_int($idOrAll) || (is_string($idOrAll) && !is_numeric($idOrAll))) {
+        if (is_int($idOrAll) || (is_string($idOrAll) && $idOrAll !== '')) {
             return $this->where('id', $idOrAll)->delete();
         }
         if ($idOrAll === false) {

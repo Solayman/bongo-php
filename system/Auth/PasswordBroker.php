@@ -103,7 +103,7 @@ class PasswordBroker
         }
 
         DB::transaction(function () use ($user, $email, $password) {
-            DB::table('users')->where('id', $user->id)->update(['password' => Hash::make($password)]);
+            $this->provider->updatePassword($user->id, Hash::make($password));
             DB::table($this->table)->where('email', $email)->delete(); // single use
         });
 
