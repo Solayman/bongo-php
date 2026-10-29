@@ -18,7 +18,7 @@ Versions follow semantic versioning: a change in the **first** number (1.x → 2
 
 ## Changes per version
 
-### Next version (unreleased)
+### 1.0.0
 - **Translations live in `resources/lang/`.** Nothing breaks: if your project has only a root `lang/` folder, Bongo keeps reading it. To switch, move the folder: `git mv lang resources/lang` (or `mv lang resources/lang`). Package translations you published to `lang/vendor/` move with it. Do not keep both folders: when `resources/lang/` exists, a root `lang/` is ignored.
 
 ### 0.9.0

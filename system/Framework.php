@@ -7,7 +7,7 @@ namespace System;
  */
 class Framework
 {
-    /** "0.9.0" (semantic versioning: a change in the first number means read UPGRADE.md) */
+    /** "1.0.0" (semantic versioning: a change in the first number means read UPGRADE.md) */
     public static function version(): string
     {
         $file = __DIR__ . '/VERSION';
