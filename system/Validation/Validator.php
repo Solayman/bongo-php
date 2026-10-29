@@ -107,6 +107,8 @@ class Validator
             $root = explode('.', (string) $pattern)[0];
             if (self::has($this->data, $root)) {
                 $validated[$root] = self::get($this->data, $root);
+            } elseif (self::has($this->data, (string) $pattern)) {
+                $validated[(string) $pattern] = self::get($this->data, (string) $pattern);
             } elseif (in_array('nullable', $ruleList, true)) {
                 $validated[$root] = null;
             }
@@ -581,15 +583,48 @@ class Validator
     /** [found, value] for "field" or "items.0.name" */
     protected static function find(array $data, string $path): array
     {
+        // 1. Direct key lookup if not a dotted path
+        if (!str_contains($path, '.')) {
+            if (array_key_exists($path, $data)) {
+                return [true, $data[$path]];
+            }
+            return [false, null];
+        }
+
+        // 2. For a dotted path, prioritize nested traversal so flat dotted keys cannot shadow nested values
+        $segments = explode('.', $path);
+        $current = $data;
+        $found = true;
+        foreach ($segments as $segment) {
+            if (!is_array($current) || !array_key_exists($segment, $current)) {
+                $found = false;
+                break;
+            }
+            $current = $current[$segment];
+        }
+        if ($found) {
+            return [true, $current];
+        }
+
+        // 3. Fallback: try prefix traversal with remaining dotted key at sub-level
+        // (handles wildcard array keys containing literal dots, e.g. items.foo.bar when key is foo.bar)
+        $prefix = '';
+        foreach ($segments as $i => $segment) {
+            $prefix = $prefix === '' ? $segment : "$prefix.$segment";
+            $remainder = implode('.', array_slice($segments, $i + 1));
+            if ($remainder !== '') {
+                $sub = self::get($data, $prefix);
+                if (is_array($sub) && array_key_exists($remainder, $sub)) {
+                    return [true, $sub[$remainder]];
+                }
+            }
+        }
+
+        // 4. Fallback: literal flat key at root only when nested path does not exist
         if (array_key_exists($path, $data)) {
             return [true, $data[$path]];
         }
-        foreach (explode('.', $path) as $segment) {
-            if (!is_array($data) || !array_key_exists($segment, $data)) {
-                return [false, null];
-            }
-            $data = $data[$segment];
-        }
-        return [true, $data];
+
+        return [false, null];
     }
 }
