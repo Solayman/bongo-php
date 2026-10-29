@@ -53,6 +53,6 @@ class ThrottleRequests
             // no auth configured for this request
         }
         $who = $who !== null ? "user:$who" : 'ip:' . \System\Http\Request::ip();
-        return 'throttle:' . sha1($who . '|' . Request::path());
+        return 'throttle:' . sha1($who . '|' . rawurldecode(Request::path()));
     }
 }

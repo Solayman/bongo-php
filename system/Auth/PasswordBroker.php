@@ -104,6 +104,7 @@ class PasswordBroker
 
         DB::transaction(function () use ($user, $email, $password) {
             $this->provider->updatePassword($user->id, Hash::make($password));
+            $this->provider->setRememberToken($user->id, null);
             DB::table($this->table)->where('email', $email)->delete(); // single use
         });
 

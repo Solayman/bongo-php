@@ -216,6 +216,12 @@ class Request
         }
 
         $forwarded = array_map('trim', explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? '')));
+        if (in_array('*', (array) config('security.trusted_proxies', []), true)) {
+            $firstHop = $forwarded[0] ?? '';
+            if (filter_var($firstHop, FILTER_VALIDATE_IP)) {
+                return $firstHop;
+            }
+        }
         // Walk from the closest hop back; the first address that is not a trusted proxy is the client
         for ($i = count($forwarded) - 1; $i >= 0; $i--) {
             $candidate = $forwarded[$i];

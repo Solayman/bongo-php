@@ -104,9 +104,15 @@ class SecurityCheck
 
         // Demo credentials
         try {
-            $admin = \System\Database\DB::table('users')->where('email', 'admin@example.com')->first();
-            if ($admin && Hash::check('password', $admin->password)) {
-                $add('Demo admin login', $production ? 'fail' : 'warn', 'admin@example.com still has the demo password "password". Change it (Profile page) before going live.');
+            $demoAccounts = [
+                'admin@example.com' => 'Demo admin login',
+                'user@example.com'  => 'Demo user login',
+            ];
+            foreach ($demoAccounts as $email => $title) {
+                $demoUser = \System\Database\DB::table('users')->where('email', $email)->first();
+                if ($demoUser && Hash::check('password', $demoUser->password)) {
+                    $add($title, $production ? 'fail' : 'warn', "$email still has the demo password \"password\". Change it before going live.");
+                }
             }
         } catch (\Throwable $e) {
             // no database or no users table: nothing to check
