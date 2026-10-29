@@ -823,6 +823,18 @@ class QueryBuilder
             if ($this->isPgsql()) {
                 return (bool) $this->pgsqlUniqueKey($cols);
             }
+            if ($this->isMysql()) {
+                $indexes = $this->run("SHOW INDEX FROM " . $this->wrapTable($this->table) . " WHERE Non_unique = 0", [])->fetchAll(\PDO::FETCH_ASSOC);
+                $byName = [];
+                foreach ($indexes as $row) {
+                    $byName[$row['Key_name']][] = $row['Column_name'];
+                }
+                foreach ($byName as $keyCols) {
+                    if (!array_diff($keyCols, $cols) && !array_diff($cols, $keyCols)) {
+                        return true;
+                    }
+                }
+            }
             if ($this->isSqlite()) {
                 $indexes = $this->run("PRAGMA index_list('{$this->table}')", [])->fetchAll(PDO::FETCH_ASSOC);
                 foreach ($indexes as $idx) {
