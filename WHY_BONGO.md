@@ -230,7 +230,7 @@ Architectural trade-offs compared objectively across common PHP ecosystems:
 | **Native WebSockets** | **Integrated (Pure PHP)** | Separate Service / Reverb | Third-Party Bundle | Not Included | Not Included |
 | **Built-in Security Auditor** | **`security:check`** | External package | External package | Not Included | Not Included |
 | **Native Bilingual (বাংলা)** | **Built-in** | Community Package | Community Package | Community Package | Not Included |
-| **Ecosystem Maturity** | **v0.9.x (Focused)** | Industry Standard | Enterprise Standard | Mature | Mature |
+| **Ecosystem Maturity** | **v1.0.x (Audited & Production-Ready)** | Industry Standard | Enterprise Standard | Mature | Mature |
 
 > [!TIP]
 > **Branch Distribution:** Direct end-users clone the `release` branch (`git clone -b release ...`) for the clean ~800 KB starter skeleton (183 files). Framework contributors and auditors clone `master` for the demo store and automated test suites.
@@ -258,7 +258,7 @@ Architectural trade-offs compared objectively across common PHP ecosystems:
 Yes. Bongo does not require Composer, but it remains fully compatible with it. If `vendor/autoload.php` exists, the framework automatically registers the autoloader.
 
 **Is Bongo suitable for production workloads?**  
-Bongo includes 359 automated test cases, strict type hinting, regression suites, and production security verification (`php bongo security:check`). As a v0.9.x release, core interfaces are stable while feature expansion continues.
+Bongo includes 401 automated test cases, strict type hinting, regression suites, and production security verification (`php bongo security:check`). As a v1.0.x release, core interfaces are stable, audited, and production-ready while feature expansion continues.
 
 **How does framework maintenance and upgrading work?**  
 The framework provides an isolated upgrade utility (`php bongo upgrade`) that verifies cryptographic SHA-256 checksums, creates an automated pre-upgrade backup, and patches core `system/` components without touching application files. Upgrades can be reversed using `php bongo upgrade --rollback`.
