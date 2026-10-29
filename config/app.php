@@ -3,7 +3,7 @@
 return [
     'name'  => env('APP_NAME', 'Bongo'),
     'env'   => env('APP_ENV', 'local'),
-    'debug' => env('APP_DEBUG', env('APP_ENV', 'local') !== 'production'),
+    'debug' => (bool) env('APP_DEBUG', in_array(env('APP_ENV', 'local'), ['local', 'testing'], true)),
     'url'   => env('APP_URL', 'http://127.0.0.1:8000'),
 
     // "Open in editor" links on the dd() page: vscode, phpstorm, sublime or none

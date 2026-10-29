@@ -45,7 +45,7 @@ class ProfileController extends Controller
         }
 
         DB::table('users')->where('id', $user->id)
-            ->update(['password' => Hash::make($data['password'])]);
+            ->update(['password' => Hash::make($data['password']), 'remember_token' => null]);
 
         // New session id after a credential change
         Session::regenerate();

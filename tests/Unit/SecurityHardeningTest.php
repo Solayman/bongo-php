@@ -349,4 +349,49 @@ class SecurityHardeningTest extends TestCase
             $this->assertTrue(true);
         }
     }
+
+    public function testFtpAndSftpRejectDirectoryTraversal(): void
+    {
+        $ftp = new \System\Storage\Drivers\FtpDriver('ftp', ['host' => '127.0.0.1', 'root' => '/var/www']);
+        $this->assertThrows(\InvalidArgumentException::class, function () use ($ftp) {
+            $ftp->resolveRemotePath('../../etc/passwd');
+        });
+
+        $sftp = new \System\Storage\Drivers\SftpDriver('sftp', ['host' => '127.0.0.1', 'root' => '/var/www']);
+        $this->assertThrows(\InvalidArgumentException::class, function () use ($sftp) {
+            $sftp->resolveRemotePath('../../../etc/shadow');
+        });
+    }
+
+    public function testSessionGuardPreventsCustomerFromAccessingWebGuardViaRememberCookie(): void
+    {
+        $customer = \System\Database\DB::table('users')->where('role', 'customer')->first();
+        if (!$customer) {
+            $this->assertTrue(true);
+            return;
+        }
+
+        // Set remember token for customer
+        $token = bin2hex(random_bytes(32));
+        \System\Database\DB::table('users')->where('id', $customer->id)->update(['remember_token' => hash('sha256', $token)]);
+
+        // Customer attempts to impersonate admin by sending remember_web cookie
+        $_COOKIE['remember_web'] = "{$customer->id}|{$token}";
+
+        $guard = \System\Auth\Auth::guard('web');
+        $resolvedUser = $guard->user();
+
+        $this->assertNull($resolvedUser, 'Customer user must be rejected when accessing web admin guard via remember cookie');
+
+        // Clean up
+        unset($_COOKIE['remember_web']);
+        \System\Database\DB::table('users')->where('id', $customer->id)->update(['remember_token' => null]);
+    }
+
+    public function testSecurityCheckDetectsDemoUserAccount(): void
+    {
+        $results = array_column(\System\Security\SecurityCheck::run(), null, 'check');
+        $this->assertArrayHasKey('Demo admin login', $results);
+        $this->assertArrayHasKey('Demo user login', $results);
+    }
 }

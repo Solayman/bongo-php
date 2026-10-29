@@ -95,6 +95,11 @@ class SessionGuard extends Guard
             $this->setCookie('', time() - 3600);   // forged or outdated: drop it
             return null;
         }
+        // Guard separation: web guard is restricted to administrators
+        if ($this->name === 'web' && isset($user->role) && $user->role !== 'admin') {
+            $this->setCookie('', time() - 3600);
+            return null;
+        }
         Session::regenerate();
         Session::put($this->key(), (int) $user->id);
         Log::info('User {user_id} signed in by "remember me" ({guard} guard)', ['user_id' => (int) $user->id, 'guard' => $this->name, 'ip' => Request::ip()]);
