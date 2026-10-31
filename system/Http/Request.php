@@ -125,10 +125,30 @@ class Request
     /** "http://localhost:8000/products" (no query string) */
     public static function url(): string
     {
-        $scheme = self::isSecure() ? 'https' : 'http';
+        $configured = (string) config('app.url', 'http://localhost');
+        $configScheme = (string) (parse_url($configured, PHP_URL_SCHEME) ?: 'http');
+        $parsedConfigHost = (string) (parse_url($configured, PHP_URL_HOST) ?? 'localhost');
+        $configPort = parse_url($configured, PHP_URL_PORT);
+        $defaultHost = $configPort ? "{$parsedConfigHost}:{$configPort}" : $parsedConfigHost;
+
+        $scheme = self::isSecure() ? 'https' : $configScheme;
         $rawHost = (string) ($_SERVER['HTTP_HOST'] ?? '');
-        $defaultHost = (string) (parse_url((string) config('app.url', 'http://localhost'), PHP_URL_HOST) ?? 'localhost');
-        $host = ($rawHost !== '' && preg_match('/^[a-zA-Z0-9.\-_]+(:[0-9]+)?$/', $rawHost)) ? $rawHost : $defaultHost;
+
+        // Validate incoming Host header against configured app host and local development hosts
+        $host = $defaultHost;
+        if ($rawHost !== '' && preg_match('/^(\[[0-9a-fA-F:]+\]|[a-zA-Z0-9.\-_]+)(:[0-9]+)?$/', $rawHost)) {
+            $parsedRawHost = parse_url('http://' . $rawHost, PHP_URL_HOST);
+            $rawClean = trim((string) $parsedRawHost, '[]');
+            $configClean = trim($parsedConfigHost, '[]');
+            if (in_array($configClean, ['127.0.0.1', 'localhost', '::1', ''], true)) {
+                if (in_array($rawClean, ['127.0.0.1', 'localhost', '::1'], true)) {
+                    $host = $rawHost;
+                }
+            } elseif (strcasecmp($parsedConfigHost, (string) $parsedRawHost) === 0) {
+                $host = $rawHost;
+            }
+        }
+
         return $scheme . '://' . $host . (parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/');
     }
 

@@ -357,8 +357,14 @@ class ViewEngine
 
     protected function pathFor(string $view): string
     {
+        if (str_contains($view, "\0") || str_contains($view, '..')) {
+            throw new ViewException("Invalid view name [$view]: path traversal is not permitted.");
+        }
         if (str_contains($view, '::')) {
             [$namespace, $relative] = explode('::', $view, 2);
+            if (str_contains($relative, "\0") || str_contains($relative, '..')) {
+                throw new ViewException("Invalid view name [$view]: path traversal is not permitted.");
+            }
             $subPath = str_replace('.', '/', $relative) . '.php';
             // App override takes precedence: resources/views/vendor/<namespace>/<view>.php
             $override = "{$this->viewPath}/vendor/{$namespace}/{$subPath}";
@@ -375,9 +381,30 @@ class ViewEngine
     protected function getViewPath(string $view): string
     {
         $path = $this->pathFor($view);
-        if (!is_file($path)) {
+        $real = realpath($path);
+        if ($real === false || !is_file($real)) {
             throw new ViewException("View not found: $path");
         }
-        return $path;
+
+        // Verify the resolved canonical path is strictly inside the views root or a registered namespace
+        $allowed = false;
+        $realViewPath = realpath($this->viewPath);
+        if ($realViewPath && str_starts_with($real, $realViewPath . DIRECTORY_SEPARATOR)) {
+            $allowed = true;
+        } else {
+            foreach (self::$namespaces as $nsDir) {
+                $realNs = realpath($nsDir);
+                if ($realNs && str_starts_with($real, $realNs . DIRECTORY_SEPARATOR)) {
+                    $allowed = true;
+                    break;
+                }
+            }
+        }
+
+        if (!$allowed) {
+            throw new ViewException("View [$view] resolves outside permitted view paths.");
+        }
+
+        return $real;
     }
 }

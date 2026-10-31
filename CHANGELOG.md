@@ -2,6 +2,13 @@
 
 Every notable change to the Bongo PHP Framework. Versions follow [semantic versioning](https://semver.org): while in 0.x, a minor version (0.10 → 0.11) may contain breaking changes, and [UPGRADE.md](UPGRADE.md) explains them.
 
+## 1.0.1 — 2026-10-31
+
+### Fixed & Optimized
+- **MySQL Composite Unique Key Detection in QueryBuilder::upsert()**:
+  - Enhanced QueryBuilder::upsert() for MySQL to automatically inspect table index metadata (SHOW INDEX FROM <table> WHERE Non_unique = 0) to detect composite unique indexes matching the uniqueBy columns.
+  - Automatically generates compound ON DUPLICATE KEY UPDATE statements, preventing duplicate key collision errors on complex multi-column constraints.
+
 ## 1.0.0 — 2026-10-30
 
 ### Security Hardening & Audit Remediations

@@ -20,13 +20,15 @@ class ErrorPage
             http_response_code($status);
         }
 
+        $showDebug = (bool) config('app.debug');
+
         // API clients get JSON, browsers get a page
         if (Request::wantsJson()) {
             if (!headers_sent()) {
                 header('Content-Type: application/json');
             }
             $body = ['error' => ['status' => $status, 'message' => $message]];
-            if ($exception) {
+            if ($exception && $showDebug) {
                 $body['error']['exception'] = get_class($exception) . ': ' . $exception->getMessage();
                 $body['error']['file'] = $exception->getFile() . ':' . $exception->getLine();
             }
@@ -39,7 +41,7 @@ class ErrorPage
         }
 
         $viewFile = base_path("resources/views/errors/$status.php");
-        if (!$exception && file_exists($viewFile)) {
+        if ((!$exception || !$showDebug) && file_exists($viewFile)) {
             try {
                 echo view("errors.$status", ['status' => $status, 'message' => $message]);
                 return;
@@ -49,7 +51,7 @@ class ErrorPage
         }
 
         // Debug mode: the developer page with source, stack trace and request
-        if ($exception) {
+        if ($exception && $showDebug) {
             try {
                 echo (new \System\Debug\ExceptionPage($exception, $status))->render();
                 return;
@@ -60,7 +62,7 @@ class ErrorPage
 
         $title = e("$status · $message");
         $details = '';
-        if ($exception) {
+        if ($exception && $showDebug) {
             $details = '<p class="msg">' . e(get_class($exception) . ': ' . $exception->getMessage()) . '</p>'
                 . '<p class="loc">' . e($exception->getFile() . ':' . $exception->getLine()) . '</p>'
                 . '<pre>' . e($exception->getTraceAsString()) . '</pre>';
