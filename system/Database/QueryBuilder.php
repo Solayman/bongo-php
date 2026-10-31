@@ -200,8 +200,12 @@ class QueryBuilder
 
     public function join(string $table, string $first, string $operator, string $second, string $type = 'INNER'): self
     {
+        $normalizedType = strtoupper(trim($type));
+        if (!in_array($normalizedType, ['INNER', 'LEFT', 'RIGHT', 'CROSS', 'FULL OUTER', 'FULL'], true)) {
+            throw new \InvalidArgumentException("Invalid join type [$type]");
+        }
         $this->assertOperator($operator);
-        $this->joins[] = "$type JOIN " . $this->wrapTable($table) . ' ON ' . $this->column($first) . " $operator " . $this->column($second);
+        $this->joins[] = "$normalizedType JOIN " . $this->wrapTable($table) . ' ON ' . $this->column($first) . " $operator " . $this->column($second);
         return $this;
     }
 
@@ -313,13 +317,16 @@ class QueryBuilder
 
     public function wrapTable(string $table): string
     {
-        if (preg_match('/^([A-Za-z_][A-Za-z0-9_]*)\s+as\s+([A-Za-z_][A-Za-z0-9_]*)$/i', $table, $m)) {
-            return $this->wrapIdentifier($m[1]) . ' AS ' . $this->wrapIdentifier($m[2]);
+        if (preg_match('/^([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?)\s+as\s+([A-Za-z_][A-Za-z0-9_]*)$/i', $table, $m)) {
+            $parts = explode('.', $m[1]);
+            $wrapped = implode('.', array_map([$this, 'wrapIdentifier'], $parts));
+            return $wrapped . ' AS ' . $this->wrapIdentifier($m[2]);
         }
-        if (preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $table)) {
-            return $this->wrapIdentifier($table);
+        if (preg_match('/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$/', $table)) {
+            $parts = explode('.', $table);
+            return implode('.', array_map([$this, 'wrapIdentifier'], $parts));
         }
-        return $table;
+        throw new \InvalidArgumentException("Invalid table name [$table]. Table names must be valid alphanumeric SQL identifiers.");
     }
 
     protected function wrapSelectColumn(string $column): string
@@ -389,7 +396,11 @@ class QueryBuilder
     public function having(string $expression, string $operator, $value): self
     {
         $this->assertOperator($operator);
-        $this->havings[] = "$expression $operator ?";
+        $trimmed = trim($expression);
+        if (!preg_match('/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$|^(COUNT|SUM|AVG|MIN|MAX)\([A-Za-z0-9_.*]+\)$/i', $trimmed)) {
+            throw new \InvalidArgumentException("Invalid having expression [$expression]. Use havingRaw() for complex SQL expressions.");
+        }
+        $this->havings[] = "$trimmed $operator ?";
         $this->havingBindings[] = $value;
         return $this;
     }

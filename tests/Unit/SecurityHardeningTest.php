@@ -394,4 +394,102 @@ class SecurityHardeningTest extends TestCase
         $this->assertArrayHasKey('Demo admin login', $results);
         $this->assertArrayHasKey('Demo user login', $results);
     }
+    public function testViewEngineBlocksPathTraversalAndNullBytes(): void
+    {
+        $engine = \System\View\ViewEngine::shared();
+
+        $this->assertThrows(\System\View\ViewException::class, function () use ($engine) {
+            $engine->render('../../../etc/passwd');
+        });
+
+        $this->assertThrows(\System\View\ViewException::class, function () use ($engine) {
+            $engine->render("page\0secret");
+        });
+    }
+
+    public function testQueryBuilderBlocksMaliciousTableNames(): void
+    {
+        $this->assertThrows(\InvalidArgumentException::class, function () {
+            \System\Database\DB::table('users; DROP TABLE users;--')->get();
+        });
+
+        $this->assertThrows(\InvalidArgumentException::class, function () {
+            \System\Database\DB::table('users UNION SELECT * FROM secrets')->get();
+        });
+    }
+
+    public function testQueryBuilderBlocksInvalidJoinTypes(): void
+    {
+        $this->assertThrows(\InvalidArgumentException::class, function () {
+            \System\Database\DB::table('users')->join('posts', 'users.id', '=', 'posts.user_id', 'INJECTION');
+        });
+    }
+
+    public function testQueryBuilderBlocksMaliciousHavingExpressions(): void
+    {
+        $this->assertThrows(\InvalidArgumentException::class, function () {
+            \System\Database\DB::table('orders')->groupBy('status')->having('status = 1 OR 1=1;--', '>', 0)->get();
+        });
+    }
+
+    public function testRequestUrlBlocksHostHeaderPoisoning(): void
+    {
+        $GLOBALS['config']['app']['url'] = 'https://nobotech.org';
+        $_SERVER['HTTP_HOST'] = 'evil-attacker.com';
+        $_SERVER['REQUEST_URI'] = '/password/reset';
+
+        $url = Request::url();
+        $this->assertSame('https://nobotech.org/password/reset', $url, 'Host header poisoning must not replace configured application host');
+    }
+
+    public function testEscapeHelperSubstitutesInvalidUtf8AndPreservesHtmlString(): void
+    {
+        $safeHtml = new \System\View\HtmlString('<strong>Safe HTML</strong>');
+        $this->assertSame('<strong>Safe HTML</strong>', e($safeHtml));
+
+        // Invalid byte sequence should be substituted with unicode replacement character rather than empty string
+        $invalidUtf8 = "Hello Ã( World";
+        $escaped = e($invalidUtf8);
+        $this->assertContains('Hello', $escaped);
+        $this->assertContains('World', $escaped);
+    }
+
+    public function testVerifyCsrfTokenAcceptsJsonPayloadsAndXsrfHeader(): void
+    {
+        @Session::start();
+        $validToken = Session::token();
+
+        // 1. Valid token in header
+        $_POST = [];
+        $_SERVER['REQUEST_METHOD'] = 'POST';
+        $_SERVER['HTTP_X_XSRF_TOKEN'] = $validToken;
+        $middleware = new \App\Http\Middleware\VerifyCsrfToken();
+        $middleware->handle(); // Should not throw
+        $this->assertTrue(true);
+
+        // 2. Invalid token throws 419
+        $_SERVER['HTTP_X_XSRF_TOKEN'] = 'invalid_token';
+        $this->assertThrows(\System\Http\HttpException::class, function () use ($middleware) {
+            $middleware->handle();
+        });
+    }
+
+    public function testErrorPageHidesExceptionDetailsWhenAppDebugIsFalse(): void
+    {
+        $GLOBALS['config']['app']['debug'] = false;
+        $_SERVER['HTTP_ACCEPT'] = 'application/json';
+
+        $exception = new \RuntimeException('Database credentials leak in error');
+
+        ob_start();
+        \System\Http\ErrorPage::render(500, 'Server Error', $exception);
+        $output = ob_get_clean();
+
+        $decoded = json_decode($output, true);
+        $this->assertArrayHasKey('error', $decoded);
+        $this->assertSame(500, $decoded['error']['status']);
+        $this->assertSame('Server Error', $decoded['error']['message']);
+        $this->assertFalse(array_key_exists('exception', $decoded['error']), 'Exception details must be masked in production JSON responses');
+        $this->assertFalse(array_key_exists('file', $decoded['error']), 'File path details must be masked in production JSON responses');
+    }
 }
