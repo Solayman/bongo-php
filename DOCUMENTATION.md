@@ -1,4 +1,12 @@
-# Bongo PHP Framework: Documentation
+# Bongo PHP Framework: Master Documentation
+
+> 🌐 **Official Online Documentation Portal**: [https://bongo.nobotech.org](https://bongo.nobotech.org)  
+> 📦 **Official 50 Packages Directory**: [https://bongo.nobotech.org/packages](https://bongo.nobotech.org/packages)  
+> 🐙 **Packages Git Repository**: [https://github.com/Solayman/bongo-php-packages](https://github.com/Solayman/bongo-php-packages)  
+> ⚡ **Empirical Benchmarks**: [https://bongo.nobotech.org/benchmarks](https://bongo.nobotech.org/benchmarks)  
+> 🐙 **Core Git Repository**: [https://github.com/Solayman/bongo-php](https://github.com/Solayman/bongo-php)
+
+---
 
 Bongo is a lightweight PHP MVC framework with **zero required dependencies**. It needs no Composer and no `vendor/` folder: clone it, set `.env`, and run it. Composer packages and Node tooling are optional. If `vendor/autoload.php` exists, Bongo loads it; otherwise nothing changes.
 
