@@ -30,7 +30,7 @@ class VerifyCsrfToken
 
         $token = $_POST['_token']
             ?? Request::input('_token')
-            ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? ($_SERVER['HTTP_X_XSRF_TOKEN'] ?? ''));
+            ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
 
         if (!is_string($token) || !Session::isValidToken($token)) {
             throw new HttpException(419);
