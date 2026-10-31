@@ -42,8 +42,8 @@ class Cors
 
         if (in_array('*', $allowed, true) && !$credentials) {
             header('Access-Control-Allow-Origin: *');
-        } elseif (in_array($origin, $allowed, true) || in_array('*', $allowed, true)) {
-            // A specific origin is echoed back; with credentials "*" is not allowed by browsers
+        } elseif (in_array($origin, $allowed, true)) {
+            // An explicitly listed origin is echoed back; with credentials "*" is not allowed by browsers
             $cleanOrigin = str_replace(["\r", "\n", "\0"], '', (string) $origin);
             header('Access-Control-Allow-Origin: ' . $cleanOrigin);
             header('Vary: Origin', false);

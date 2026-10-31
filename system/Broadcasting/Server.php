@@ -274,10 +274,9 @@ class Server
         if (!$socket) {
             return;
         }
-        stream_set_blocking($socket, true);
-        $ok = @fwrite($socket, $bytes) !== false;
         stream_set_blocking($socket, false);
-        if (!$ok) {
+        $written = @fwrite($socket, $bytes);
+        if ($written === false || $written === 0) {
             $this->disconnect($id);
         }
     }

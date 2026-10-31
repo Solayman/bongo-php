@@ -277,9 +277,11 @@ class Logger
         }
 
         if ($exception instanceof Throwable) {
-            $line .= "\n" . get_class($exception) . ': ' . $exception->getMessage()
+            $excMsg = str_replace(["\r\n", "\r", "\n"], "\n    ", $exception->getMessage());
+            $trace = str_replace(["\r\n", "\r", "\n"], "\n    ", $exception->getTraceAsString());
+            $line .= "\n    " . get_class($exception) . ': ' . $excMsg
                 . ' in ' . $exception->getFile() . ':' . $exception->getLine()
-                . "\n" . $exception->getTraceAsString();
+                . "\n    " . $trace;
         }
 
         return $line . "\n";

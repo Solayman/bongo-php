@@ -193,7 +193,20 @@ class FtpDriver extends Disk
      */
     public function resolveRemotePath(string $relative): string
     {
-        $relative = ltrim(str_replace(['\\', "\0"], ['/', ''], $relative), '/');
+        $clean = ltrim(str_replace(['\\', "\0"], ['/', ''], $relative), '/');
+        $parts = [];
+        foreach (explode('/', $clean) as $seg) {
+            if ($seg === '' || $seg === '.') continue;
+            if ($seg === '..') {
+                if (empty($parts)) {
+                    throw new \InvalidArgumentException("Directory traversal path outside of root: [{$relative}]");
+                }
+                array_pop($parts);
+            } else {
+                $parts[] = $seg;
+            }
+        }
+        $relative = implode('/', $parts);
         $baseRoot = (string) ($this->config['root'] ?? '/');
 
         if ($this->chrootJailPrefix !== null) {

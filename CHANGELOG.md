@@ -2,7 +2,35 @@
 
 Every notable change to the Bongo PHP Framework. Versions follow [semantic versioning](https://semver.org): while in 0.x, a minor version (0.10 → 0.11) may contain breaking changes, and [UPGRADE.md](UPGRADE.md) explains them.
 
-## Unreleased
+## 1.0.1 — 2026-10-31
+
+### Fixed & Optimized
+- **MySQL Composite Unique Key Detection in QueryBuilder::upsert()**:
+  - Enhanced QueryBuilder::upsert() for MySQL to automatically inspect table index metadata (SHOW INDEX FROM <table> WHERE Non_unique = 0) to detect composite unique indexes matching the uniqueBy columns.
+  - Automatically generates compound ON DUPLICATE KEY UPDATE statements, preventing duplicate key collision errors on complex multi-column constraints.
+
+## 1.0.0 — 2026-10-30
+
+### Security Hardening & Audit Remediations
+- **File Manager Authorization & RCE Mitigation (`packages/file-manager`)**:
+  - Enforced `['web', 'auth']` middleware by default across all file manager routes, preventing unauthenticated access.
+  - Hardened code editor save flow and upload validation in `PathSecurity` and `FileManagerService`: banned executable extensions (`php`, `php[0-9]`, `phtml`, `phar`, `pht`, `shtml`), blocked multi-extension execution bypasses (`.php.jpg`), restricted editable file types, and added `X-Content-Type-Options: nosniff` with strict MIME checking on thumbnail endpoints.
+- **ORM & Database Protection**:
+  - `QueryBuilder::delete()`: Fixed condition handling so non-empty numeric strings properly scope deletion to `WHERE id = ?`, eliminating table-wide deletion hazards.
+  - `Model` Mass-Assignment: Implemented attribute key normalization stripping quotes, backticks, brackets, and table aliases with case-insensitive checks against `$guarded` and `$fillable`.
+  - Relationship Safety: Prevented destructive internal model methods (`delete()`, `save()`, `forceDelete()`) from execution via `with()` or `withCount()`.
+  - Pluck Injection Prevention: Sanitized column identifiers via `QueryBuilder::column()`.
+- **Authentication & Session Hardening**:
+  - Host Header Poisoning: Strict RFC hostname verification on incoming `Host` headers and restricted dynamic password-reset URL generation to verified local addresses or configured `app.url`.
+  - Guard Isolation for Remember Cookies: Verified user roles against the target guard context to prevent privilege escalation via cookie tampering.
+  - Credential Revocation: Cleared `remember_token` on password change and reset to log out all other active sessions immediately.
+  - Hardened JWT Logout Revocation: Expanded revocation TTL window to cover `max(exp, windowEnds)` where `windowEnds = iat + refresh_ttl`, preventing expired session reuse.
+- **HTTP Layer, Storage & WebSockets**:
+  - Validation Traversal: Prioritized nested dot-path resolution over flat dotted keys to prevent validation shadows and ensure verified input integrity.
+  - CORS Credential Reflection: Stopped wildcard `*` from reflecting arbitrary request origins when `supports_credentials = true`.
+  - Storage Traversal Prevention: Blocked directory escape sequences (`..`) in FTP and SFTP filesystem drivers with `InvalidArgumentException`.
+  - WebSocket Server Resiliency: Added payload length bounds validation in `Frame::decode()` and set non-blocking stream writes to disconnect stalled clients cleanly without hanging the broadcast server.
+  - Environment Security: Configured `APP_DEBUG` default to true strictly when `APP_ENV` is `local` or `testing`. Added demo account checks to `SecurityCheck`.
 
 ### Added
 - **Internal Professional DevTools DebugBar (`System\Debug\DebugBar`) & `@debugbar` Template Directive**: Zero-dependency, dark-themed floating developer toolbar built directly into the framework core for real-time runtime inspection when `APP_DEBUG=true`. Features 7 inspection tabs: **Request** (method, path, action, headers, cookies, input), **Messages** (`Logger::getRecorded()` with severity pills), **Timeline** (boot duration, database query time, view render time, peak memory), **Views** (rendered templates hierarchy and passed variables), **Queries** (syntax-highlighted SQL, execution duration, copy query, and automated **N+1 repetition counters** flagging queries executed 3+ times), **Models** (hydrated model counts), and **Cache** (hits, misses, writes). Right-side status widgets include `⚡ OpCache` status, `🗄️ {RAM} MB`, `⏱️ {Time} ms`, and link to `/system`.

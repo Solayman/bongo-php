@@ -47,6 +47,11 @@ class UserProvider
         DB::table($this->table)->where('id', $id)->update(['remember_token' => $hash]);
     }
 
+    public function updatePassword(int|string $id, string $hash): void
+    {
+        DB::table($this->table)->where('id', $id)->update(['password' => $hash]);
+    }
+
     public function findByIdentifier(string $value): ?object
     {
         return $this->query()->where($this->identifier, $value)->first();

@@ -126,7 +126,9 @@ class Request
     public static function url(): string
     {
         $scheme = self::isSecure() ? 'https' : 'http';
-        $host = (string) ($_SERVER['HTTP_HOST'] ?? parse_url((string) config('app.url', 'http://localhost'), PHP_URL_HOST) ?? 'localhost');
+        $rawHost = (string) ($_SERVER['HTTP_HOST'] ?? '');
+        $defaultHost = (string) (parse_url((string) config('app.url', 'http://localhost'), PHP_URL_HOST) ?? 'localhost');
+        $host = ($rawHost !== '' && preg_match('/^[a-zA-Z0-9.\-_]+(:[0-9]+)?$/', $rawHost)) ? $rawHost : $defaultHost;
         return $scheme . '://' . $host . (parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/');
     }
 
@@ -214,6 +216,12 @@ class Request
         }
 
         $forwarded = array_map('trim', explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? '')));
+        if (in_array('*', (array) config('security.trusted_proxies', []), true)) {
+            $firstHop = $forwarded[0] ?? '';
+            if (filter_var($firstHop, FILTER_VALIDATE_IP)) {
+                return $firstHop;
+            }
+        }
         // Walk from the closest hop back; the first address that is not a trusted proxy is the client
         for ($i = count($forwarded) - 1; $i >= 0; $i--) {
             $candidate = $forwarded[$i];

@@ -70,13 +70,24 @@ if (!function_exists('url')) {
         $configured = (string) config('app.url', '');
         $pathString = '/' . ltrim((string) $path, '/');
 
-        // When served over HTTP/HTTPS, dynamically match current host and port if configured URL uses localhost/127.0.0.1
+        // When served over HTTP/HTTPS, dynamically match current host and port
+        // strictly when incoming host matches local development or configured domain
         if (isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] !== '') {
-            $scheme = \System\Http\Request::isSecure() ? 'https' : 'http';
-            $configHost = parse_url($configured, PHP_URL_HOST);
-            if ($configHost === '127.0.0.1' || $configHost === 'localhost' || $configured === '') {
-                $basePath = rtrim(parse_url($configured, PHP_URL_PATH) ?? '', '/');
-                return $scheme . '://' . $_SERVER['HTTP_HOST'] . $basePath . $pathString;
+            $rawHost = (string) $_SERVER['HTTP_HOST'];
+            if (preg_match('/^[a-zA-Z0-9.\-_]+(:[0-9]+)?$/', $rawHost)) {
+                $scheme = \System\Http\Request::isSecure() ? 'https' : 'http';
+                $configHost = parse_url($configured, PHP_URL_HOST);
+                $requestHost = parse_url('http://' . $rawHost, PHP_URL_HOST);
+
+                if ($configHost === '127.0.0.1' || $configHost === 'localhost' || $configured === '') {
+                    if ($requestHost === '127.0.0.1' || $requestHost === 'localhost' || $requestHost === '::1') {
+                        $basePath = rtrim(parse_url($configured, PHP_URL_PATH) ?? '', '/');
+                        return $scheme . '://' . $rawHost . $basePath . $pathString;
+                    }
+                } elseif (strcasecmp((string) $configHost, (string) $requestHost) === 0) {
+                    $basePath = rtrim(parse_url($configured, PHP_URL_PATH) ?? '', '/');
+                    return $scheme . '://' . $rawHost . $basePath . $pathString;
+                }
             }
         }
 
