@@ -14,8 +14,9 @@ use System\Routing\Route;
  * ->name(), ->middleware(), ->withoutMiddleware(), ->where().
  */
 
-// Public Welcome Page
+// Public Welcome Page & Core Working Demo
 Route::get('/', [HomeController::class, 'index'])->name('welcome');
+Route::get('/api/demo', [HomeController::class, 'demo'])->name('api.demo');
 
 // Authentication
 Route::middleware('guest')->group(function () {

@@ -15,7 +15,7 @@ A full-stack, enterprise-capable web framework crafted in ~665 KB of clean, read
 [![Localization](https://img.shields.io/badge/i18n-English%20%7C%20বাংলা-orange?style=flat-square)](DOCUMENTATION.md#localization)
 [![Maintained by](https://img.shields.io/badge/maintained%20by-Nobotech-blueviolet?style=flat-square)](https://nobotech.xyz)
 
-[**Why Bongo?**](WHY_BONGO.md) • [**Quick Start**](#-quick-start) • [**Code Tour**](#-code-tour) • [**Feature Matrix**](#-everything-included) • [**Documentation**](DOCUMENTATION.md) • [**Benchmarks**](#-performance--benchmarks)
+[**Official Docs Portal**](https://bongo.nobotech.org) • [**50 Packages**](https://bongo.nobotech.org/packages) • [**Packages on GitHub**](https://github.com/Solayman/bongo-php-packages) • [**Benchmarks**](https://bongo.nobotech.org/benchmarks) • [**Master DOCUMENTATION.md**](DOCUMENTATION.md) • [**Why Bongo?**](WHY_BONGO.md) • [**Quick Start**](#-quick-start)
 
 </div>
 
