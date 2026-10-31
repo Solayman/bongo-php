@@ -209,7 +209,8 @@ namespace Tests\Unit {
             DB::enableQueryLog();
             $category->save();
             $update = DB::getQueryLog()[0];
-            $this->assertSame('UPDATE `orm_categories` SET `name` = ? WHERE `id` = ?', $update['sql'], 'only the changed column is written');
+            $q = \System\Database\Connection::isMysql() ? '`' : '"';
+            $this->assertSame("UPDATE {$q}orm_categories{$q} SET {$q}name{$q} = ? WHERE {$q}id{$q} = ?", $update['sql'], 'only the changed column is written');
             $this->assertSame('ORM Renamed', OrmCategory::find($category->id)->name);
             $this->assertSame('orm-test', $category->getOriginal('slug'));
 
@@ -302,7 +303,8 @@ namespace Tests\Unit {
             $sql = DB::table('orm_products')->where('status', 'active')
                 ->where(fn($q) => $q->where('price', '<', 10)->orWhere('stock', '<', 5))
                 ->orWhereNull('category_id')->toSql();
-            $this->assertSame('SELECT * FROM `orm_products` WHERE `status` = ? AND (`price` < ? OR `stock` < ?) OR `category_id` IS NULL', $sql);
+            $q = \System\Database\Connection::isMysql() ? '`' : '"';
+            $this->assertSame("SELECT * FROM {$q}orm_products{$q} WHERE {$q}status{$q} = ? AND ({$q}price{$q} < ? OR {$q}stock{$q} < ?) OR {$q}category_id{$q} IS NULL", $sql);
 
             $rows = DB::table('orm_products')->where('status', 'active')
                 ->where(fn($q) => $q->where('price', '<', 10)->orWhere('sku', 'BG-1000'))->pluck('sku');
@@ -398,7 +400,8 @@ namespace Tests\Unit {
             DB::enableQueryLog();
             DB::table('users')->where('email', 'admin@example.com')->first();
             $log = DB::getQueryLog();
-            $this->assertSame('SELECT * FROM `users` WHERE `email` = ? LIMIT 1', $log[0]['sql']);
+            $q = \System\Database\Connection::isMysql() ? '`' : '"';
+            $this->assertSame("SELECT * FROM {$q}users{$q} WHERE {$q}email{$q} = ? LIMIT 1", $log[0]['sql']);
             $this->assertSame(['admin@example.com'], $log[0]['bindings']);
             $this->assertTrue(is_float($log[0]['ms']) || is_int($log[0]['ms']));
         }

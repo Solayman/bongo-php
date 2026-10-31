@@ -63,9 +63,10 @@ class QueryBuilderTest extends TestCase
             ->offset(10)
             ->toSql();
 
+        $q = \System\Database\Connection::isMysql() ? '`' : '"';
         $this->assertSame(
-            'SELECT `qb_items`.`id`, `qb_groups`.`name` AS `grp` FROM `qb_items` LEFT JOIN `qb_groups` ON `qb_groups`.`id` = `qb_items`.`group_id`'
-            . ' WHERE `price` > ? AND `status` IN (?,?) ORDER BY `price` DESC LIMIT 5 OFFSET 10',
+            "SELECT {$q}qb_items{$q}.{$q}id{$q}, {$q}qb_groups{$q}.{$q}name{$q} AS {$q}grp{$q} FROM {$q}qb_items{$q} LEFT JOIN {$q}qb_groups{$q} ON {$q}qb_groups{$q}.{$q}id{$q} = {$q}qb_items{$q}.{$q}group_id{$q}"
+            . " WHERE {$q}price{$q} > ? AND {$q}status{$q} IN (?,?) ORDER BY {$q}price{$q} DESC LIMIT 5 OFFSET 10",
             $sql
         );
     }

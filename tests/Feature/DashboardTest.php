@@ -50,7 +50,8 @@ class DashboardTest extends HttpTestCase
         $response = $this->get('/dashboard');
         $response->assertSee('bongo-debugbar');
         $response->assertSee('Queries');
-        $response->assertSee('SELECT COUNT(*) AS aggregate FROM `users`');
+        $q = \System\Database\Connection::isMysql() ? '`' : '&quot;';
+        $response->assertSee("SELECT COUNT(*) AS aggregate FROM {$q}users{$q}");
     }
 
     public function testProfileUpdate(): void
