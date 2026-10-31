@@ -4,6 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ config('app.name', 'Bongo') }} · Modern Lightweight PHP Framework</title>
+    <script>
+        // Suppress benign third-party browser extension message channel errors
+        window.addEventListener('unhandledrejection', function (event) {
+            if (event && event.reason && typeof event.reason.message === 'string') {
+                if (event.reason.message.includes('message channel closed') ||
+                    event.reason.message.includes('listener indicated an asynchronous response')) {
+                    event.preventDefault();
+                }
+            }
+        });
+    </script>
     <style>
         :root {
             --bg-base: #020617;
