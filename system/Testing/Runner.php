@@ -153,12 +153,58 @@ class Runner
 
         // Create the test database if needed (a SQLite file is created on connect)
         if ($db['driver'] === 'mysql') {
-            self::createMysqlDatabase($db);
+            try {
+                self::createMysqlDatabase($db);
+            } catch (\PDOException $e) {
+                if (extension_loaded('pdo_sqlite')) {
+                    echo "  \033[33mNotice:\033[0m MySQL unreachable at {$db['host']}:{$db['port']}.\n";
+                    echo "  Falling back to SQLite test database: storage/testing/database.sqlite\n";
+                    self::fallbackToSqlite();
+                    return;
+                }
+                throw new \RuntimeException(
+                    "Database Connection [mysql] Failed: {$e->getMessage()}.\n" .
+                    "Ensure MySQL is running on {$db['host']}:{$db['port']}, or run tests with SQLite:\n" .
+                    "  DB_CONNECTION=sqlite php bongo test"
+                );
+            }
         } elseif ($db['driver'] === 'pgsql') {
             self::createPgsqlDatabase($db);
         }
 
         echo "Test database: {$db['database']}\n";
+
+        $paths = array_merge(
+            [base_path('database/migrations')],
+            class_exists(\System\Package\PackageManager::class) ? \System\Package\PackageManager::migrationPaths() : []
+        );
+        $migrator = new Migrator($paths);
+        $migrator->dropAllTables();
+        $migrator->migrate();
+
+        require_once base_path('database/seeders/DatabaseSeeder.php');
+        (new \Database\Seeders\DatabaseSeeder())->run();
+    }
+
+    protected static function fallbackToSqlite(): void
+    {
+        $testDb = BASE_PATH . '/storage/testing/database.sqlite';
+        if (!is_dir(dirname($testDb))) {
+            @mkdir(dirname($testDb), 0777, true);
+        }
+        $_ENV['DB_CONNECTION'] = 'sqlite';
+        putenv('DB_CONNECTION=sqlite');
+        $_ENV['DB_SQLITE_PATH'] = $testDb;
+        putenv("DB_SQLITE_PATH=$testDb");
+        $GLOBALS['config']['database']['default'] = 'sqlite';
+        $GLOBALS['config']['database']['connections']['sqlite'] = [
+            'driver'   => 'sqlite',
+            'database' => $testDb,
+            'prefix'   => '',
+        ];
+        \System\Database\Connection::reset();
+
+        echo "Test database: {$testDb}\n";
 
         $paths = array_merge(
             [base_path('database/migrations')],

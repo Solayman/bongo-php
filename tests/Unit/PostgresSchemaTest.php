@@ -110,7 +110,7 @@ class PostgresSchemaTest extends TestCase
 
     public function testPostgresQueryBuilderSqlGeneration(): void
     {
-        $qb = new QueryBuilder('users');
+        $qb = (new QueryBuilder('users'))->setConnection('mysql');
         $qb->where('id', 1);
         $this->assertSame('SELECT * FROM `users` WHERE `id` = ?', $qb->toSql());
         $qbPg = (new QueryBuilder('users'))->setConnection('pgsql');
