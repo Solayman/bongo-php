@@ -476,20 +476,42 @@ class SecurityHardeningTest extends TestCase
     {
         @Session::start();
         $validToken = Session::token();
+        $middleware = new \App\Http\Middleware\VerifyCsrfToken();
 
-        // 1. Valid token in header
+        // 1. Valid token in HTTP_X_CSRF_TOKEN header passes
         $_POST = [];
+        unset($_SERVER['HTTP_X_XSRF_TOKEN']);
         $_SERVER['REQUEST_METHOD'] = 'POST';
         $_SERVER['HTTP_X_CSRF_TOKEN'] = $validToken;
-        $middleware = new \App\Http\Middleware\VerifyCsrfToken();
         $middleware->handle(); // Should not throw
         $this->assertTrue(true);
 
-        // 2. Invalid token throws 419
+        // 2. Valid token in form payload passes
+        unset($_SERVER['HTTP_X_CSRF_TOKEN']);
+        $_POST = ['_token' => $validToken];
+        $middleware->handle(); // Should not throw
+        $this->assertTrue(true);
+
+        // 3. Invalid token throws 419
+        $_POST = [];
         $_SERVER['HTTP_X_CSRF_TOKEN'] = 'invalid_token';
         $this->assertThrows(\System\Http\HttpException::class, function () use ($middleware) {
             $middleware->handle();
         });
+
+        // 4. Missing token throws 419
+        unset($_SERVER['HTTP_X_CSRF_TOKEN']);
+        $_POST = [];
+        $this->assertThrows(\System\Http\HttpException::class, function () use ($middleware) {
+            $middleware->handle();
+        });
+
+        // 5. Unused XSRF header does not pass
+        $_SERVER['HTTP_X_XSRF_TOKEN'] = $validToken;
+        $this->assertThrows(\System\Http\HttpException::class, function () use ($middleware) {
+            $middleware->handle();
+        });
+        unset($_SERVER['HTTP_X_XSRF_TOKEN']);
     }
 
     public function testHostHeaderSupportsIpv6Loopback(): void
