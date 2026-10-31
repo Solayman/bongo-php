@@ -389,12 +389,12 @@ class ViewEngine
         // Verify the resolved canonical path is strictly inside the views root or a registered namespace
         $allowed = false;
         $realViewPath = realpath($this->viewPath);
-        if ($realViewPath && str_starts_with($real, $realViewPath)) {
+        if ($realViewPath && str_starts_with($real, $realViewPath . DIRECTORY_SEPARATOR)) {
             $allowed = true;
         } else {
             foreach (self::$namespaces as $nsDir) {
                 $realNs = realpath($nsDir);
-                if ($realNs && str_starts_with($real, $realNs)) {
+                if ($realNs && str_starts_with($real, $realNs . DIRECTORY_SEPARATOR)) {
                     $allowed = true;
                     break;
                 }
