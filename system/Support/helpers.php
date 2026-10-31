@@ -160,10 +160,13 @@ if (!function_exists('channel_token')) {
 }
 
 if (!function_exists('e')) {
-    /** HTML-escape a value */
+    /** HTML-escape a value with UTF-8 replacement for invalid byte sequences */
     function e($value)
     {
-        return htmlspecialchars((string) ($value ?? ''), ENT_QUOTES, 'UTF-8');
+        if ($value instanceof \System\View\HtmlString) {
+            return (string) $value;
+        }
+        return htmlspecialchars((string) ($value ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 }
 

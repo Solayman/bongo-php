@@ -11,8 +11,14 @@ $uri = urldecode(
     parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? ''
 );
 
-// If the file exists in the public directory and is not a directory, let PHP serve it directly.
-if ($uri !== '/' && file_exists(__DIR__ . '/public' . $uri) && !is_dir(__DIR__ . '/public' . $uri)) {
+$publicDir = realpath(__DIR__ . '/public');
+$targetPath = realpath(__DIR__ . '/public' . $uri);
+
+// Only let PHP built-in server serve static files directly if:
+// 1. $uri does not attempt directory traversal (no '..' or leading hidden segments '/.')
+// 2. $targetPath exists and is strictly located inside public/
+// 3. $targetPath is a file (not a directory)
+if ($uri !== '/' && !str_contains($uri, '..') && !str_contains($uri, '/.') && $targetPath && $publicDir && str_starts_with($targetPath, $publicDir) && is_file($targetPath)) {
     return false;
 }
 
