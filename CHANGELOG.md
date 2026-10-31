@@ -2,6 +2,25 @@
 
 Every notable change to the Bongo PHP Framework. Versions follow [semantic versioning](https://semver.org): while in 0.x, a minor version (0.10 → 0.11) may contain breaking changes, and [UPGRADE.md](UPGRADE.md) explains them.
 
+## [Unreleased]
+
+### Breaking Changes
+- **Strict Table Identifier Validation in `QueryBuilder::wrapTable()`**:
+  - `QueryBuilder::wrapTable()` now throws `InvalidArgumentException` for any table name that is not a plain identifier (`[a-zA-Z0-9_]+`), schema-qualified table (`schema.table`), or explicit alias (`table as alias`).
+- **Whitelisted Aggregates in `QueryBuilder::having()`**:
+  - `QueryBuilder::having()` now strictly accepts a column name or standard aggregate functions `COUNT(col)`, `SUM(col)`, `AVG(col)`, `MIN(col)`, `MAX(col)`.
+  - Complex expressions (such as `COUNT(DISTINCT id)`) or arithmetic expressions must use `QueryBuilder::havingRaw()`.
+
+### Changed & Hardened
+- **Path Traversal Boundary Hardening**:
+  - Appended directory separators to prefix boundary checks in `server.php` and `ViewEngine::getViewPath()`, ensuring sibling directories cannot match root directory prefixes.
+- **IPv6 Host Support in `Request::url()`**:
+  - Permitted bracketed IPv6 notation (`[::1]`) in host header format validation and local host matching.
+- **CSRF Token Handling**:
+  - Accepted CSRF tokens from JSON request bodies and the `X-CSRF-TOKEN` header.
+- **Error Page Buffer Handling**:
+  - Reverted test-only buffer conditionals from production in `ErrorPage::render()`, handling output buffering cleanly in the test harness.
+
 ## 1.0.1 — 2026-10-31
 
 ### Fixed & Optimized

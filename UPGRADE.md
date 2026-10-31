@@ -18,6 +18,20 @@ Versions follow semantic versioning: a change in the **first** number (1.x → 2
 
 ## Changes per version
 
+### [Unreleased]
+- **`QueryBuilder::wrapTable()` strictly validates table names**:
+  Any table name that is not a plain identifier, `schema.table`, or `table as alias` now throws `InvalidArgumentException`.
+- **`QueryBuilder::having()` requires `havingRaw()` for complex expressions**:
+  `having()` now only accepts a column identifier or a standard aggregate function (`COUNT`, `SUM`, `AVG`, `MIN`, `MAX`). If your queries used expressions such as `COUNT(DISTINCT column)`, migrate them to `havingRaw()`:
+  ```php
+  // Before:
+  DB::table('users')->groupBy('role')->having('COUNT(DISTINCT department_id)', '>', 1)->get();
+
+  // After:
+  DB::table('users')->groupBy('role')->havingRaw('COUNT(DISTINCT department_id) > ?', [1])->get();
+  ```
+
+
 ### 1.0.0
 - **Translations live in `resources/lang/`.** Nothing breaks: if your project has only a root `lang/` folder, Bongo keeps reading it. To switch, move the folder: `git mv lang resources/lang` (or `mv lang resources/lang`). Package translations you published to `lang/vendor/` move with it. Do not keep both folders: when `resources/lang/` exists, a root `lang/` is ignored.
 
