@@ -18,7 +18,7 @@ $targetPath = realpath(__DIR__ . '/public' . $uri);
 // 1. $uri does not attempt directory traversal (no '..' or leading hidden segments '/.')
 // 2. $targetPath exists and is strictly located inside public/
 // 3. $targetPath is a file (not a directory)
-if ($uri !== '/' && !str_contains($uri, '..') && !str_contains($uri, '/.') && $targetPath && $publicDir && str_starts_with($targetPath, $publicDir) && is_file($targetPath)) {
+if ($uri !== '/' && !str_contains($uri, '..') && !str_contains($uri, '/.') && $targetPath && $publicDir && str_starts_with($targetPath, $publicDir . DIRECTORY_SEPARATOR) && is_file($targetPath)) {
     return false;
 }
 

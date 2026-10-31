@@ -136,10 +136,12 @@ class Request
 
         // Validate incoming Host header against configured app host and local development hosts
         $host = $defaultHost;
-        if ($rawHost !== '' && preg_match('/^[a-zA-Z0-9.\-_]+(:[0-9]+)?$/', $rawHost)) {
+        if ($rawHost !== '' && preg_match('/^(\[[0-9a-fA-F:]+\]|[a-zA-Z0-9.\-_]+)(:[0-9]+)?$/', $rawHost)) {
             $parsedRawHost = parse_url('http://' . $rawHost, PHP_URL_HOST);
-            if (in_array($parsedConfigHost, ['127.0.0.1', 'localhost', '::1', ''], true)) {
-                if (in_array($parsedRawHost, ['127.0.0.1', 'localhost', '::1'], true)) {
+            $rawClean = trim((string) $parsedRawHost, '[]');
+            $configClean = trim($parsedConfigHost, '[]');
+            if (in_array($configClean, ['127.0.0.1', 'localhost', '::1', ''], true)) {
+                if (in_array($rawClean, ['127.0.0.1', 'localhost', '::1'], true)) {
                     $host = $rawHost;
                 }
             } elseif (strcasecmp($parsedConfigHost, (string) $parsedRawHost) === 0) {

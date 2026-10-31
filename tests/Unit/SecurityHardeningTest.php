@@ -434,12 +434,30 @@ class SecurityHardeningTest extends TestCase
 
     public function testRequestUrlBlocksHostHeaderPoisoning(): void
     {
-        $GLOBALS['config']['app']['url'] = 'https://nobotech.org';
-        $_SERVER['HTTP_HOST'] = 'evil-attacker.com';
-        $_SERVER['REQUEST_URI'] = '/password/reset';
+        $origConfigUrl = $GLOBALS['config']['app']['url'] ?? null;
+        $origHost = $_SERVER['HTTP_HOST'] ?? null;
+        $origUri = $_SERVER['REQUEST_URI'] ?? null;
 
-        $url = Request::url();
-        $this->assertSame('https://nobotech.org/password/reset', $url, 'Host header poisoning must not replace configured application host');
+        try {
+            $GLOBALS['config']['app']['url'] = 'https://nobotech.org';
+            $_SERVER['HTTP_HOST'] = 'evil-attacker.com';
+            $_SERVER['REQUEST_URI'] = '/password/reset';
+
+            $url = Request::url();
+            $this->assertSame('https://nobotech.org/password/reset', $url, 'Host header poisoning must not replace configured application host');
+        } finally {
+            $GLOBALS['config']['app']['url'] = $origConfigUrl;
+            if ($origHost === null) {
+                unset($_SERVER['HTTP_HOST']);
+            } else {
+                $_SERVER['HTTP_HOST'] = $origHost;
+            }
+            if ($origUri === null) {
+                unset($_SERVER['REQUEST_URI']);
+            } else {
+                $_SERVER['REQUEST_URI'] = $origUri;
+            }
+        }
     }
 
     public function testEscapeHelperSubstitutesInvalidUtf8AndPreservesHtmlString(): void
@@ -454,7 +472,7 @@ class SecurityHardeningTest extends TestCase
         $this->assertContains('World', $escaped);
     }
 
-    public function testVerifyCsrfTokenAcceptsJsonPayloadsAndXsrfHeader(): void
+    public function testVerifyCsrfTokenAcceptsJsonPayloadsAndCsrfHeader(): void
     {
         @Session::start();
         $validToken = Session::token();
@@ -462,30 +480,56 @@ class SecurityHardeningTest extends TestCase
         // 1. Valid token in header
         $_POST = [];
         $_SERVER['REQUEST_METHOD'] = 'POST';
-        $_SERVER['HTTP_X_XSRF_TOKEN'] = $validToken;
+        $_SERVER['HTTP_X_CSRF_TOKEN'] = $validToken;
         $middleware = new \App\Http\Middleware\VerifyCsrfToken();
         $middleware->handle(); // Should not throw
         $this->assertTrue(true);
 
         // 2. Invalid token throws 419
-        $_SERVER['HTTP_X_XSRF_TOKEN'] = 'invalid_token';
+        $_SERVER['HTTP_X_CSRF_TOKEN'] = 'invalid_token';
         $this->assertThrows(\System\Http\HttpException::class, function () use ($middleware) {
             $middleware->handle();
         });
     }
 
+    public function testHostHeaderSupportsIpv6Loopback(): void
+    {
+        $origConfigUrl = $GLOBALS['config']['app']['url'] ?? null;
+        $origHost = $_SERVER['HTTP_HOST'] ?? null;
+        $origUri = $_SERVER['REQUEST_URI'] ?? null;
+
+        try {
+            $GLOBALS['config']['app']['url'] = 'http://localhost:8000';
+            $_SERVER['HTTP_HOST'] = '[::1]:8000';
+            $_SERVER['REQUEST_URI'] = '/test-ipv6';
+
+            $url = Request::url();
+            $this->assertSame('http://[::1]:8000/test-ipv6', $url);
+        } finally {
+            $GLOBALS['config']['app']['url'] = $origConfigUrl;
+            if ($origHost === null) {
+                unset($_SERVER['HTTP_HOST']);
+            } else {
+                $_SERVER['HTTP_HOST'] = $origHost;
+            }
+            if ($origUri === null) {
+                unset($_SERVER['REQUEST_URI']);
+            } else {
+                $_SERVER['REQUEST_URI'] = $origUri;
+            }
+        }
+    }
+
     public function testErrorPageHidesExceptionDetailsWhenAppDebugIsFalse(): void
     {
-        $GLOBALS['config']['app']['debug'] = false;
-        $_SERVER['HTTP_ACCEPT'] = 'application/json';
+        $bootstrap = addslashes(BASE_PATH . '/config/bootstrap.php');
+        $code = 'putenv(\'BONGO_CONFIG_CACHE=0\'); require \'' . $bootstrap . '\'; $GLOBALS[\'config\'][\'app\'][\'debug\'] = false; $_SERVER[\'HTTP_ACCEPT\'] = \'application/json\'; \System\Http\ErrorPage::render(500, \'Server Error\', new \RuntimeException(\'Database credentials leak in error\'));';
 
-        $exception = new \RuntimeException('Database credentials leak in error');
-
-        ob_start();
-        \System\Http\ErrorPage::render(500, 'Server Error', $exception);
-        $output = ob_get_clean();
+        $cmd = escapeshellarg(PHP_BINARY) . ' -r ' . escapeshellarg($code);
+        $output = (string) shell_exec($cmd);
 
         $decoded = json_decode($output, true);
+        $this->assertTrue(is_array($decoded));
         $this->assertArrayHasKey('error', $decoded);
         $this->assertSame(500, $decoded['error']['status']);
         $this->assertSame('Server Error', $decoded['error']['message']);

@@ -12,8 +12,7 @@ class ErrorPage
      */
     public static function render(int $status, string $message, ?Throwable $exception = null): void
     {
-        $minBuffer = (config('app.env') === 'testing') ? 1 : 0;
-        while (ob_get_level() > $minBuffer) {
+        while (ob_get_level() > 0) {
             ob_end_clean();
         }
 
